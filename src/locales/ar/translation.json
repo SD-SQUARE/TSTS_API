@@ -1,0 +1,13 @@
+{
+  "user_created": "تم إنشاء المستخدم",
+  "internal_error": "خطاء داخلي",
+  "invalid_input": "مدخلات غير صالحة",
+  "forbidden": "ممنوع",
+  "name_en_must_be_english": "اسم يجب ان يكون بالانجليزية",
+  "name_ar_must_be_arabic": "اسم يجب ان يكون بالعربية",
+  "not_token": "لا توجد توكن",
+  "invalid_token": "توكن غير صالح",
+  "user_not_found": "المستخدم غير موجود",
+  "invalid_mail":"البريد الالكتروني غير صالح",
+  "password_too_short":"كلمة المرور قصيرة جدا"
+}

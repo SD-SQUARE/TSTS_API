@@ -1,0 +1,13 @@
+{
+  "user_created": "User created",
+  "internal_error": "Internal error", 
+  "invalid_input": "Invalid input",
+  "forbidden": "Forbidden",
+  "name_en_must_be_english": "Name must be in English",
+  "name_ar_must_be_arabic": "Name must be in Arabic",
+  "not_token": "No token provided",
+  "invalid_token": "Invalid token",
+  "user_not_found": "User not found",
+  "invalid_mail":"Invalid email",
+  "password_too_short":"Password too short"
+}
