@@ -25,6 +25,27 @@ services:
       - redis-data:/data
     command: ["redis-server", "--appendonly", "yes"]
 
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "${MINIO_API_PORT}:${MINIO_API_PORT}"       # MinIO console & API
+      - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"       # MinIO admin console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
+    volumes:
+      - minio_data:/data
+    networks:
+      - app-network
+
 volumes:
-  postgres_data:
+  postgres_data:  
   redis-data:
+  minio_data:
+  
+networks:
+  app-network:
+    driver: bridge

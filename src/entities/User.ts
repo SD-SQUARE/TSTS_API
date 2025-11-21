@@ -6,14 +6,11 @@ export class User {
   id: string;
 
   @Column({ type: "varchar", length: 150 })
-  name_en: string;
-
-  @Column({ type: "varchar", length: 150 })
-  name_ar: string;
+  name: string;
 
   @Column({ type: "varchar", unique: true, length: 255 })
   email: string;
 
-  @Column({ type: "varchar", length: 255 })
+  @Column({ type: "varchar", length: 255, nullable: true })
   password: string;
 }

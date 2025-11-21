@@ -1,32 +1,28 @@
 
 import dotenv from "dotenv";
 import path from "path";
-import { fileURLToPath } from "url";
-
-// ESM __dirname workaround
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-dotenv.config({ path: path.join(__dirname, ".env") });
+dotenv.config({ path: path.join(process.cwd(), "src/.env") });
 
 import "reflect-metadata";
-import { PostgresDataSource } from "./database/postgres-data-source.js";
+import { initDataSource } from "./database/postgres-data-source.js";
 import app from "./app.js";
 import logger from "./utils/logger.js";
+import { connectRedis } from "./database/redis.js";
 
+const HOST = process.env.HOST ?? "localhost";
+const PORT = process.env.PORT ?? 3000;
 
-const PORT = process.env.PORT || 3000;
-
-PostgresDataSource.initialize()
-  .then(() => {
-    console.log("DataSource initialized");
+/**
+ * Main entry point of the application.
+ * Initializes the Postgres data source and connects to Redis. !! without waitting for it to connect !!
+ * Then starts the Express app listening on the specified port.
+ */
+async function main() {
+    initDataSource();
+    connectRedis();
     app.listen(PORT, () => {
-        logger.info(`Server listening on http://localhost:${PORT}`);
-      console.log(`Server listening on http://localhost:${PORT}`);
+        logger.info(`[server] listening on http://${HOST}:${PORT}`);
     });
-  })
-  .catch((err) => {
-    logger.error("Error during Data Source initialization", err);
-    console.error("Error during Data Source initialization", err);
-    process.exit(1);
-  });
+}
+
+main();

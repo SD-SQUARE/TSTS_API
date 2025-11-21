@@ -46,7 +46,7 @@ app.use(i18nextMiddleware.handle(i18n));
 // TODO: enable in prod
 if (process.env.NODE_ENV === "production") app.use(csrfMiddleware);
 
-import { authRouter } from "./routes/";
+import { authRouter } from "./routes/index.js";
 // routes
 app.use("/api/v1/auth", authRouter );
 

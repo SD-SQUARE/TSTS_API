@@ -4,9 +4,9 @@ import { User } from "../entities/User.js";
 
 export const createUser = async (req: Request, res: Response) => {
   const userRepo = PostgresDataSource.getRepository(User);
-  const { name_en, name_ar, email, password } = req.body;
+  const { name, email, password } = req.body;
 
-  const user = userRepo.create({ name_en, name_ar, email, password });
+  const user = userRepo.create({ name, email, password });
   await userRepo.save(user);
 
   return res

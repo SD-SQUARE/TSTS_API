@@ -1,5 +1,12 @@
 import winston from "winston";
 
+const transports:winston.transport[] = [new winston.transports.File({ filename: "logs/app.log" })];
+
+// Add console transport only if not in test mode
+if (process.env.TEST_MODE !== "true") {
+  transports.push(new winston.transports.Console());
+}
+
 const logger = winston.createLogger({
   levels: {
     error: 0,
@@ -18,10 +25,7 @@ const logger = winston.createLogger({
         `${timestamp} [${level.toUpperCase()}]: ${message}`
     )
   ),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: "logs/app.log" }),
-  ],
+  transports,
 });
 
 logger.exceptions.handle(

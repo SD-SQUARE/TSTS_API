@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Request } from "express";
-import { ARABIC_REGEX, ENGLISH_REGEX } from "../config/validations";
+import { ARABIC_REGEX, ENGLISH_REGEX } from "../config/validations.js";
 
 
 export const createUserSchema = (t: Request['t']) => z.object({
