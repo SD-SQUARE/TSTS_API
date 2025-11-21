@@ -6,7 +6,6 @@ const router = Router();
 router.post("/login", asyncHandler(async(req, res, next) => {
     console.log("login");
     console.log(req);
-    console.log(req.params.lang);
     console.log(req.language);
     res.send("login");
 }));

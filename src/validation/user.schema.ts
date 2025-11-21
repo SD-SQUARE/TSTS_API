@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Request } from "express";
 import { ARABIC_REGEX, ENGLISH_REGEX } from "../config/validations.js";
 
-
+// FIXME: change schema
 export const createUserSchema = (t: Request['t']) => z.object({
   name_en: z
     .string()

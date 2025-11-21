@@ -12,12 +12,6 @@
     "db:destroy": "docker-compose -f ./docker/compose.db.yml down -v",
     "db:reset": "run-s db:destroy db:start dev",
     "secret:publish:example": "node ./scripts/publish-env.js",
-    "typeorm": "node --loader ts-node/esm ./node_modules/typeorm/cli.js",
-    "migration:generate": "npm run typeorm -- migration:generate --dataSource ./src/database/data-source.ts",
-    "migration:create": "npx typeorm migration:create ",
-    "migration:run": "npm run typeorm -- migration:run --dataSource ./src/database/data-source.ts",
-    "migration:revert": "npm run typeorm -- migration:revert --dataSource ./src/database/data-source.ts",
-    "migration:show": "npm run typeorm -- migration:show --dataSource ./src/database/data-source.ts",
     "test": "jest --runInBand"
   },
   "keywords": [],
@@ -27,6 +21,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.936.0",
     "@aws-sdk/s3-request-presigner": "^3.936.0",
+    "@types/multer": "^2.0.0",
     "bcrypt": "^6.0.0",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
@@ -43,6 +38,7 @@
     "i18next-http-middleware": "^3.8.2",
     "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
     "nodemailer": "^7.0.10",
     "pg": "^8.16.3",
     "redis": "^5.10.0",
@@ -76,5 +72,4 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }
- 
 }
