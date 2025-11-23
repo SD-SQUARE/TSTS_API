@@ -3,6 +3,7 @@ import { PostgresDataSource } from "../database/postgres-data-source.js";
 import { User } from "../entities/User.js";
 import { EmailSsnConflictResult } from "../interfaces/users/IEmailAndSsnConflict.js";
 import { GetUsersQuery } from "../interfaces/users/IGetUsersQuery.js";
+import { UserType } from "../enums/UserType.enum.js";
 
 export class UserRepository {
   private repo = PostgresDataSource.getRepository(User);
@@ -65,8 +66,6 @@ export class UserRepository {
     return this.repo.save(user);
   }
 
-
-
   async getAllWithFilter(
     query: GetUsersQuery,
     lang: "en" | "ar"
@@ -80,6 +79,9 @@ export class UserRepository {
       .leftJoinAndSelect("user.userDepartments", "userDepartments")
       .leftJoinAndSelect("userDepartments.department", "department")
       .where("1 = 1");
+
+    qb.andWhere("user.user_type = :userType", { userType: UserType.REQUESTER });
+    qb.andWhere("user.deletedAt IS NULL");
 
     const fn = `"user"."firstName"->>'${lang}'`;
     const mn = `"user"."midName"->>'${lang}'`;
