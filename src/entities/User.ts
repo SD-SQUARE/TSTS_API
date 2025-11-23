@@ -7,7 +7,7 @@ import { GroupHead } from "./GroupHead.js";
 import { UsersPermissions } from "./UsersPermissions.js";
 import { UserDepartment } from "./UserDepartment.js";
 import { University } from "./University.js";
-import { Domain } from "./Domain.js";  
+import { Domain } from "./Domain.js";
 import { UserStatus } from "../enums/UserStatus.enum.js";
 import { UserType } from "../enums/UserType.enum.js";
 
@@ -43,7 +43,7 @@ export class User extends BaseEntity {
   @Column({ type: "jsonb", nullable: true })
   contacts?: { mobile?: string[]; phone?: string[] };
 
-  @ManyToOne(() => University, (u) => u.domains, { nullable: true , lazy: true })
+  @ManyToOne(() => University, (u) => u.domains, { nullable: true, lazy: true })
   university?: University;
 
   @ManyToOne(() => Domain, { nullable: true, lazy: true })
@@ -72,5 +72,4 @@ export class User extends BaseEntity {
 
   @OneToMany(() => UserDepartment, (ud) => ud.user, { lazy: true })
   userDepartments!: UserDepartment[];
-  
 }

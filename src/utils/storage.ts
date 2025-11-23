@@ -20,7 +20,7 @@ import { Readable } from "stream";
  * const result = await uploadFile('my-bucket', 'file.txt', buffer, 'text/plain');
  * console.log(result); // Output: File uploaded: file.txt
  * @returns {Promise<string>} - A promise that resolves with a string indicating the file was uploaded successfully.
-*/
+ */
 export const uploadFile = async (
   bucket: string,
   key: string,
@@ -35,7 +35,7 @@ export const uploadFile = async (
       ContentType: contentType,
     })
   );
-  return `File uploaded: ${key}`;
+  return key;
 };
 
 /**
@@ -98,7 +98,6 @@ export const downloadFile = async (bucket: string, key: string) => {
   return response.Body as Readable;
 };
 
-
 /**
  * Generates a presigned URL for downloading a file from an S3 bucket.
  * The URL is valid for a specified number of seconds.
@@ -110,7 +109,11 @@ export const downloadFile = async (bucket: string, key: string) => {
  * const url = await getPresignedUrl('my-bucket', 'file.txt');
  * console.log(url); // Output: A presigned URL for downloading file.txt from my-bucket
  */
-export const getPresignedUrl = async (bucket: string, key: string, expiresIn: number = 60) => {
+export const getPresignedUrl = async (
+  bucket: string,
+  key: string,
+  expiresIn: number = 60
+) => {
   const command = new GetObjectCommand({ Bucket: bucket, Key: key });
   const url = await getSignedUrl(s3Client, command, { expiresIn }); // URL valid for 60 seconds
   return url;

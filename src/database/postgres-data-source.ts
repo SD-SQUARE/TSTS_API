@@ -5,7 +5,6 @@ import logger from "../utils/logger.js";
 import { __dirname } from "../utils/paths.js";
 import * as entities from "../entities/index.js";
 
-
 dotenv.config({ path: path.join(__dirname, "src/.env") });
 
 const HOST = process.env.DB_HOST ?? "localhost";
@@ -25,8 +24,8 @@ export const PostgresDataSource = new DataSource({
   synchronize: isSync, // true in dev only; use migrations in prod
   logging: true,
   logger: "file",
-  migrationsTableName: "migrations",
-  migrations: [path.join(__dirname, "src/migrations/*.ts")],
+  migrationsTableName: "migration",
+  migrations: [path.join(__dirname, "src/migration/*.ts")],
   entities: Object.values(entities),
 });
 
@@ -39,8 +38,12 @@ export async function initDataSource() {
   try {
     if (!PostgresDataSource.isInitialized) {
       await PostgresDataSource.initialize();
-      logger.info(`[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`);
-      logger.info(`[postgres] Database Connected: ${PostgresDataSource.options.database}`);
+      logger.info(
+        `[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`
+      );
+      logger.info(
+        `[postgres] Database Connected: ${PostgresDataSource.options.database}`
+      );
     }
     return PostgresDataSource;
   } catch (err) {
@@ -51,15 +54,18 @@ export async function initDataSource() {
 
 /**
  * Destroys the Postgres data source if it has been initialized.
-*This function does nothing if the data source has not been initialized.
-*Use this function to clean up the data source before the program exits.
-* @returns {Promise<void>} A promise that resolves when the data source has been destroyed.
-*/
+ *This function does nothing if the data source has not been initialized.
+ *Use this function to clean up the data source before the program exits.
+ * @returns {Promise<void>} A promise that resolves when the data source has been destroyed.
+ */
 export async function destroyDataSource() {
   if (PostgresDataSource.isInitialized) {
     await PostgresDataSource.destroy();
-    logger.info(`[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`);
-    logger.info(`[postgres] Database Disconnected: ${PostgresDataSource.options.database}`
+    logger.info(
+      `[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`
+    );
+    logger.info(
+      `[postgres] Database Disconnected: ${PostgresDataSource.options.database}`
     );
   }
 }

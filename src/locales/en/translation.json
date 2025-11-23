@@ -1,13 +1,68 @@
 {
-  "user_created": "User created",
-  "internal_error": "Internal error", 
+  "internal_error": "Internal error",
   "invalid_input": "Invalid input",
   "forbidden": "Forbidden",
-  "name_en_must_be_english": "Name must be in English",
-  "name_ar_must_be_arabic": "Name must be in Arabic",
+
   "not_token": "No token provided",
   "invalid_token": "Invalid token",
+
+  "invalid_image_extension": "Invalid image extension",
+  "image_must_be_under_1mb": "Image must be under 1MB",
+
+  "name_en_must_be_english": "Name must be in English",
+  "name_ar_must_be_arabic": "Name must be in Arabic",
+
+  "user_created": "User created",
+  "user_edited": "User edited",
+  "User_deleted": "User deleted",
   "user_not_found": "User not found",
-  "invalid_mail":"Invalid email",
-  "password_too_short":"Password too short"
+  "user_not_created": "User not created",
+  "user_not_edited": "User not edited",
+
+  "domain_not_found": "Domain not found",
+
+  "departments_not_found": "Departments not found",
+
+  "profile_permission_not_found": "Profile permission not found",
+  "some_permissions_do_not_exist": "Some permissions do not exist",
+  "some_specialization_does_not_exist": "Some specialization does not exist",
+
+  "university_not_found": "University not found",
+
+  "invalid_mail": "Invalid email",
+
+  "password_too_short": "Password too short",
+  "password_must_contain_uppercase": "Password must contain at least one uppercase letter",
+  "password_must_contain_number": "Password must contain at least one number",
+  "password_must_contain_special_char": "Password must contain at least one special character",
+
+  "invalid_ssn": "Invalid Egyptian national ID",
+
+  "first_name_en_required": "First name (EN) is required",
+  "mid_name_en_required": "Middle name (EN) is required",
+  "last_name_en_required": "Last name (EN) is required",
+  "first_name_en_must_be_english": "First name must be in English",
+  "mid_name_en_must_be_english": "Middle name must be in English",
+  "last_name_en_must_be_english": "Last name must be in English",
+
+  "first_name_ar_required": "First name (AR) is required",
+  "mid_name_ar_required": "Middle name (AR) is required",
+  "last_name_ar_required": "Last name (AR) is required",
+  "first_name_ar_must_be_arabic": "First name must be in Arabic",
+  "mid_name_ar_must_be_arabic": "Middle name must be in Arabic",
+  "last_name_ar_must_be_arabic": "Last name must be in Arabic",
+
+  "university_required": "University is required",
+  "domain_required": "Domain is required",
+
+  "permission_profile_required": "Permission profile is required",
+
+  "job_en_required": "Job title (EN) is required",
+  "job_en_must_be_english": "Job title must be in English",
+  "job_ar_required": "Job title (AR) is required",
+  "job_ar_must_be_arabic": "Job title must be in Arabic",
+  "email_already_exists": "Email already exists",
+  "ssn_already_exists": "SSN already exists",
+  "email_and_ssn_already_exist": "Email and SSN already exist in the system",
+  "specialization_id_invalid": "allowed specialations not valid"
 }

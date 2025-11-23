@@ -20,20 +20,36 @@ export const validate =
   (schema: (t: Request["t"]) => ZodSchema<any>) =>
   (req: Request, res: Response, next: NextFunction) => {
     try {
+      // Validate the request body, query, and params using the schema
       schema(req.t).parse({
         ...req.body,
         ...req.params,
         ...req.query,
       });
-      next();
+      next(); // If validation succeeds, move to the next middleware
     } catch (err: any) {
-      // map Zod errors into friendly messages and localize using req.t
-      const issues = (err?.issues || []).map((issue: any) => {
-        const msgKey = issue.message || "invalid_input";
-        // if req.t exists (i18next) translate, otherwise use key
-        const message = req.t ? req.t(msgKey) || msgKey : msgKey;
-        return { path: issue.path, message };
-      });
+      // Map Zod errors into friendly messages and localize using req.t
+      const issues = (err?.issues || [])
+        .map((issue: any) => {
+          const msgKey = issue.message || "invalid_input";
+          const message = req.t ? req.t(msgKey) || msgKey : msgKey;
+
+          // Return the field name (key) and the localized message
+          return {
+            key: issue.path?.[0] || "unknown", // path[0] is the field name (key)
+            message, // Localized or fallback message
+          };
+        })
+        // Remove duplicates based on the 'key' and 'message'
+        .filter(
+          (value, index, self) =>
+            index ===
+            self.findIndex(
+              (t) => t.key === value.key && t.message === value.message
+            )
+        );
+
+      // Return the validation errors in the response
       return res.status(400).json({ errors: issues });
     }
   };

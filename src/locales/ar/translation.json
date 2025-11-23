@@ -1,13 +1,62 @@
 {
-  "user_created": "تم إنشاء المستخدم",
   "internal_error": "خطاء داخلي",
   "invalid_input": "مدخلات غير صالحة",
   "forbidden": "ممنوع",
+
+  "invalid_token": "توكن غير صالح",
+  "not_token": "لا توجد توكن",
+
   "name_en_must_be_english": "اسم يجب ان يكون بالانجليزية",
   "name_ar_must_be_arabic": "اسم يجب ان يكون بالعربية",
-  "not_token": "لا توجد توكن",
-  "invalid_token": "توكن غير صالح",
+
+  "university_not_found": "لم يتم العثور على الجامعة",
+  "domain_not_found": "الجهة غير موجودة",
+  "departments_not_found": "لم يتم العثور على الأقسام",
+
+  "profile_permission_not_found": "لم يتم العثور على ملف الصلاحيات",
+  "some_permissions_do_not_exist": "بعض الصلاحيات غير موجودة",
+  "some_specialization_does_not_exist": "بعض التخصصات غير موجودة",
+
+  "user_created": "تم إنشاء المستخدم",
+  "userNotCreated": "لم يتم إنشاء المستخدم",
+  "user_not_edited": "لم يتم تعديل المستخدم",
+  "User_not_found": "المستخدم غير موجود",
+  "user_edited": "تم تعديل المستخدم",
+  "user_deleted": "تم حذف المستخدم",
   "user_not_found": "المستخدم غير موجود",
-  "invalid_mail":"البريد الالكتروني غير صالح",
-  "password_too_short":"كلمة المرور قصيرة جدا"
+
+  "invalid_mail": "البريد الالكتروني غير صالح",
+  "password_too_short": "كلمة المرور قصيرة جدا",
+  "invalid_image_extension": "امتداد الصورة غير صالح",
+  "image_must_be_under_1mb": "حجم الصورة يجب أن يكون أقل من 1 ميجابايت",
+  "password_must_contain_uppercase": "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل",
+  "password_must_contain_number": "يجب أن تحتوي كلمة المرور على رقم واحد على الأقل",
+  "password_must_contain_special_char": "يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل",
+  "invalid_ssn": "الرقم القومي غير صالح",
+  "first_name_en_required": "الإسم الأول بالإنجليزية مطلوب",
+  "mid_name_en_required": "الإسم الأوسط بالإنجليزية مطلوب",
+  "last_name_en_required": "الإسم الأخير بالإنجليزية مطلوب",
+  "first_name_en_must_be_english": "الإسم الأول يجب أن يكون باللغة الإنجليزية",
+  "mid_name_en_must_be_english": "الإسم الأوسط يجب أن يكون باللغة الإنجليزية",
+  "last_name_en_must_be_english": "الإسم الأخير يجب أن يكون باللغة الإنجليزية",
+
+  "first_name_ar_required": "الإسم الأول بالعربية مطلوب",
+  "mid_name_ar_required": "الإسم الأوسط بالعربية مطلوب",
+  "last_name_ar_required": "الإسم الأخير بالعربية مطلوب",
+  "first_name_ar_must_be_arabic": "الإسم الأول يجب أن يكون باللغة العربية",
+  "mid_name_ar_must_be_arabic": "الإسم الأوسط يجب أن يكون باللغة العربية",
+  "last_name_ar_must_be_arabic": "الإسم الأخير يجب أن يكون باللغة العربية",
+
+  "university_required": "الجامعة مطلوبة",
+  "domain_required": "المجال مطلوب",
+
+  "permission_profile_required": "ملف الصلاحيات مطلوب",
+
+  "job_en_required": "الوظيفة بالإنجليزية مطلوبة",
+  "job_en_must_be_english": "الوظيفة يجب أن تكون باللغة الإنجليزية",
+  "job_ar_required": "الوظيفة بالعربية مطلوبة",
+  "ssn_already_exists": "رقم الهوية موجود بالفعل",
+  "email_already_exists": "البريد الإلكتروني موجود بالفعل",
+  "job_ar_must_be_arabic": "الوظيفة يجب أن تكون باللغة العربية",
+  "email_and_ssn_already_exist": "البريد الإلكتروني والرقم القومي موجودان بالفعل"
 }
