@@ -12,7 +12,8 @@
     "db:destroy": "docker-compose -f ./docker/compose.db.yml down -v",
     "db:reset": "run-s db:destroy db:start dev",
     "secret:publish:example": "node ./scripts/publish-env.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "seed": "tsx src/database/seeding/index.ts"
   },
   "keywords": [],
   "author": "",
