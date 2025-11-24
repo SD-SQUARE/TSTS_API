@@ -29,6 +29,12 @@ import {
   getAdminsPaged,
 } from "../controllers/admins.controller.js";
 import { createAdminSchema } from "../validation/admin/createAdmin.schema.js";
+import {
+  getMyProfileById,
+  getUserGroups,
+  getUserProfileById,
+  getUserSpecializations,
+} from "../controllers/profile.controller.js";
 
 const router = Router();
 
@@ -38,7 +44,14 @@ router
   .get("/technicians", asyncHandler(getTechniciansPaged))
   .get("/technicians/:id", asyncHandler(getTechnicianById))
   .get("/admins", asyncHandler(getAdminsPaged))
-  .get("/admins/:id", asyncHandler(getAdminById));
+  .get("/admins/:id", asyncHandler(getAdminById))
+  .get("/profile/:id/view", asyncHandler(getUserProfileById))
+  .get("/profile/:id", asyncHandler(getMyProfileById))
+  .get("/profile/:id/view/groups", asyncHandler(getUserGroups))
+  .get(
+    "/profile/:id/view/specializations",
+    asyncHandler(getUserSpecializations)
+  );
 
 router
   .post(

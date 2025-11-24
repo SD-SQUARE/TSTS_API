@@ -4,6 +4,12 @@ import { User } from "../entities/User.js";
 import { EmailSsnConflictResult } from "../interfaces/users/IEmailAndSsnConflict.js";
 import { GetUsersQuery } from "../interfaces/users/IGetUsersQuery.js";
 import { UserType } from "../enums/UserType.enum.js";
+import { IPagination } from "../interfaces/shared/IPagination.js";
+import { parsePageIndex, parsePageSize } from "../helpers/paginationHelper.js";
+import { TechnicianGroup } from "../entities/TechnicianGroup.js";
+import { GroupDto, toGroupDto } from "../mappers/groups/toGroupDto.js";
+import { Group } from "../entities/Group.js";
+import { AllowedSpecialization, Specialization } from "../entities/index.js";
 
 export class UserRepository {
   private repo = PostgresDataSource.getRepository(User);
@@ -267,6 +273,72 @@ export class UserRepository {
 
     return await qb.getManyAndCount();
   }
-}
 
+  async getUserTypeByUserId(id) {
+    const user = await this.repo.findOne({
+      where: { id },
+      select: ["user_type"],
+    });
+    return user?.user_type ?? null;
+  }
+
+  async getUserGroups(
+    userId: string,
+    query?: IPagination
+  ): Promise<[Group[], number]> {
+    const tgRepo = PostgresDataSource.getRepository(TechnicianGroup);
+
+    const qb = tgRepo
+      .createQueryBuilder("tg")
+      .leftJoinAndSelect("tg.group", "g")
+      .leftJoinAndSelect("tg.user", "u")
+      .where("u.id = :userId", { userId })
+      .andWhere('u."deletedAt" IS NULL')
+      .andWhere("u.user_type != :adminType", {
+        adminType: UserType.SUPER_ADMIN,
+      });
+
+    const pageIndex = parsePageIndex(query?.page_index);
+    const pageSize = parsePageSize(query?.page_size);
+    const skip = (pageIndex - 1) * pageSize;
+
+    qb.skip(skip).take(pageSize);
+    const [techGroups, total] = await qb.getManyAndCount();
+
+    const groups = await Promise.all(techGroups.map((tg) => tg.group));
+
+    return [groups, total];
+  }
+
+  async getUserSpecializations(
+    userId: string,
+    query?: IPagination
+  ): Promise<[Specialization[], number]> {
+    const allowedRepo = PostgresDataSource.getRepository(AllowedSpecialization);
+
+    const qb = allowedRepo
+      .createQueryBuilder("as")
+      .leftJoinAndSelect("as.user", "u")
+      .leftJoinAndSelect("as.specialization", "s")
+      .where("u.id = :userId", { userId })
+      .andWhere('u."deletedAt" IS NULL')
+      .andWhere("u.user_type != :adminType", {
+        adminType: UserType.SUPER_ADMIN,
+      });
+    const pageIndex = parsePageIndex(query?.page_index);
+    const pageSize = parsePageSize(query?.page_size);
+    const skip = (pageIndex - 1) * pageSize;
+
+    qb.skip(skip).take(pageSize);
+
+    const [allowedList, total] = await qb.getManyAndCount();
+
+    // if specialization is lazy, it may be Promise<Specialization>
+    const specializations = await Promise.all(
+      allowedList.map((a) => a.specialization)
+    );
+
+    return [specializations, total];
+  }
+}
 export const userRepository = new UserRepository();

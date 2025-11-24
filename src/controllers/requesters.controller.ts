@@ -57,10 +57,12 @@ export const getRequesterById = async (req, res) => {
   const requester = await getRequesterByIdService(id, lang);
 
   if (!requester || !isValid.success) {
-    return res.status(404).json({ message: "Requester not found" });
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: "Requester not found" });
   }
 
-  return res.status(200).json(requester);
+  return res.status(ResponseStatus.SUCCESS).json(requester);
 };
 
 export const EditRequester = async (req, res: Response) => {

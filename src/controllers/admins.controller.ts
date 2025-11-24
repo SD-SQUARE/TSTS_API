@@ -1,9 +1,6 @@
 import { Response } from "express";
-
 import { t } from "i18next";
-
 import { parseGetUsersQuery } from "../interfaces/users/IGetUsersQuery.js";
-
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 import {
   mapCreateAdmin,
@@ -62,10 +59,12 @@ export const getAdminById = async (req, res) => {
   const admin = await getAdminByIdService(id, lang);
 
   if (!admin || !isValid.success) {
-    return res.status(404).json({ message: t("user_not_found") });
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: t("user_not_found") });
   }
 
-  return res.status(200).json(admin);
+  return res.status(ResponseStatus.SUCCESS).json(admin);
 };
 
 export const EditAdmin = async (req, res: Response) => {

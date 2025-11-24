@@ -57,10 +57,12 @@ export const getTechnicianById = async (req, res) => {
   const technician = await getTechnicianByIdService(id, lang);
 
   if (!technician) {
-    return res.status(404).json({ message: t("user_not_found") });
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: t("user_not_found") });
   }
 
-  return res.status(200).json(technician);
+  return res.status(ResponseStatus.SUCCESS).json(technician);
 };
 
 export const EditTechnician = async (req, res: Response) => {
