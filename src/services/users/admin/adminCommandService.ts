@@ -7,7 +7,6 @@ import logger from "../../../utils/logger.js";
 import { validateEntities } from "../../../helpers/EntitiesValidatorHelper.js";
 import { validateExistingPermission } from "../../../helpers/ProfileAndPermissionValidatorHelper.js";
 import { validateExistingSpecializations } from "../../../helpers/specializationValidatorHelper.js";
-import { mapRequesterToUserEntity } from "../../../mappers/requester/requesterToUserEntity.js";
 import { PostgresDataSource } from "../../../database/postgres-data-source.js";
 import { UserDepartment } from "../../../entities/UserDepartment.js";
 import { UsersPermissions } from "../../../entities/UsersPermissions.js";
@@ -17,17 +16,18 @@ import { ICreateResponse } from "../../../interfaces/response/ICreateResponse.js
 import { IEditResponse } from "../../../interfaces/response/IEditResponse.js";
 import { uploadFilesWithUniqueKey } from "../../../helpers/ImagesHelper.js";
 import { IDeleteResponse } from "../../../interfaces/response/IDeleteResponse.js";
-import { CreateRequesterMapped } from "../../../interfaces/requester/ICreateRequester.js";
+import { CreateAdminMapped } from "../../../interfaces/admin/ICreateAdmin.js";
+import { mapAdminToUserEntity } from "../../../mappers/admin/adminToUserEntity.js";
 
-export const createRequesterService = async (
-  requesterDto: CreateRequesterMapped,
+export const createAdminService = async (
+  AdminDto: CreateAdminMapped,
   imageFile?: Express.Multer.File
 ): Promise<ICreateResponse> => {
   // 2) university + domain + departments in ONE helper
   const entitiesResult = await validateEntities(
-    requesterDto.university,
-    requesterDto.domain,
-    requesterDto.departments
+    AdminDto.university,
+    AdminDto.domain,
+    AdminDto.departments
   );
 
   if (!entitiesResult.is_valid) {
@@ -46,9 +46,9 @@ export const createRequesterService = async (
 
   // 3) validate permission profile + extra/revoked permissions
   const permResult = await validateExistingPermission(
-    requesterDto.permissionProfile,
-    requesterDto.extraPermissions,
-    requesterDto.revokedPermissions
+    AdminDto.permissionProfile,
+    AdminDto.extraPermissions,
+    AdminDto.revokedPermissions
   );
 
   if (!permResult.is_valid) {
@@ -60,7 +60,7 @@ export const createRequesterService = async (
   }
 
   const specsResult = await validateExistingSpecializations(
-    requesterDto.allowedSpecializations
+    AdminDto.allowedSpecializations
   );
 
   if (!specsResult.is_valid) {
@@ -72,10 +72,10 @@ export const createRequesterService = async (
   }
 
   // 7) Set user type
-  requesterDto.userType = UserType.REQUESTER;
+  AdminDto.userType = UserType.ADMIN;
 
   // 8) Map DTO → Entity
-  const userData = await mapRequesterToUserEntity(requesterDto);
+  const userData = await mapAdminToUserEntity(AdminDto);
   userData.university = university;
   userData.domain = domain;
 
@@ -83,7 +83,7 @@ export const createRequesterService = async (
   if (imageFile) {
     const safeKey = await uploadFilesWithUniqueKey(
       IMAGE_PATHS.UsersImages,
-      requesterDto.ssn,
+      AdminDto.ssn,
       imageFile
     );
     userData.image = safeKey;
@@ -117,15 +117,15 @@ export const createRequesterService = async (
     usersPermissionsRepo.create({
       user,
       permissionProfile: profile,
-      extraPermissions: requesterDto.extraPermissions,
-      revokedPermissions: requesterDto.revokedPermissions,
+      extraPermissions: AdminDto.extraPermissions,
+      revokedPermissions: AdminDto.revokedPermissions,
     })
   );
 
   // 13) Save allowedSpecializations
-  if (requesterDto.allowedSpecializations?.length > 0) {
+  if (AdminDto.allowedSpecializations?.length > 0) {
     await allowedSpecializationsRepo.save(
-      requesterDto.allowedSpecializations.map((specId) =>
+      AdminDto.allowedSpecializations.map((specId) =>
         allowedSpecializationsRepo.create({
           user,
           specialization: { id: specId } as any,
@@ -137,9 +137,9 @@ export const createRequesterService = async (
   return { is_added: true, message: t("user_created") };
 };
 
-export const editRequesterService = async (
+export const editAdminService = async (
   id: string,
-  requesterDto: CreateRequesterMapped,
+  AdminDto: CreateAdminMapped,
   imageFile?: Express.Multer.File
 ): Promise<IEditResponse> => {
   const userRepo = PostgresDataSource.getRepository(User);
@@ -166,9 +166,9 @@ export const editRequesterService = async (
 
   // 2) Validate university + domain + departments
   const entitiesResult = await validateEntities(
-    requesterDto.university,
-    requesterDto.domain,
-    requesterDto.departments
+    AdminDto.university,
+    AdminDto.domain,
+    AdminDto.departments
   );
 
   if (!entitiesResult.is_valid) {
@@ -187,9 +187,9 @@ export const editRequesterService = async (
 
   // 3) Validate permission profile + extra/revoked permissions
   const permResult = await validateExistingPermission(
-    requesterDto.permissionProfile,
-    requesterDto.extraPermissions,
-    requesterDto.revokedPermissions
+    AdminDto.permissionProfile,
+    AdminDto.extraPermissions,
+    AdminDto.revokedPermissions
   );
 
   if (!permResult.is_valid) {
@@ -202,7 +202,7 @@ export const editRequesterService = async (
 
   // 4) Validate allowed specializations
   const specsResult = await validateExistingSpecializations(
-    requesterDto.allowedSpecializations
+    AdminDto.allowedSpecializations
   );
 
   if (!specsResult.is_valid) {
@@ -214,10 +214,10 @@ export const editRequesterService = async (
   }
 
   // 5) Force user type
-  requesterDto.userType = UserType.REQUESTER;
+  AdminDto.userType = UserType.ADMIN;
 
   // 6) Map DTO → partial User and merge into existing entity
-  const userData = await mapRequesterToUserEntity(requesterDto);
+  const userData = await mapAdminToUserEntity(AdminDto);
 
   userRepo.merge(userEntity, userData);
   userEntity.university = university;
@@ -231,7 +231,7 @@ export const editRequesterService = async (
 
     const safeKey = await uploadFilesWithUniqueKey(
       IMAGE_PATHS.UsersImages,
-      requesterDto.ssn,
+      AdminDto.ssn,
       imageFile
     );
     userEntity.image = safeKey;
@@ -265,17 +265,17 @@ export const editRequesterService = async (
     usersPermissionsRepo.create({
       user,
       permissionProfile: profile,
-      extraPermissions: requesterDto.extraPermissions,
-      revokedPermissions: requesterDto.revokedPermissions,
+      extraPermissions: AdminDto.extraPermissions,
+      revokedPermissions: AdminDto.revokedPermissions,
     })
   );
 
   // 9.3) AllowedSpecializations – clear then add
   await allowedSpecializationsRepo.delete({ user: { id: user.id } as any });
 
-  if (requesterDto.allowedSpecializations?.length > 0) {
+  if (AdminDto.allowedSpecializations?.length > 0) {
     await allowedSpecializationsRepo.save(
-      requesterDto.allowedSpecializations.map((specId) =>
+      AdminDto.allowedSpecializations.map((specId) =>
         allowedSpecializationsRepo.create({
           user,
           specialization: { id: specId } as any,
@@ -284,10 +284,10 @@ export const editRequesterService = async (
     );
   }
 
-  return { is_edited: true, message: "requester_edited_successfully" };
+  return { is_edited: true, message: "Admin_edited_successfully" };
 };
 
-export const deleteRequesterService = async (
+export const deleteAdminService = async (
   id: string
 ): Promise<IDeleteResponse> => {
   const userRepo = PostgresDataSource.getRepository(User);

@@ -21,6 +21,14 @@ import {
   getTechnicianById,
   getTechniciansPaged,
 } from "../controllers/technicians.controller.js";
+import {
+  createAdmin,
+  deleteAdmin,
+  EditAdmin,
+  getAdminById,
+  getAdminsPaged,
+} from "../controllers/admins.controller.js";
+import { createAdminSchema } from "../validation/admin/createAdmin.schema.js";
 
 const router = Router();
 
@@ -28,7 +36,9 @@ router
   .get("/requesters", asyncHandler(getRequestersPaged))
   .get("/requesters/:id", asyncHandler(getRequesterById))
   .get("/technicians", asyncHandler(getTechniciansPaged))
-  .get("/technicians/:id", asyncHandler(getTechnicianById));
+  .get("/technicians/:id", asyncHandler(getTechnicianById))
+  .get("/admins", asyncHandler(getAdminsPaged))
+  .get("/admins/:id", asyncHandler(getAdminById));
 
 router
   .post(
@@ -44,6 +54,13 @@ router
     validate(createTechnicianSchema),
     validateEmailAndSsnMiddleware,
     asyncHandler(createTechnician)
+  )
+  .post(
+    "/admins",
+    upload.single("image"),
+    validate(createAdminSchema),
+    validateEmailAndSsnMiddleware,
+    asyncHandler(createAdmin)
   );
 
 router
@@ -60,9 +77,17 @@ router
     validate(createTechnicianSchema),
     validateEmailEditSsnMiddleware,
     asyncHandler(EditTechnician)
+  )
+  .put(
+    "/admins/:id",
+    upload.single("image"),
+    validate(createAdminSchema),
+    validateEmailEditSsnMiddleware,
+    asyncHandler(EditAdmin)
   );
 router
   .delete("/requester/:id", asyncHandler(deleteRequester))
-  .delete("/technicians/:id", asyncHandler(deleteTechnician));
+  .delete("/technicians/:id", asyncHandler(deleteTechnician))
+  .delete("/admins/:id", asyncHandler(deleteAdmin));
 
 export default router;

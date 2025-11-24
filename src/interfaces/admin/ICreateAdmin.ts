@@ -1,8 +1,5 @@
-// src/interfaces/ICreateRequester.ts
-
-export interface CreateRequesterBody {
-  // note: image comes from req.file when using multer, so you don't need it here
-  image?: string; // optional – can be ignore in code if you only use req.file
+export interface CreateAdminBody {
+  image?: string;
 
   email: string;
   password: string;
@@ -18,9 +15,9 @@ export interface CreateRequesterBody {
 
   ssn: string;
 
-  university: string; // now a plain string
-  domain: string; // now a plain string
-  departments: string[]; // array of strings
+  university: string;
+  domain: string;
+  departments: string[];
 
   contacts: {
     phones: string[];
@@ -38,7 +35,7 @@ export interface CreateRequesterBody {
 }
 
 // What you actually want to work with in your service / DB layer
-export interface CreateRequesterMapped {
+export interface CreateAdminMapped {
   image?: Express.Multer.File | undefined;
 
   email: string;

@@ -199,6 +199,74 @@ export class UserRepository {
 
     return await qb.getManyAndCount();
   }
+
+  async getAllAdminsWithFilter(
+    query: GetUsersQuery,
+    lang: "en" | "ar"
+  ): Promise<[User[], number]> {
+    const repo = PostgresDataSource.getRepository(User);
+
+    const qb = repo
+      .createQueryBuilder("user")
+      .leftJoinAndSelect("user.university", "university")
+      .leftJoinAndSelect("user.domain", "domain")
+      .leftJoinAndSelect("user.userDepartments", "userDepartments")
+      .leftJoinAndSelect("userDepartments.department", "department")
+      .where("1 = 1");
+
+    qb.andWhere("user.user_type = :userType", {
+      userType: UserType.ADMIN,
+    });
+    qb.andWhere("user.deletedAt IS NULL");
+
+    const fn = `"user"."firstName"->>'${lang}'`;
+    const mn = `"user"."midName"->>'${lang}'`;
+    const ln = `"user"."lastName"->>'${lang}'`;
+
+    // Text search filters
+    if (query.first_name) {
+      qb.andWhere(`${fn} ILIKE :fn`, { fn: `%${query.first_name}%` });
+    }
+
+    if (query.mid_name) {
+      qb.andWhere(`${mn} ILIKE :mn`, { mn: `%${query.mid_name}%` });
+    }
+
+    if (query.last_name) {
+      qb.andWhere(`${ln} ILIKE :ln`, { ln: `%${query.last_name}%` });
+    }
+
+    if (query.ssn) {
+      qb.andWhere("user.ssn = :ssn", { ssn: query.ssn });
+    }
+
+    if (query.user_type) {
+      qb.andWhere("user.user_type = :ut", { ut: query.user_type });
+    }
+
+    if (query.departments) {
+      qb.andWhere("department.id = :dep", { dep: query.departments });
+    }
+
+    if (query.universities && query.domains) {
+      qb.andWhere("(university.id = :un OR domain.id = :dm)", {
+        un: query.universities,
+        dm: query.domains,
+      });
+    } else if (query.universities) {
+      qb.andWhere("university.id = :un", { un: query.universities });
+    } else if (query.domains) {
+      qb.andWhere("domain.id = :dm", { dm: query.domains });
+    }
+
+    const pageIndex = Number(query.page_index ?? 1);
+    const pageSize = Number(query.page_size ?? 10);
+    const skip = (pageIndex - 1) * pageSize;
+
+    qb.skip(skip).take(pageSize);
+
+    return await qb.getManyAndCount();
+  }
 }
 
 export const userRepository = new UserRepository();
