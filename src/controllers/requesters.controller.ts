@@ -15,6 +15,7 @@ import {
   getRequesterByIdService,
 } from "../services/users/requester/requesterQueryService.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
+import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 
 export const createRequester = async (
   req: RequestWithFileAndBody,
@@ -45,10 +46,17 @@ export const getRequestersPaged = async (req, res) => {
 export const getRequesterById = async (req, res) => {
   const id = req.params.id;
   const lang = req.language as "en" | "ar";
+  const isValid = uuidValidationSchema.safeParse(id);
+
+  if (!id || !isValid.success) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_deleted: false, message: t("invalid_requester_id") });
+  }
 
   const requester = await getRequesterByIdService(id, lang);
 
-  if (!requester) {
+  if (!requester || !isValid.success) {
     return res.status(404).json({ message: "Requester not found" });
   }
 
@@ -58,8 +66,9 @@ export const getRequesterById = async (req, res) => {
 export const EditRequester = async (req, res: Response) => {
   const requesterDto = mapCreateRequester(req);
   const id = req.params.id;
+  const isValid = uuidValidationSchema.safeParse(id);
 
-  if (!id) {
+  if (!id || !isValid.success) {
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ is_edited: false, message: t("user_not_found"), errors: [] });
@@ -78,8 +87,9 @@ export const EditRequester = async (req, res: Response) => {
 
 export const deleteRequester = async (req, res: Response) => {
   const id = req.params.id;
+  const isValid = uuidValidationSchema.safeParse(id);
 
-  if (!id) {
+  if (!id || !isValid.success) {
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ is_deleted: false, message: t("invalid_requester_id") });

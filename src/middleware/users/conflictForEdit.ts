@@ -5,6 +5,7 @@ import {
 } from "../../helpers/UserConflictHelper.js";
 import { t } from "i18next";
 import { IEditResponse } from "../../interfaces/response/IEditResponse.js";
+import { uuidValidationSchema } from "../../validation/shared/uuidSchema.js";
 
 export const validateEmailEditSsnMiddleware = async (
   req: Request,
@@ -15,7 +16,16 @@ export const validateEmailEditSsnMiddleware = async (
     const { email, ssn } = req.body;
     const id = req.params.id;
     const errors: { key: string; message: string }[] = [];
+    const isValid = uuidValidationSchema.safeParse(id);
+    if (!isValid.success) {
+      const response: IEditResponse = {
+        is_edited: false,
+        message: t("user_not_edited"),
+        errors,
+      };
 
+      return res.status(400).json(response);
+    }
     const conflictMessage = await validateEmailAndSsnForEdit(id, email, ssn);
 
     if (conflictMessage) {
@@ -34,7 +44,7 @@ export const validateEmailEditSsnMiddleware = async (
 
       const response: IEditResponse = {
         is_edited: false,
-        message: t("user_not_created"),
+        message: t("user_not_edited"),
         errors,
       };
 

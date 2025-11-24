@@ -18,6 +18,8 @@ import {
   getAdminByIdService,
   getAllAdminsService,
 } from "../services/users/admin/adminQueryService.js";
+import { validate } from "../validation/zod-middleware.js";
+import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 
 export const createAdmin = async (
   req: RequestWithFileAndBody,
@@ -49,9 +51,17 @@ export const getAdminById = async (req, res) => {
   const id = req.params.id;
   const lang = req.language as "en" | "ar";
 
+  const isValid = uuidValidationSchema.safeParse(id);
+
+  if (!id || !isValid.success) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_deleted: false, message: t("invalid_admin_id") });
+  }
+
   const admin = await getAdminByIdService(id, lang);
 
-  if (!admin) {
+  if (!admin || !isValid.success) {
     return res.status(404).json({ message: t("user_not_found") });
   }
 
@@ -61,8 +71,8 @@ export const getAdminById = async (req, res) => {
 export const EditAdmin = async (req, res: Response) => {
   const adminDto = mapCreateAdmin(req);
   const id = req.params.id;
-
-  if (!id) {
+  const isValid = uuidValidationSchema.safeParse(id);
+  if (!id || !isValid.success) {
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ is_edited: false, message: t("user_not_found"), errors: [] });
@@ -81,8 +91,9 @@ export const EditAdmin = async (req, res: Response) => {
 
 export const deleteAdmin = async (req, res: Response) => {
   const id = req.params.id;
+  const isValid = uuidValidationSchema.safeParse(id);
 
-  if (!id) {
+  if (!id || !isValid.success) {
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ is_deleted: false, message: t("invalid_Admin_id") });

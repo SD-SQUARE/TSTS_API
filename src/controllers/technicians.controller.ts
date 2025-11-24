@@ -17,6 +17,7 @@ import {
   getAllTechnicianService,
   getTechnicianByIdService,
 } from "../services/users/technician/technicianQueryService.js";
+import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 
 export const createTechnician = async (
   req: RequestWithFileAndBody,
@@ -47,7 +48,12 @@ export const getTechniciansPaged = async (req, res) => {
 export const getTechnicianById = async (req, res) => {
   const id = req.params.id;
   const lang = req.language as "en" | "ar";
-
+  const isValid = uuidValidationSchema.safeParse(id);
+  if (!id || !isValid.success) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: t("user_not_found"), errors: [] });
+  }
   const technician = await getTechnicianByIdService(id, lang);
 
   if (!technician) {
@@ -60,7 +66,6 @@ export const getTechnicianById = async (req, res) => {
 export const EditTechnician = async (req, res: Response) => {
   const TechnicianDto = mapCreateTechnician(req);
   const id = req.params.id;
-
   if (!id) {
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -80,8 +85,9 @@ export const EditTechnician = async (req, res: Response) => {
 
 export const deleteTechnician = async (req, res: Response) => {
   const id = req.params.id;
+  const isValid = uuidValidationSchema.safeParse(id);
 
-  if (!id) {
+  if (!id || !isValid.success) {
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ is_deleted: false, message: t("invalid_Technician_id") });
