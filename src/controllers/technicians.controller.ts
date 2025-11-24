@@ -1,28 +1,30 @@
 import { Response } from "express";
-import {
-  mapCreateRequester,
-  RequestWithFileAndBody,
-} from "../mappers/requester/requesterMapper.js";
 import { t } from "i18next";
-import {
-  createRequesterService,
-  deleteRequesterService,
-  editRequesterService,
-} from "../services/users/requester/requesterCommandService.js";
-import { parseGetUsersQuery } from "../interfaces/users/IGetUsersQuery.js";
-import {
-  getAllRequestersService,
-  getRequesterByIdService,
-} from "../services/users/requester/requesterQueryService.js";
-import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 
-export const createRequester = async (
+import { parseGetUsersQuery } from "../interfaces/users/IGetUsersQuery.js";
+
+import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
+import {
+  mapCreateTechnician,
+  RequestWithFileAndBody,
+} from "../mappers/technician/technicianMapper.js";
+import {
+  createTechnicianService,
+  deleteTechnicianService,
+  editTechnicianService,
+} from "../services/users/technician/technicianCommandService.js";
+import {
+  getAllTechnicianService,
+  getTechnicianByIdService,
+} from "../services/users/technician/technicianQueryService.js";
+
+export const createTechnician = async (
   req: RequestWithFileAndBody,
   res: Response
 ) => {
-  const requesterDto = mapCreateRequester(req);
+  const technicianDto = mapCreateTechnician(req);
 
-  const result = await createRequesterService(requesterDto, req.file);
+  const result = await createTechnicianService(technicianDto, req.file);
   if (!result.is_added) {
     result.message = t("user_not_created");
     return res.status(ResponseStatus.BAD_REQUEST).json(result);
@@ -32,31 +34,31 @@ export const createRequester = async (
   });
 };
 
-export const getRequestersPaged = async (req, res) => {
+export const getTechniciansPaged = async (req, res) => {
   const query = parseGetUsersQuery(req.query);
   const lang = req.language;
 
-  const result = await getAllRequestersService(query, lang);
+  const result = await getAllTechnicianService(query, lang);
   return res
     .status(ResponseStatus.SUCCESS)
     .json({ users: result.users, meta_data: result.meta_ });
 };
 
-export const getRequesterById = async (req, res) => {
+export const getTechnicianById = async (req, res) => {
   const id = req.params.id;
   const lang = req.language as "en" | "ar";
 
-  const requester = await getRequesterByIdService(id, lang);
+  const technician = await getTechnicianByIdService(id, lang);
 
-  if (!requester) {
-    return res.status(404).json({ message: "Requester not found" });
+  if (!technician) {
+    return res.status(404).json({ message: t("user_not_found") });
   }
 
-  return res.status(200).json(requester);
+  return res.status(200).json(technician);
 };
 
-export const EditRequester = async (req, res: Response) => {
-  const requesterDto = mapCreateRequester(req);
+export const EditTechnician = async (req, res: Response) => {
+  const TechnicianDto = mapCreateTechnician(req);
   const id = req.params.id;
 
   if (!id) {
@@ -65,7 +67,7 @@ export const EditRequester = async (req, res: Response) => {
       .json({ is_edited: false, message: t("user_not_found"), errors: [] });
   }
 
-  const result = await editRequesterService(id, requesterDto, req.file);
+  const result = await editTechnicianService(id, TechnicianDto, req.file);
   if (!result.is_edited) {
     result.message = t("user_not_edited");
     return res.status(ResponseStatus.BAD_REQUEST).json(result);
@@ -76,16 +78,16 @@ export const EditRequester = async (req, res: Response) => {
   });
 };
 
-export const deleteRequester = async (req, res: Response) => {
+export const deleteTechnician = async (req, res: Response) => {
   const id = req.params.id;
 
   if (!id) {
     return res
       .status(ResponseStatus.BAD_REQUEST)
-      .json({ is_deleted: false, message: t("invalid_requester_id") });
+      .json({ is_deleted: false, message: t("invalid_Technician_id") });
   }
 
-  const result = await deleteRequesterService(id);
+  const result = await deleteTechnicianService(id);
   if (!result.is_deleted) {
     return res
       .status(ResponseStatus.BAD_REQUEST)

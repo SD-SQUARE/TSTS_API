@@ -26,3 +26,14 @@ export const parseArray = (value: unknown): string[] => {
 
   return [];
 };
+
+export const parseIfJson = <T>(value: unknown): T | undefined => {
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return undefined;
+    }
+  }
+  return value as T;
+};

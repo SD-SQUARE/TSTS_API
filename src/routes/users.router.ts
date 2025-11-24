@@ -13,29 +13,56 @@ import {
 } from "../controllers/requesters.controller.js";
 import { validateEmailAndSsnMiddleware } from "../middleware/users/conflictForAdd.js";
 import { validateEmailEditSsnMiddleware } from "../middleware/users/conflictForEdit.js";
+import { createTechnicianSchema } from "../validation/technician/createTechnician.schema.js";
+import {
+  createTechnician,
+  deleteTechnician,
+  EditTechnician,
+  getTechnicianById,
+  getTechniciansPaged,
+} from "../controllers/technicians.controller.js";
 
 const router = Router();
 
-// requesters
 router
   .get("/requesters", asyncHandler(getRequestersPaged))
-  .get("/requesters/:id", asyncHandler(getRequesterById));
+  .get("/requesters/:id", asyncHandler(getRequesterById))
+  .get("/technicians", asyncHandler(getTechniciansPaged))
+  .get("/technicians/:id", asyncHandler(getTechnicianById));
 
-router.post(
-  "/requester",
-  upload.single("image"),
-  validate(createRequesterSchema),
-  validateEmailAndSsnMiddleware,
-  asyncHandler(createRequester)
-);
+router
+  .post(
+    "/requester",
+    upload.single("image"),
+    validate(createRequesterSchema),
+    validateEmailAndSsnMiddleware,
+    asyncHandler(createRequester)
+  )
+  .post(
+    "/technicians",
+    upload.single("image"),
+    validate(createTechnicianSchema),
+    validateEmailAndSsnMiddleware,
+    asyncHandler(createTechnician)
+  );
 
-router.put(
-  "/requester/:id",
-  upload.single("image"),
-  validate(createRequesterSchema),
-  validateEmailEditSsnMiddleware,
-  asyncHandler(EditRequester)
-);
-router.delete("/requester/:id", asyncHandler(deleteRequester));
+router
+  .put(
+    "/requester/:id",
+    upload.single("image"),
+    validate(createRequesterSchema),
+    validateEmailEditSsnMiddleware,
+    asyncHandler(EditRequester)
+  )
+  .put(
+    "/technicians/:id",
+    upload.single("image"),
+    validate(createTechnicianSchema),
+    validateEmailEditSsnMiddleware,
+    asyncHandler(EditTechnician)
+  );
+router
+  .delete("/requester/:id", asyncHandler(deleteRequester))
+  .delete("/technicians/:id", asyncHandler(deleteTechnician));
 
 export default router;
