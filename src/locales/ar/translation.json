@@ -8,6 +8,7 @@
   "not_token": "لا توجد توكن",
   "invalid_token": "توكن غير صالح",
   "user_not_found": "المستخدم غير موجود",
-  "invalid_mail":"البريد الالكتروني غير صالح",
-  "password_too_short":"كلمة المرور قصيرة جدا"
+  "invalid_mail": "البريد الالكتروني غير صالح",
+  "password_too_short": "كلمة المرور قصيرة جدا",
+  "account_locked": "الحساب مغلق"
 }
