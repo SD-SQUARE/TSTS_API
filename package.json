@@ -2,7 +2,22 @@
   "name": "api",
   "version": "1.0.0",
   "description": "this is tsts project api",
+  "keywords": [],
+  "homepage": "https://github.com/SD-SQUARE/TSTS_API#readme",
+  "bugs": {
+    "url": "https://github.com/SD-SQUARE/TSTS_API/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SD-SQUARE/TSTS_API.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
   "main": "index.ts",
+  "directories": {
+    "test": "tests"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
@@ -14,10 +29,6 @@
     "secret:publish:example": "node ./scripts/publish-env.js",
     "test": "jest --runInBand"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.936.0",
     "@aws-sdk/s3-request-presigner": "^3.936.0",

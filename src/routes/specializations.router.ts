@@ -1,0 +1,10 @@
+import { createSpecialization,updateSpecialization,getSpecializationById,getAllSpecializations,deleteSpecialization } from "../controllers/Specialization.controller.js";
+import { Router } from "express";
+import { asyncHandler } from "../utils/asyncHandler.js";
+const router = Router();
+router.post("/", asyncHandler(createSpecialization));
+router.get("/:id", asyncHandler(getSpecializationById));
+router.get("/", asyncHandler(getAllSpecializations));
+router.put("/:id", asyncHandler(updateSpecialization));
+router.delete("/:id", asyncHandler(deleteSpecialization));
+export default router;
