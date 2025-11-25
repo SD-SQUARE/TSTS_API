@@ -125,15 +125,15 @@ export async function seedRequesters(
       firstNameEn: "Requester",
       firstNameAr: "مستخدم",
 
-      midNameEn: "",
-      midNameAr: "",
+      midNameEn: `mid${i}`,
+      midNameAr: `نص${i}`,
 
       lastNameEn: `#${i}`,
       lastNameAr: `رقم ${i}`,
 
       ssn,
-      mobiles: [mobile],
-      phones: [],
+      mobiles: [mobile, mobile],
+      phones: [mobile],
 
       jobEn: "Staff",
       jobAr: "موظف",

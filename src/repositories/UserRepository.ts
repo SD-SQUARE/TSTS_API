@@ -72,7 +72,7 @@ export class UserRepository {
     return this.repo.save(user);
   }
 
-  async getAllWithFilter(
+  async getAllRequestersWithFilter(
     query: GetUsersQuery,
     lang: "en" | "ar"
   ): Promise<[User[], number]> {
@@ -88,6 +88,7 @@ export class UserRepository {
 
     qb.andWhere("user.user_type = :userType", { userType: UserType.REQUESTER });
     qb.andWhere("user.deletedAt IS NULL");
+    qb.orderBy("user.createdAt", "DESC");
 
     const fn = `"user"."firstName"->>'${lang}'`;
     const mn = `"user"."midName"->>'${lang}'`;
@@ -156,6 +157,7 @@ export class UserRepository {
       userType: UserType.TECHNICIAN,
     });
     qb.andWhere("user.deletedAt IS NULL");
+    qb.orderBy("user.createdAt", "DESC");
 
     const fn = `"user"."firstName"->>'${lang}'`;
     const mn = `"user"."midName"->>'${lang}'`;
@@ -224,6 +226,7 @@ export class UserRepository {
       userType: UserType.ADMIN,
     });
     qb.andWhere("user.deletedAt IS NULL");
+    qb.orderBy("user.createdAt", "DESC");
 
     const fn = `"user"."firstName"->>'${lang}'`;
     const mn = `"user"."midName"->>'${lang}'`;

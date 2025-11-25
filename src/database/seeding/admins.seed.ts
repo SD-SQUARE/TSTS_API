@@ -134,16 +134,16 @@ export async function seedAdmins(dataSource: DataSource, count = 100) {
       firstNameEn: "Admin",
       firstNameAr: "مسؤول",
 
-      midNameEn: "",
-      midNameAr: "",
+      midNameEn: `mid${i}`,
+      midNameAr: `نص${i}`,
 
       lastNameEn: `#${i}`,
       lastNameAr: `رقم ${i}`,
 
       // -------- identity / contacts --------
       ssn,
-      mobiles: [mobile],
-      phones: [],
+      mobiles: [mobile, mobile],
+      phones: [mobile],
 
       jobEn: "System Administrator",
       jobAr: "مسؤول نظام",

@@ -124,15 +124,15 @@ export async function seedTechnicians(
       firstNameEn: "Technician",
       firstNameAr: "فني",
 
-      midNameEn: "",
-      midNameAr: "",
+      midNameEn: `mid${i}`,
+      midNameAr: `نص${i}`,
 
       lastNameEn: `#${i}`,
       lastNameAr: `رقم ${i}`,
 
       ssn,
-      mobiles: [mobile],
-      phones: [],
+      mobiles: [mobile, mobile],
+      phones: [mobile],
 
       jobEn: "Support Technician",
       jobAr: "فني دعم",

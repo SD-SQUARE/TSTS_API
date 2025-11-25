@@ -8,7 +8,10 @@ export const getAllRequestersService = async (
   query: GetUsersQuery,
   lang: "en" | "ar"
 ) => {
-  const [users, total] = await userRepository.getAllWithFilter(query, lang);
+  const [users, total] = await userRepository.getAllRequestersWithFilter(
+    query,
+    lang
+  );
 
   const requesters = await Promise.all(users.map((u) => toRequester(u, lang)));
 
