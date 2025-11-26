@@ -45,7 +45,6 @@ interface UserPayload {
   permission_profile: any;
 }
 
-// Main login service function
 export const loginUser = async (
   email: string,
   password: string
