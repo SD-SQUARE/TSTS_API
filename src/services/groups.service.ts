@@ -9,10 +9,8 @@ import type { Request } from "express";
 import { PostgresDataSource } from "../database/postgres-data-source.js";
 import logger from "../utils/logger.js";
 import { In } from "typeorm";
+import { buildPagination, PaginationQuery } from "../utils/pagination.js";
 
-/**
- * Initialize repositories at module load (as you requested)
- */
 const groupsRepository = PostgresDataSource.getRepository(Group);
 const usersRepository = PostgresDataSource.getRepository(User);
 const specializationsRepository =
@@ -34,12 +32,16 @@ type CreateGroupInput = {
   specializations: string[];
 };
 
+interface GroupFilters {
+  name?: string;
+}
+
 export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
   logger.info("[server][groups][service] createGroup start", { data });
 
   // Validate team leader exists
   const leader = await usersRepository.findOne({
-    where: { id: data.team_leader },
+    where: { id: data.team_leader, deletedAt: null },
   });
 
   if (!leader) {
@@ -52,6 +54,7 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
   // Validate heads exist
   const foundHeads = await usersRepository.findBy({
     id: In(data.heads),
+    deletedAt: null,
   });
 
   if (foundHeads.length !== data.heads.length) {
@@ -65,6 +68,7 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
   // Validate specializations exist
   const foundSpecs = await specializationsRepository.findBy({
     id: In(data.specializations),
+    deletedAt: null,
   });
 
   if (foundSpecs.length !== data.specializations.length) {
@@ -75,26 +79,19 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
     throw new AppError(t("one_or_more_specializations_not_found"), 404);
   }
 
-  // Create group entity
+  // Create group entity with team leader
   const group = groupsRepository.create({
     name: { en: data.name_en, ar: data.name_ar },
     descriptions: { en: data.description_en, ar: data.description_ar },
     color: data.color,
+    teamLeader: leader,
   });
 
   try {
     await groupsRepository.save(group);
-    logger.info("[server][groups][service] Group saved", { id: group.id });
-
-    // Assign team leader → TechnicianGroup
-    const leaderRelation = technicianGroupRepository.create({
-      group,
-      user: leader,
-    });
-    await technicianGroupRepository.save(leaderRelation);
-    logger.info("[server][groups][service] Team leader assigned", {
-      groupId: group.id,
-      leaderId: leader.id,
+    logger.info("[server][groups][service] Group saved with team leader", {
+      id: group.id,
+      teamLeaderId: leader.id,
     });
 
     // Assign heads
@@ -150,4 +147,312 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
     }
     throw new AppError(t("internal_server_error"), 500);
   }
+};
+
+export const bulkAssignUsersToGroup = async (
+  groupId: string,
+  userIds: string[],
+  t: any
+) => {
+  logger.info("[server][groups][service] bulkAssignUsersToGroup start", {
+    groupId,
+    userIds,
+  });
+
+  const group = await groupsRepository.findOne({
+    where: { id: groupId, deletedAt: null },
+  });
+  if (!group) {
+    logger.info("[server][groups][service] Group not found", { groupId });
+    throw new AppError(t("group_not_found"), 404);
+  }
+
+  // Fetch all users in one query
+  const users = await usersRepository.findBy({
+    id: In(userIds),
+    deletedAt: null,
+  });
+
+  if (users.length !== userIds.length) {
+    const foundIds = users.map((u) => u.id);
+    const missing = userIds.filter((id) => !foundIds.includes(id));
+    logger.info("[server][groups][service] Some users not found", { missing });
+    throw new AppError(
+      t("some_users_not_found", { ids: missing.join(", ") }),
+      404
+    );
+  }
+
+  // Create relations
+  const relations = users.map((user) =>
+    technicianGroupRepository.create({
+      group,
+      user,
+    })
+  );
+
+  try {
+    await technicianGroupRepository.save(relations);
+    logger.info(
+      "[server][groups][service] Users assigned to group successfully",
+      { groupId }
+    );
+    return true;
+  } catch (err: any) {
+    logger.error("[server][groups][service] Failed to assign users", {
+      error: err,
+    });
+    throw new AppError(t("internal_server_error"), 500);
+  }
+};
+
+export const getGroupById = async (groupId: string, t: any) => {
+  logger.info("[server][groups][service] getGroupById request received", {
+    groupId,
+  });
+
+  const group = await groupsRepository.findOne({
+    where: { id: groupId, deletedAt: null },
+  });
+  if (!group) {
+    logger.info("[server][groups][service] Group not found", { groupId });
+    throw new AppError(t("group_not_found"), 404);
+  }
+
+  return {
+    id: group.id,
+    name_en: group.name?.en || "",
+    name_ar: group.name?.ar || "",
+    description_en: group.descriptions?.en || "",
+    description_ar: group.descriptions?.ar || "",
+    color: group.color || "",
+  };
+};
+
+export const softDeleteGroup = async (groupId: string, t: any) => {
+  logger.info("[server][groups][service] softDeleteGroup request received", {
+    groupId,
+  });
+
+  const group = await groupsRepository.findOne({
+    where: { id: groupId, deletedAt: null },
+  });
+  if (!group) {
+    logger.info("[server][groups][service] Group not found", { groupId });
+    throw new AppError(t("group_not_found"), 404);
+  }
+
+  if (group.deletedAt) {
+    logger.info("[server][groups][service] Group already deleted", { groupId });
+    return {
+      is_deleted: false,
+      message: t("group_already_deleted"),
+      errors: [],
+    };
+  }
+
+  group.deletedAt = new Date();
+  await groupsRepository.save(group);
+
+  logger.info("[server][groups][service] Group soft-deleted successfully", {
+    groupId,
+  });
+
+  return {
+    is_deleted: true,
+    message: t("group_deleted_successfully"),
+    errors: [],
+  };
+};
+
+export const editGroup = async (groupId: string, data: any, t: any) => {
+  logger.info("[server][groups][service] editGroup request received", {
+    groupId,
+    data,
+  });
+
+  const group = await groupsRepository.findOne({ where: { id: groupId } });
+  if (!group) {
+    logger.info("[server][groups][service] Group not found", { groupId });
+    throw new AppError(t("group_not_found"), 404);
+  }
+
+  group.name.en = data.name_en ?? group.name.en;
+  group.name.ar = data.name_ar ?? group.name.ar;
+  group.descriptions.en = data.description_en ?? group.descriptions.en;
+  group.descriptions.ar = data.description_ar ?? group.descriptions.ar;
+  group.color = data.color ?? group.color;
+
+  if (data.team_leader) {
+    const leader = await usersRepository.findOne({
+      where: { id: data.team_leader, deletedAt: null },
+    });
+
+    if (!leader) {
+      logger.info("[server][groups][service] Team leader not found", {
+        team_leader: data.team_leader,
+      });
+      throw new AppError(t("team_leader_not_found"), 404);
+    }
+
+    group.teamLeader = leader;
+    logger.info("[server][groups][service] Team leader updated", {
+      groupId,
+      newLeaderId: leader.id,
+    });
+  }
+
+  if (Array.isArray(data.heads) && data.heads.length > 0) {
+    group.heads = data.heads.map((h: any) => h.id);
+  }
+
+  if (Array.isArray(data.specializations) && data.specializations.length > 0) {
+    group.specializations = data.specializations.map((s: any) => s.id);
+  }
+
+  await groupsRepository.save(group);
+
+  logger.info("[server][groups][service] Group updated successfully", {
+    groupId,
+  });
+
+  return {
+    is_updated: true,
+    message: t("group_updated_successfully"),
+    errors: [],
+  };
+};
+
+const getUserFullName = (user: User, locale: string): string => {
+  const lang = locale === "ar" ? "ar" : "en";
+  const firstName = user.firstName?.[lang] || "";
+  const midName = user.midName?.[lang] || "";
+  const lastName = user.lastName?.[lang] || "";
+  return [firstName, midName, lastName].filter(Boolean).join(" ").trim();
+};
+
+export const getAllGroups = async (
+  pagination: PaginationQuery,
+  filters: GroupFilters,
+  t: any
+) => {
+  logger.info("[server][groups][service] getAllGroups request received", {
+    pagination,
+    filters,
+  });
+
+  const { skip, take, meta } = buildPagination(pagination);
+
+  // Get current locale from t function
+  const locale = t.locale || "en";
+
+  // Build query
+  const queryBuilder = groupsRepository
+    .createQueryBuilder("group")
+    .leftJoinAndSelect("group.teamLeader", "teamLeader")
+    .leftJoinAndSelect("group.heads", "groupHeads")
+    .leftJoinAndSelect("groupHeads.user", "headUser")
+    .leftJoinAndSelect("group.specializations", "groupSpecializations")
+    .leftJoinAndSelect("groupSpecializations.specialization", "specialization")
+    .where("group.deletedAt IS NULL");
+
+  // Apply name filter if provided
+  if (filters.name && filters.name.trim()) {
+    queryBuilder.andWhere(
+      "(group.name->>'en' ILIKE :name OR group.name->>'ar' ILIKE :name)",
+      { name: `%${filters.name.trim()}%` }
+    );
+  }
+
+  // Get total count
+  const total = await queryBuilder.getCount();
+
+  // Get paginated results
+  const groups = await queryBuilder.skip(skip).take(take).getMany();
+
+  logger.info("[server][groups][service] Groups fetched successfully", {
+    total,
+    returned: groups.length,
+    locale,
+  });
+
+  // Map to response format
+  const mappedGroups = groups.map(async (group) => ({
+    id: group.id,
+    name_en: group.name?.en || "",
+    name_ar: group.name?.ar || "",
+    description_en: group.descriptions?.en || "",
+    description_ar: group.descriptions?.ar || "",
+    color: group.color || "",
+    team_leader: (group as any).__teamLeader__
+      ? {
+          id: (group as any).__teamLeader__.id,
+          name: getUserFullName((group as any).__teamLeader__, locale),
+        }
+      : null,
+    heads:
+      (group as any).__heads__?.map((gh) => ({
+        id: gh.__user__.id,
+        name: getUserFullName(gh.__user__, locale),
+      })) || [],
+    specializations:
+      (group as any).__specializations__?.map((gs) => ({
+        id: gs.__specialization__.id,
+        name: gs.__specialization__.name?.[locale] || "",
+      })) || [],
+  }));
+
+  return {
+    groups: await Promise.all(mappedGroups),
+    meta_data: {
+      total,
+      page_index: meta.page_index,
+      page_size: meta.page_size,
+    },
+  };
+};
+
+export const getGroupUsersService = async (groupId: string, query: any) => {
+  const pageIndex = +(query.page_index || 1);
+  const pageSize = +(query.page_size || 10);
+
+  const group = await groupsRepository.findOne({
+    where: { id: groupId },
+    relations: ["heads", "teamLeader", "technicians"],
+  });
+
+  console.log(group);
+
+  if (!group) throw new AppError("group_not_found", 404);
+
+  // Extract ids from actual fields
+  const teamLeaderId = (group as any).__teamLeader__?.id ?? null;
+  const headIds = (group as any).__heads__?.map((h) => h.id) ?? [];
+  const technicianIds = (group as any).__technicians__?.map((t) => t.id) ?? [];
+
+  // Paginate technicians
+  const [technicians, total] = await usersRepository.findAndCount({
+    where: {
+      id: In(technicianIds),
+    },
+    skip: (pageIndex - 1) * pageSize,
+    take: pageSize,
+  });
+
+  return {
+    team_leader: teamLeaderId
+      ? await usersRepository.findOne({ where: { id: teamLeaderId } })
+      : null,
+    heads: headIds.length
+      ? await usersRepository.find({
+          where: { id: In(headIds) },
+        })
+      : [],
+    technicians,
+    meta_data: {
+      total,
+      page_index: pageIndex,
+      page_size: pageSize,
+    },
+  };
 };

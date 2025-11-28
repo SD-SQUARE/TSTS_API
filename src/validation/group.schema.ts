@@ -32,3 +32,10 @@ export const createGroupSchema = (t: Request["t"]) =>
       .array(z.string().uuid({ message: t("invalid_specialization_id") }))
       .min(1, { message: t("invalid_specializations") }),
   });
+
+export const bulkAssignUsersSchema = (t: any) =>
+  z.object({
+    users: z
+      .array(z.string().uuid({ message: t("invalid_user_id") }))
+      .min(1, { message: t("users_required") }),
+  });
