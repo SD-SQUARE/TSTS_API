@@ -1,5 +1,15 @@
 import { Request, Response, NextFunction } from "express";
-import { getUsersLockupService } from "../services/lockups.service.js";
+import {
+  getDepartmentsLockupService,
+  getDomainDepartmentsLockupService,
+  getDomainsLockupService,
+  getGroupsLockupService,
+  getPermissionsLockupService,
+  getSpecializationsLockupService,
+  getUniversitiesLockupService,
+  getUniversityDomainsLockupService,
+  getUsersLockupService,
+} from "../services/lockups.service.js";
 import { UserType } from "../enums/UserType.enum.js";
 
 export const getAllUsersLockup = async (req: Request, res: Response) => {
@@ -22,3 +32,75 @@ export const getAdminsLockup = createUserTypeController(UserType.ADMIN);
 export const getTechniciansLockup = createUserTypeController(
   UserType.TECHNICIAN
 );
+
+export const getPermissionsLockupController = async (
+  req: Request,
+  res: Response
+) => {
+  const data = await getPermissionsLockupService(req.query);
+  res.status(200).json(data);
+};
+
+export const getUniversitiesLockupController = async (
+  req: Request,
+  res: Response
+) => {
+  const universities = await getUniversitiesLockupService(req.query);
+  res.status(200).json({ universities });
+};
+
+export const getDomainsLockupController = async (
+  req: Request,
+  res: Response
+) => {
+  const domains = await getDomainsLockupService(req.query);
+  res.status(200).json({ domains });
+};
+
+export const getdepartmentsLockupController = async (
+  req: Request,
+  res: Response
+) => {
+  const departments = await getDepartmentsLockupService(req.query);
+  res.status(200).json({ departments });
+};
+
+export const getSpecializationsLockupController = async (
+  req: Request,
+  res: Response
+) => {
+  const specializations = await getSpecializationsLockupService(req.query);
+  res.status(200).json({ specializations });
+};
+
+export const getGroupsLockupController = async (
+  req: Request,
+  res: Response
+) => {
+  const groups = await getGroupsLockupService(req.query);
+  res.status(200).json({ groups });
+};
+
+export const getUniversityDomainsLockupController = async (
+  req: Request,
+  res: Response
+) => {
+  const universityId = req.params.id;
+  const domains = await getUniversityDomainsLockupService(
+    universityId,
+    req.query
+  );
+  res.status(200).json({ domains });
+};
+
+export const getDomainDepartmentsLockupController = async (
+  req: Request,
+  res: Response
+) => {
+  const domainId = req.params.id;
+  const departments = await getDomainDepartmentsLockupService(
+    domainId,
+    req.query
+  );
+  res.status(200).json({ departments });
+};
