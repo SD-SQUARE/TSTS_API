@@ -46,12 +46,18 @@ app.use(i18nextMiddleware.handle(i18n));
 if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "test")
   app.use(csrfMiddleware);
 
-import { authRouter, usersRouter, groupsRouter } from "./routes/index.js";
+import {
+  authRouter,
+  usersRouter,
+  groupsRouter,
+  lockupsRouter,
+} from "./routes/index.js";
 
 // routes
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/groups", groupsRouter);
+app.use("/api/v1/lockups", lockupsRouter);
 
 app.use(errorHandler);
 
