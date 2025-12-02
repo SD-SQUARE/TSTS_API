@@ -55,7 +55,7 @@ router
 
 router
   .post(
-    "/requester",
+    "/requesters",
     upload.single("image"),
     validate(createRequesterSchema),
     validateEmailAndSsnMiddleware,
@@ -78,7 +78,7 @@ router
 
 router
   .put(
-    "/requester/:id",
+    "/requesters/:id",
     upload.single("image"),
     validate(createRequesterSchema),
     validateEmailEditSsnMiddleware,
@@ -99,7 +99,7 @@ router
     asyncHandler(EditAdmin)
   );
 router
-  .delete("/requester/:id", asyncHandler(deleteRequester))
+  .delete("/requesters/:id", asyncHandler(deleteRequester))
   .delete("/technicians/:id", asyncHandler(deleteTechnician))
   .delete("/admins/:id", asyncHandler(deleteAdmin));
 

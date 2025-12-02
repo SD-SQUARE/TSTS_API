@@ -1,14 +1,23 @@
 import { User } from "../../entities/index.js";
+import { fetchAllTechniciansGroupsService } from "../../services/users/profile/profileQueryService.js";
 import { getPresignedUrl } from "../../utils/storage.js";
+import { GroupDto, toGroupDto } from "../groups/toGroupDto.js";
 
 type TechnicianDto = {
   id: string;
   image: string | null;
   email: string;
   user_type: string;
-  first_name: string | null;
-  mid_name: string | null;
-  last_name: string | null;
+
+  first_name_en: string | null;
+  first_name_ar: string | null;
+
+  mid_name_en: string | null;
+  mid_name_ar: string | null;
+
+  last_name_en: string | null;
+  last_name_ar: string | null;
+
   ssn: string | null;
   university: { id: string; name: string } | null;
   domain: { id: string; name: string } | null;
@@ -18,7 +27,11 @@ type TechnicianDto = {
     mobiles: string[];
   };
   status: string;
-  job: string;
+
+  job_ar: string;
+  job_en: string;
+
+  groups: GroupDto[];
 };
 
 export const toTechnician = async (
@@ -56,9 +69,14 @@ export const toTechnician = async (
     email: entity.email,
     user_type: entity.user_type,
 
-    first_name: entity.firstName?.[lang] ?? null,
-    mid_name: entity.midName?.[lang] ?? null,
-    last_name: entity.lastName?.[lang] ?? null,
+    first_name_en: entity.firstName.en ?? null,
+    first_name_ar: entity.firstName.ar ?? null,
+
+    mid_name_en: entity.midName.en ?? null,
+    mid_name_ar: entity.midName.ar ?? null,
+
+    last_name_en: entity.lastName.en ?? null,
+    last_name_ar: entity.lastName.ar ?? null,
 
     ssn: entity.ssn ?? null,
 
@@ -86,6 +104,10 @@ export const toTechnician = async (
     },
 
     status: entity.status,
-    job: entity.job?.[lang] ?? "",
+
+    job_ar: entity.job.ar ?? "",
+    job_en: entity.job.en ?? "",
+
+    groups: await fetchAllTechniciansGroupsService(entity.id, lang),
   };
 };

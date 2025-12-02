@@ -5,7 +5,7 @@ import { t } from "i18next";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 import {
-  fetchUserGroupsService,
+  fetchUserGroupsByTypeService,
   fetchUserSpecializationsService,
   getMyProfile,
   getUserProfileByType,
@@ -72,7 +72,7 @@ export const getUserGroups = async (req: Request, res: Response) => {
       .json({ is_deleted: false, message: t("invalid_uuid") });
   }
 
-  const profile = await fetchUserGroupsService(id, pagination, lang);
+  const profile = await fetchUserGroupsByTypeService(id, pagination, lang);
 
   return res.status(ResponseStatus.SUCCESS).json(profile);
 };

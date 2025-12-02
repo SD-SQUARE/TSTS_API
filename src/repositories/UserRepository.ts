@@ -7,9 +7,12 @@ import { UserType } from "../enums/UserType.enum.js";
 import { IPagination } from "../interfaces/shared/IPagination.js";
 import { parsePageIndex, parsePageSize } from "../helpers/paginationHelper.js";
 import { TechnicianGroup } from "../entities/TechnicianGroup.js";
-import { GroupDto, toGroupDto } from "../mappers/groups/toGroupDto.js";
 import { Group } from "../entities/Group.js";
-import { AllowedSpecialization, Specialization } from "../entities/index.js";
+import {
+  AllowedSpecialization,
+  GroupHead,
+  Specialization,
+} from "../entities/index.js";
 
 export class UserRepository {
   private repo = PostgresDataSource.getRepository(User);
@@ -285,12 +288,11 @@ export class UserRepository {
     return user?.user_type ?? null;
   }
 
-  async getUserGroups(
+  async getTechniciansGroupsPaged(
     userId: string,
     query?: IPagination
   ): Promise<[Group[], number]> {
     const tgRepo = PostgresDataSource.getRepository(TechnicianGroup);
-
     const qb = tgRepo
       .createQueryBuilder("tg")
       .leftJoinAndSelect("tg.group", "g")
@@ -313,6 +315,30 @@ export class UserRepository {
     return [groups, total];
   }
 
+  async getAdminsGroupsHeadsPaged(
+    userId: string,
+    query?: IPagination
+  ): Promise<[Group[], number]> {
+    const ghRepo = PostgresDataSource.getRepository(GroupHead);
+
+    const qb = ghRepo
+      .createQueryBuilder("tg")
+      .leftJoinAndSelect("tg.group", "g")
+      .leftJoinAndSelect("tg.user", "u")
+      .where("u.id = :userId", { userId })
+      .andWhere('u."deletedAt" IS NULL');
+
+    const pageIndex = parsePageIndex(query?.page_index);
+    const pageSize = parsePageSize(query?.page_size);
+    const skip = (pageIndex - 1) * pageSize;
+
+    qb.skip(skip).take(pageSize);
+    const [techGroups, total] = await qb.getManyAndCount();
+
+    const groups = await Promise.all(techGroups.map((tg) => tg.group));
+
+    return [groups, total];
+  }
   async getUserSpecializations(
     userId: string,
     query?: IPagination
@@ -342,6 +368,39 @@ export class UserRepository {
     );
 
     return [specializations, total];
+  }
+
+  async getAllTechniciansGroups(userId: string): Promise<Group[]> {
+    const tgRepo = PostgresDataSource.getRepository(TechnicianGroup);
+
+    const qb = tgRepo
+      .createQueryBuilder("tg")
+      .leftJoinAndSelect("tg.group", "g")
+      .leftJoinAndSelect("tg.user", "u")
+      .where("u.id = :userId", { userId })
+      .andWhere('u."deletedAt" IS NULL')
+      .andWhere("u.user_type != :adminType", {
+        adminType: UserType.SUPER_ADMIN,
+      });
+
+    const techGroups = await qb.getMany();
+    const groups = await Promise.all(techGroups.map((tg) => tg.group));
+    return groups;
+  }
+
+  async getAllAdminsGroupsAsHeads(userId: string): Promise<Group[]> {
+    const tgRepo = PostgresDataSource.getRepository(GroupHead);
+
+    const qb = tgRepo
+      .createQueryBuilder("tg")
+      .leftJoinAndSelect("tg.group", "g")
+      .leftJoinAndSelect("tg.user", "u")
+      .where("u.id = :userId", { userId })
+      .andWhere('u."deletedAt" IS NULL');
+
+    const adminsGroups = await qb.getMany();
+    const groups = await Promise.all(adminsGroups.map((tg) => tg.group));
+    return groups;
   }
 }
 export const userRepository = new UserRepository();

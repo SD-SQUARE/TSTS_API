@@ -1,4 +1,4 @@
-import { Specialization } from "../../../entities/Specialization.js";
+import { Group } from "../../../entities/index.js";
 import { UserType } from "../../../enums/UserType.enum.js";
 import {
   parsePageIndex,
@@ -35,7 +35,7 @@ export const getMyProfile = async (id, lang: "ar" | "en") => {
   } else return null;
 };
 
-export const fetchUserGroupsService = async (
+export const fetchUserGroupsByTypeService = async (
   userId: string,
   query: IPagination,
   lang: "ar" | "en"
@@ -43,7 +43,24 @@ export const fetchUserGroupsService = async (
   query.page_index = parsePageIndex(query?.page_index);
   query.page_size = parsePageSize(query?.page_size);
 
-  const [groups, total] = await userRepository.getUserGroups(userId, query);
+  const userType = await userRepository.getUserTypeByUserId(userId);
+
+  let groups: Group[] = [];
+  let total = 0;
+
+  if (userType === UserType.ADMIN || userType === UserType.SUPER_ADMIN) {
+    [groups, total] = await userRepository.getAdminsGroupsHeadsPaged(
+      userId,
+      query
+    );
+  } else if (userType === UserType.TECHNICIAN) {
+    [groups, total] = await userRepository.getTechniciansGroupsPaged(
+      userId,
+      query // if you need pagination in repo
+    );
+  } else {
+    return null;
+  }
 
   const dtoList = await Promise.all(groups.map((g) => toGroupDto(g, lang)));
 
@@ -80,4 +97,22 @@ export const fetchUserSpecializationsService = async (
       ...query,
     },
   };
+};
+
+export const fetchAllTechniciansGroupsService = async (
+  userId: string,
+  lang: "ar" | "en"
+) => {
+  const groups = await userRepository.getAllTechniciansGroups(userId);
+
+  return await Promise.all(groups.map((g) => toGroupDto(g, lang)));
+};
+
+export const fetchAllAdminsGroupsAsHeadsService = async (
+  userId: string,
+  lang: "ar" | "en"
+) => {
+  const groups = await userRepository.getAllAdminsGroupsAsHeads(userId);
+
+  return await Promise.all(groups.map((g) => toGroupDto(g, lang)));
 };
