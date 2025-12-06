@@ -52,12 +52,23 @@ import {
   groupsRouter,
   lockupsRouter,
 } from "./routes/index.js";
-
+import universitiesRouter from "./routes/universities.router.js";
+import domainsRouter from "./routes/domains.router.js";
+import departmentsRouter from "./routes/departments.router.js";
+import specializationsRouter from "./routes/specializations.router.js";
+import workHourRouter from "./routes/workHour.router.js";
 // routes
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/groups", groupsRouter);
 app.use("/api/v1/lockups", lockupsRouter);
+app.use("/api/v1/universities", universitiesRouter );
+app.use("/api/v1/domains", domainsRouter );
+app.use("/api/v1/departments", departmentsRouter );
+app.use("/api/v1/specializations", specializationsRouter );
+app.use("/api/v1/work-hours", workHourRouter );
+
+
 
 app.use(errorHandler);
 
