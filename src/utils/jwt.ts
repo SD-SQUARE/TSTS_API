@@ -1,10 +1,14 @@
 import jwt, { SignOptions } from "jsonwebtoken";
+import { StringValue } from "ms";
 
 const SECRET = process.env.JWT_SECRET || "supersecret";
 
 const HOUR = 3600;
 
-export const generateToken = (payload: object, expiresIn = HOUR) => {
+export const generateToken = (
+  payload: object,
+  expiresIn: StringValue | number = HOUR
+) => {
   const options: SignOptions = {
     expiresIn,
   };

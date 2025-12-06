@@ -8,8 +8,10 @@ import { UsersPermissions } from "./UsersPermissions.js";
 import { UserDepartment } from "./UserDepartment.js";
 import { University } from "./University.js";
 import { Domain } from "./Domain.js";
+import { Domain } from "./Domain.js";
 import { UserStatus } from "../enums/UserStatus.enum.js";
 import { UserType } from "../enums/UserType.enum.js";
+import { Group } from "./Group.js";
 
 @Entity({ name: "users" })
 @Unique(["email"])
@@ -44,6 +46,7 @@ export class User extends BaseEntity {
   contacts?: { mobile?: string[]; phone?: string[] };
 
   @ManyToOne(() => University, (u) => u.domains, { nullable: true, lazy: true })
+  @ManyToOne(() => University, (u) => u.domains, { nullable: true, lazy: true })
   university?: University;
 
   @ManyToOne(() => Domain, { nullable: true, lazy: true })
@@ -72,4 +75,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => UserDepartment, (ud) => ud.user, { lazy: true })
   userDepartments!: UserDepartment[];
+
+  @OneToMany(() => Group, (g) => g.teamLeader, { lazy: true })
+  ledGroups!: Group[];
 }

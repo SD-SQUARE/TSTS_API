@@ -12,8 +12,9 @@
     "db:destroy": "docker-compose -f ./docker/compose.db.yml down -v",
     "db:reset": "run-s db:destroy db:start dev",
     "secret:publish:example": "node ./scripts/publish-env.js",
-    "test": "jest --runInBand",
-    "seed": "tsx src/database/seeding/index.ts"
+    "seed": "tsx src/database/seeding/index.ts",
+    "seed:users": "tsx src/database/seeding/users/userSeeder.ts",
+    "test": "jest --runInBand"
   },
   "keywords": [],
   "author": "",
@@ -39,6 +40,7 @@
     "i18next-http-middleware": "^3.8.2",
     "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
+    "ms": "^2.1.3",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.10",
     "pg": "^8.16.3",

@@ -25,8 +25,9 @@
   "user_deleted": "تم حذف المستخدم",
   "user_not_found": "المستخدم غير موجود",
 
-  "invalid_mail": "البريد الالكتروني غير صالح",
-  "password_too_short": "كلمة المرور قصيرة جدا",
+  "invalid_mail":  "البريد الالكتروني غير صالح",
+  "password_too_short":  "كلمة المرور قصيرة جدا",
+  "account_locked": "الحساب مغلق",
   "invalid_image_extension": "امتداد الصورة غير صالح",
   "image_must_be_under_1mb": "حجم الصورة يجب أن يكون أقل من 1 ميجابايت",
   "password_must_contain_uppercase": "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل",

@@ -29,9 +29,10 @@
 
   "university_not_found": "University not found",
 
-  "invalid_mail": "Invalid email",
+  "invalid_mail":  "Invalid email",
 
-  "password_too_short": "Password too short",
+  "password_too_short":  "Password too short",
+  "account_locked": "Account locked for 1 hour due to multiple failed attempts",
   "password_must_contain_uppercase": "Password must contain at least one uppercase letter",
   "password_must_contain_number": "Password must contain at least one number",
   "password_must_contain_special_char": "Password must contain at least one special character",
