@@ -9,12 +9,12 @@ import { normalizeRelations } from "../utils/normalizeRelations.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 export async function createDepartment(req: Request, res: Response){
 
-    const { name_en,name_ar, description_ar,description_en, domainId } = req.body;
+    const { name_en,name_ar, description_ar,description_en, domain } = req.body;
     const departmentRepo = new DepartmentRepo().getRepository();
-    if (!domainId) {
+    if (!domain) {
         return res.status(400).json({ message:req.t?req.t("domain_required") :"domain id required" });
     }
-    const domainEntity = await departmentRepo.manager.findOne(Domain, { where: { id: domainId } });
+    const domainEntity = await departmentRepo.manager.findOne(Domain, { where: { id: domain } });
     if (!domainEntity) {
         return res.status(ResponseStatus.NOT_FOUND).json({ message:req.t?req.t("domain_not_found"): "Domain not found" });
     }
@@ -25,7 +25,7 @@ export async function createDepartment(req: Request, res: Response){
     const existing = await departmentRepo
         .createQueryBuilder("dept")
         .where(`dept.name->>'en' = :en`, { en: nameObj.en })
-        .andWhere("dept.domainId = :did", { did: domainId })
+        .andWhere("dept.domain = :did", { did: domain })
         .getOne();
     if (existing) {
         return res.status(ResponseStatus.CONFLICT).json({ message:req.t?req.t("department_exists"): "Department with this name already exists" });
@@ -35,7 +35,7 @@ export async function createDepartment(req: Request, res: Response){
     const department = departmentRepo.create({
         name: nameObj,
         description: descriptionObj,
-        domain: { id: domainId },
+        domain: { id: domain },
     });
     await departmentRepo.save(department);
 
@@ -63,7 +63,7 @@ export async function getDepartmentById(req: Request, res: Response) {
 
 export async function updateDepartment(req: Request, res: Response) {
   const { id } = req.params;
-  const { name_en, name_ar,description_ar,description_en, domainId } = req.body;
+  const { name_en, name_ar,description_ar,description_en, domain } = req.body;
 
   const departmentRepo = new DepartmentRepo().getRepository();
   const department = await departmentRepo.findOne({
@@ -74,9 +74,9 @@ export async function updateDepartment(req: Request, res: Response) {
   if (!department) {
     return res.status(ResponseStatus.NOT_FOUND).json({ message:req.t?req.t("department_not_found"): "Department not found" });
   }
-  if (domainId) {
+  if (domain) {
     const domainEntity = await departmentRepo.manager.findOne(Domain, {
-      where: { id: domainId },
+      where: { id: domain },
     });
     if (!domainEntity) {
       return res.status(ResponseStatus.NOT_FOUND).json({ message:req.t?req.t("domain_not_found"): "Domain not found" });

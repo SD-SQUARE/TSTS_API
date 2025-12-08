@@ -24,13 +24,13 @@ export class Group extends BaseEntity {
   @Column({ type: "varchar", length: 255, nullable: true })
   color?: string;
 
-  @OneToMany(() => TechnicianGroup, (tg) => tg.group, { lazy: true })
+  @OneToMany(() => TechnicianGroup, (tg) => tg.group, )
   technicians!: TechnicianGroup[];
 
-  @OneToMany(() => GroupHead, (gh) => gh.group, { lazy: true })
+  @OneToMany(() => GroupHead, (gh) => gh.group, )
   heads!: GroupHead[];
 
-  @OneToMany(() => GroupSpecialization, (gs) => gs.group, { lazy: true })
+  @OneToMany(() => GroupSpecialization, (gs) => gs.group, )
   specializations!: GroupSpecialization[];
 
   @ManyToOne(() => User, { nullable: true, lazy: true })

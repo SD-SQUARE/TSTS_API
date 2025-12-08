@@ -8,7 +8,6 @@ import { UsersPermissions } from "./UsersPermissions.js";
 import { UserDepartment } from "./UserDepartment.js";
 import { University } from "./University.js";
 import { Domain } from "./Domain.js";
-import { Domain } from "./Domain.js";
 import { UserStatus } from "../enums/UserStatus.enum.js";
 import { UserType } from "../enums/UserType.enum.js";
 import { Group } from "./Group.js";
@@ -61,13 +60,13 @@ export class User extends BaseEntity {
   @Column({ type: "jsonb", nullable: true })
   job?: { en?: string; ar?: string };
 
-  @OneToMany(() => TechnicianGroup, (tg) => tg.user, { lazy: true })
+  @OneToMany(() => TechnicianGroup, (tg) => tg.user, )
   technicianGroups!: TechnicianGroup[];
 
   @OneToMany(() => AllowedSpecialization, (as) => as.user, { lazy: true })
   allowedSpecializations!: AllowedSpecialization[];
 
-  @OneToMany(() => GroupHead, (gh) => gh.user, { lazy: true })
+  @OneToMany(() => GroupHead, (gh) => gh.user, )
   groupHeads!: GroupHead[];
 
   @OneToMany(() => UsersPermissions, (up) => up.user, { lazy: true })
@@ -76,6 +75,6 @@ export class User extends BaseEntity {
   @OneToMany(() => UserDepartment, (ud) => ud.user, { lazy: true })
   userDepartments!: UserDepartment[];
 
-  @OneToMany(() => Group, (g) => g.teamLeader, { lazy: true })
+  @OneToMany(() => Group, (g) => g.teamLeader, )
   ledGroups!: Group[];
 }

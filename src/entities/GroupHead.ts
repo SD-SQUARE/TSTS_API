@@ -9,6 +9,6 @@ export class GroupHead extends BaseEntity {
   @ManyToOne(() => Group, (g) => g.heads, { onDelete: "CASCADE", lazy: true })
   group!: Group;
 
-  @ManyToOne(() => User, (u) => u.groupHeads, { onDelete: "CASCADE", lazy: true })
+  @ManyToOne(() => User, (u) => u.groupHeads, { onDelete: "CASCADE", lazy: false })
   user!: User;
 }

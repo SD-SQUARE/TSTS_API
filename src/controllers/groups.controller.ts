@@ -71,6 +71,7 @@ export const bulkAssignUsersController = async (
 
 export const getGroupController = async (req: Request, res: Response) => {
   const t = req.t;
+  const lang = req.language;
   const groupId = req.params.id;
 
   logger.info(
@@ -83,7 +84,7 @@ export const getGroupController = async (req: Request, res: Response) => {
     throw new AppError(t("group_id_required"), 400);
   }
 
-  const group = await getGroupById(groupId, t);
+  const group = await getGroupById(groupId, t, lang);
   return res.status(200).json(group);
 };
 

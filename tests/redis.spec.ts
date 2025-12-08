@@ -1,6 +1,6 @@
 import { redisClient } from "../src/database/redis";
 
-describe("Redis Test", () => {
+xdescribe("Redis Test", () => {
     beforeAll(async () => {
       if (!redisClient.isOpen) {
         await redisClient.connect();

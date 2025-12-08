@@ -11,6 +11,7 @@ import logger from "../utils/logger.js";
 import { In } from "typeorm";
 import { buildPagination, PaginationQuery } from "../utils/pagination.js";
 
+
 const groupsRepository = PostgresDataSource.getRepository(Group);
 const usersRepository = PostgresDataSource.getRepository(User);
 const specializationsRepository =
@@ -206,14 +207,26 @@ export const bulkAssignUsersToGroup = async (
   }
 };
 
-export const getGroupById = async (groupId: string, t: any) => {
+export const getGroupById = async (groupId: string, t: any, lang: string = "en") => {
   logger.info("[server][groups][service] getGroupById request received", {
     groupId,
   });
 
-  const group = await groupsRepository.findOne({
-    where: { id: groupId, deletedAt: null },
-  });
+  // const group = await groupsRepository.findOne({
+  //   where: { id: groupId, deletedAt: null },
+  // })
+  const groupQuery = groupsRepository
+    .createQueryBuilder("group")
+    .leftJoinAndSelect("group.teamLeader", "teamLeader")
+    .leftJoinAndSelect("group.heads", "groupHeads")
+    .leftJoinAndSelect("groupHeads.user", "headUser")
+    .leftJoinAndSelect("group.specializations", "groupSpecializations")
+    .leftJoinAndSelect("groupSpecializations.specialization", "specialization")
+    .where("group.deletedAt IS NULL")
+    .where("group.id = :id", { id: groupId });
+
+    const group = await groupQuery.getOne();
+    
   if (!group) {
     logger.info("[server][groups][service] Group not found", { groupId });
     throw new AppError(t("group_not_found"), 404);
@@ -226,6 +239,11 @@ export const getGroupById = async (groupId: string, t: any) => {
     description_en: group.descriptions?.en || "",
     description_ar: group.descriptions?.ar || "",
     color: group.color || "",
+    specializations: group.specializations.map((s) =>{
+      return  { 
+      id:s.specialization.id, 
+      name: lang === "en" ? s.specialization.name.en : s.specialization.name.ar}
+      ;}),
   };
 };
 
@@ -391,14 +409,14 @@ export const getAllGroups = async (
         }
       : null,
     heads:
-      (group as any).__heads__?.map((gh) => ({
-        id: gh.__user__.id,
-        name: getUserFullName(gh.__user__, locale),
+      (group as any).heads?.map((gh) => ({
+        id: gh.user.id,
+        name: getUserFullName(gh.user, locale),
       })) || [],
     specializations:
-      (group as any).__specializations__?.map((gs) => ({
-        id: gs.__specialization__.id,
-        name: gs.__specialization__.name?.[locale] || "",
+      (group as any).specializations?.map((gs) => ({
+        id: gs.specialization.id,
+        name: gs.specialization.name?.[locale] || "",
       })) || [],
   }));
 
@@ -418,18 +436,18 @@ export const getGroupUsersService = async (groupId: string, query: any) => {
 
   const group = await groupsRepository.findOne({
     where: { id: groupId },
-    relations: ["heads", "teamLeader", "technicians"],
+    relations: ["heads", "heads.user","teamLeader", "technicians","technicians.user"],
+
   });
 
   console.log(group);
+  logger.info(`[server][groups][service] getGroupUsers request received ${group.id}`);
 
   if (!group) throw new AppError("group_not_found", 404);
-
   // Extract ids from actual fields
   const teamLeaderId = (group as any).__teamLeader__?.id ?? null;
-  const headIds = (group as any).__heads__?.map((h) => h.id) ?? [];
-  const technicianIds = (group as any).__technicians__?.map((t) => t.id) ?? [];
-
+  const headIds = (group as any).heads?.map((h) => h.user.id) ?? [];
+  const technicianIds = (group as any).technicians?.map((t) => t.user.id) ?? [];
   // Paginate technicians
   const [technicians, total] = await usersRepository.findAndCount({
     where: {

@@ -9,6 +9,7 @@ import { seedTechnicians } from "./technicians.seed.js";
 import { seedRequesters } from "./requesters.seed.js";
 import { seedGroups } from "./groups.seed.js";
 import { seedGroupRelations } from "./group-relations.seed.js";
+import { seedSpecializations } from "./specializations.seed.js";
 
 async function runSeeds() {
   try {
@@ -19,6 +20,7 @@ async function runSeeds() {
     console.log("🚀 Starting database seeding...");
 
     // Order is important because of FK dependencies
+    await seedSpecializations(PostgresDataSource);
     await seedUniversities(PostgresDataSource);
     await seedDomains(PostgresDataSource);
     await seedDepartments(PostgresDataSource);

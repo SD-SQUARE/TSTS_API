@@ -10,6 +10,7 @@ import { BaseEntity } from "./BaseEntity.js";
 import { Domain } from "./Domain.js";
 import { UserDepartment } from "./UserDepartment.js";
 import { normalizeRelations } from "../utils/normalizeRelations.js";
+import { mapJsonFields } from "../utils/formatter.js";
 type PaginatedResult<T> = {
   departments: T[];
   meta: {
@@ -44,6 +45,15 @@ export class Department extends BaseEntity {
   @OneToMany(() => UserDepartment, (ud) => ud.department, { lazy: true })
   userDepartments!: UserDepartment[];
 
+  toApi() {
+      return {
+        ...this,
+        ...mapJsonFields(this.name, { fields: { name_en: "en", name_ar: "ar" } }),
+        ...mapJsonFields(this.description ?? {}, {
+          fields: { description_en: "en", description_ar: "ar" },
+        }),
+      };
+    }
   static async paginate(
     filters: DepartmentFilter = {},
     repo?: Repository<Department>,
@@ -95,7 +105,9 @@ export class Department extends BaseEntity {
     qb.skip((page - 1) * limit).take(limit);
 
     const [data, total] = await qb.getManyAndCount();
-    const plain=JSON.parse(JSON.stringify(data));
+
+    const formattedData = data.map((d) => d.toApi());
+    const plain=JSON.parse(JSON.stringify(formattedData));
     const normalizedData = normalizeRelations(plain);
 
     return {

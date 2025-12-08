@@ -9,6 +9,7 @@ import {
 import { BaseEntity } from "./BaseEntity.js";
 import { University } from "./University.js";
 import { Department } from "./Department.js";
+import { mapJsonFields } from "../utils/formatter.js";
 
 type PaginatedResult<T> = {
   domains: T[];
@@ -33,6 +34,15 @@ export class Domain extends BaseEntity {
   @OneToMany(() => Department, (d) => d.domain, { lazy: true })
   departments!: Department[];
 
+  toApi() {
+      return {
+        ...this,
+        ...mapJsonFields(this.name, { fields: { name_en: "en", name_ar: "ar" } }),
+        ...mapJsonFields(this.description ?? {}, {
+          fields: { description_en: "en", description_ar: "ar" },
+        }),
+      };
+    }
  static async paginate(
   page = 1,
   limit = 20,
@@ -74,7 +84,8 @@ export class Domain extends BaseEntity {
 
   const [data, total] = await qb.getManyAndCount();
 
-  const domains = data.map(d => {
+  const formatted = data.map((d) => d.toApi());
+  const domains = formatted.map(d => {
     const plain = JSON.parse(JSON.stringify(d));
     if (plain.__university__ !== undefined) {
       plain.university = plain.__university__;
@@ -82,6 +93,7 @@ export class Domain extends BaseEntity {
     }
     return plain;
   });
+
 
   return {
     domains,

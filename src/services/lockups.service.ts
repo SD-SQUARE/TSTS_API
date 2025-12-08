@@ -104,7 +104,7 @@ export const getUsersLockupService = async (query: UsersLockupQuery) => {
   const total = await qb.getCount();
 
   // Get paginated results
-  const users = await qb.skip(skip).take(take).getMany();
+  const users = await qb.getMany();
 
   // Map to lockup format
   const mappedUsers = users.map((u) => ({
