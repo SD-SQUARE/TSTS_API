@@ -1,4 +1,3 @@
-// src/database/seeding/requesters.seed.ts
 import { DataSource } from "typeorm";
 import {
   Department,
@@ -9,6 +8,12 @@ import {
 import { UserType } from "../../enums/UserType.enum.js";
 import { CreateRequesterMapped } from "../../interfaces/requester/ICreateRequester.js";
 import { createRequesterService } from "../../services/users/requester/requesterCommandService.js";
+import {
+  arabicMenNames,
+  arabicNames,
+  englishMenNames,
+  englishNames,
+} from "./personNamesDataSet.js";
 
 // ---------- Helpers (could be shared with technicians.seed.ts) ----------
 function getRandomItem<T>(arr: T[]): T {
@@ -122,14 +127,14 @@ export async function seedRequesters(
       email,
       password: "Req@123456",
 
-      firstNameEn: "Requester",
-      firstNameAr: "مستخدم",
+      firstNameAr: arabicNames[i % arabicNames.length], // English name
+      firstNameEn: englishNames[i % englishNames.length], // Arabic name
 
-      midNameEn: `mid${i}`,
-      midNameAr: `نص${i}`,
+      midNameEn: englishMenNames[(i + 1) % englishMenNames.length], // English middle name
+      midNameAr: arabicMenNames[(i + 1) % arabicMenNames.length], // Arabic middle name
 
-      lastNameEn: `#${i}`,
-      lastNameAr: `رقم ${i}`,
+      lastNameEn: englishMenNames[(i + 2) % englishMenNames.length], // English last name
+      lastNameAr: arabicMenNames[(i + 2) % arabicMenNames.length], // Arabic last name
 
       ssn,
       mobiles: [mobile, mobile],

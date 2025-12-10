@@ -1,4 +1,3 @@
-// src/database/seeding/admins.seed.ts
 import { DataSource } from "typeorm";
 import {
   Department,
@@ -9,6 +8,12 @@ import {
 import { UserType } from "../../enums/UserType.enum.js";
 import { CreateAdminMapped } from "../../interfaces/admin/ICreateAdmin.js";
 import { createAdminService } from "../../services/users/admin/adminCommandService.js";
+import {
+  arabicMenNames,
+  arabicNames,
+  englishMenNames,
+  englishNames,
+} from "./personNamesDataSet.js";
 
 // ---------- Helpers ----------
 function getRandomItem<T>(arr: T[]): T {
@@ -131,14 +136,15 @@ export async function seedAdmins(dataSource: DataSource, count = 100) {
       password: "Admin@123456", // will be hashed by mapAdminToUserEntity
 
       // -------- name fields (based on mapAdminToUserEntity) --------
-      firstNameEn: "Admin",
-      firstNameAr: "مسؤول",
 
-      midNameEn: `mid${i}`,
-      midNameAr: `نص${i}`,
+      firstNameAr: arabicNames[i % arabicNames.length], // English name
+      firstNameEn: englishNames[i % englishNames.length], // Arabic name
 
-      lastNameEn: `#${i}`,
-      lastNameAr: `رقم ${i}`,
+      midNameEn: englishMenNames[(i + 1) % englishMenNames.length], // English middle name
+      midNameAr: arabicMenNames[(i + 1) % arabicMenNames.length], // Arabic middle name
+
+      lastNameEn: englishMenNames[(i + 2) % englishMenNames.length], // English last name
+      lastNameAr: arabicMenNames[(i + 2) % arabicMenNames.length], // Arabic last name
 
       // -------- identity / contacts --------
       ssn,

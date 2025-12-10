@@ -9,6 +9,7 @@ import { seedTechnicians } from "./technicians.seed.js";
 import { seedRequesters } from "./requesters.seed.js";
 import { seedGroups } from "./groups.seed.js";
 import { seedGroupRelations } from "./group-relations.seed.js";
+import { addAvatarsToUsers } from "./seedAvatars.js";
 
 async function runSeeds() {
   try {
@@ -32,7 +33,9 @@ async function runSeeds() {
     await seedAdmins(PostgresDataSource, 100);
 
     await seedTechnicians(PostgresDataSource, 100); // 100 technicians
-    await seedRequesters(PostgresDataSource, 200);
+    await seedRequesters(PostgresDataSource, 100);
+
+    // await addAvatarsToUsers(PostgresDataSource);
 
     // 4) group ↔ specs & group ↔ heads
     await seedGroupRelations(PostgresDataSource);

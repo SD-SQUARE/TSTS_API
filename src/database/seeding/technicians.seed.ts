@@ -8,6 +8,12 @@ import {
 import { UserType } from "../../enums/UserType.enum.js";
 import { CreateTechnicianMapped } from "../../interfaces/technician/ICreateTechnician.js";
 import { createTechnicianService } from "../../services/users/technician/technicianCommandService.js";
+import {
+  arabicMenNames,
+  arabicNames,
+  englishMenNames,
+  englishNames,
+} from "./personNamesDataSet.js";
 
 // ---------- Helpers ----------
 function getRandomItem<T>(arr: T[]): T {
@@ -121,14 +127,14 @@ export async function seedTechnicians(
       email,
       password: "Tech@123456",
 
-      firstNameEn: "Technician",
-      firstNameAr: "فني",
+      firstNameAr: arabicNames[i % arabicNames.length], // English name
+      firstNameEn: englishNames[i % englishNames.length], // Arabic name
 
-      midNameEn: `mid${i}`,
-      midNameAr: `نص${i}`,
+      midNameEn: englishMenNames[(i + 1) % englishMenNames.length], // English middle name
+      midNameAr: arabicMenNames[(i + 1) % arabicMenNames.length], // Arabic middle name
 
-      lastNameEn: `#${i}`,
-      lastNameAr: `رقم ${i}`,
+      lastNameEn: englishMenNames[(i + 2) % englishMenNames.length], // English last name
+      lastNameAr: arabicMenNames[(i + 2) % arabicMenNames.length], // Arabic last name
 
       ssn,
       mobiles: [mobile, mobile],
