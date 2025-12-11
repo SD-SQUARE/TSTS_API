@@ -1,4 +1,5 @@
 import express from "express";
+import http from "http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import cors from "cors";
@@ -10,8 +11,14 @@ import * as i18nextMiddleware from "i18next-http-middleware";
 import i18n from "./config/i18n.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { csrfMiddleware } from "./config/csrf.js";
+import { socketIoMiddleware } from "./middleware/socketIo.js";
+import { io as socketIoInstance } from "./config/socket.js";
+import { notificationMessage, notificationUser, ticket } from "./services/socket.service.js";
+
 
 const app = express();
+
+
 
 // basic security
 app.use(helmet({ contentSecurityPolicy: false })); // CSP setup later if needed
@@ -40,6 +47,9 @@ app.use(limiter);
 // i18n
 app.use(i18nextMiddleware.handle(i18n));
 
+app.use(socketIoMiddleware(socketIoInstance));
+
+
 // CSRF (set up if using cookies and forms; for API token flows consider disabling)
 // @AhmedElsenaty
 // TODO: enable in prod
@@ -57,7 +67,28 @@ import domainsRouter from "./routes/domains.router.js";
 import departmentsRouter from "./routes/departments.router.js";
 import specializationsRouter from "./routes/specializations.router.js";
 import workHourRouter from "./routes/workHour.router.js";
+import logger from "./utils/logger.js";
 // routes
+app.get("/api/v1/health", (req, res) => {
+  logger.info("[HealthCheck]: OK");
+  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
+
+});
+app.post("/debug/send-events", (_req, res) => {
+  notificationMessage("server_started", { message: "Server has started" });
+  notificationUser("user_update", {
+    userId: "00d53802-93a0-4213-a729-10555798929e",
+    info: "Profile updated",
+  });
+  notificationUser("user_ticket", {
+    userId: "00d53802-93a0-4213-a729-10555798929e",
+    ticketId: "ticket111",
+    info: "New comment",
+  });
+  ticket("ticket_update", { ticketId: "ticket111", status: "In Progress" });
+  res.sendStatus(204);
+});
+
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/groups", groupsRouter);

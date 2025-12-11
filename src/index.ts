@@ -8,9 +8,12 @@ import { initDataSource } from "./database/postgres-data-source.js";
 import app from "./app.js";
 import logger from "./utils/logger.js";
 import { connectRedis } from "./database/redis.js";
+import { initSocket } from "./config/socket.js";
+import http from "http";
 
 const HOST = process.env.HOST ?? "localhost";
 const PORT = process.env.PORT ?? 3000;
+const server = http.createServer(app);
 
 /**
  * Main entry point of the application.
@@ -20,9 +23,11 @@ const PORT = process.env.PORT ?? 3000;
 async function main() {
     initDataSource();
     connectRedis();
-    app.listen(PORT, () => {
+    initSocket(server);
+    server.listen(PORT, () => {
         logger.info(`[server] listening on http://${HOST}:${PORT}`);
     });
+    
 }
 
 main();
