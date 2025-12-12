@@ -5,7 +5,9 @@ import {
   getdepartmentsLockupController,
   getDomainDepartmentsLockupController,
   getDomainsLockupController,
+  getGroupNonTechnicians,
   getGroupsLockupController,
+  getGroupTechnicians,
   getPermissionsLockupController,
   getRequestersLockup,
   getSpecializationsLockupController,
@@ -28,5 +30,7 @@ router.get("/specializations", getSpecializationsLockupController);
 router.get("/groups", getGroupsLockupController);
 router.get("/universities/:id/domains", getUniversityDomainsLockupController);
 router.get("/domains/:id/departments", getDomainDepartmentsLockupController);
+router.get("/group/:groupId/technicians", getGroupTechnicians);
+router.get("/group/:groupId/non-members-technicians", getGroupNonTechnicians);
 
 export default router;

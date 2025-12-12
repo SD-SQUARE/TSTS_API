@@ -3,7 +3,9 @@ import {
   getDepartmentsLockupService,
   getDomainDepartmentsLockupService,
   getDomainsLockupService,
+  getGroupNonTechniciansLockupService,
   getGroupsLockupService,
+  getGroupTechniciansLockupService,
   getPermissionsLockupService,
   getSpecializationsLockupService,
   getUniversitiesLockupService,
@@ -103,4 +105,26 @@ export const getDomainDepartmentsLockupController = async (
     req.query
   );
   res.status(200).json({ departments });
+};
+
+export const getGroupTechnicians = async (req: Request, res: Response) => {
+  const { groupId } = req.params;
+
+  const technicians = await getGroupTechniciansLockupService(
+    groupId,
+    req.query
+  );
+
+  res.status(200).json({ technicians });
+};
+
+export const getGroupNonTechnicians = async (req: Request, res: Response) => {
+  const { groupId } = req.params;
+
+  const technicians = await getGroupNonTechniciansLockupService(
+    groupId,
+    req.query
+  );
+
+  res.status(200).json({ technicians });
 };

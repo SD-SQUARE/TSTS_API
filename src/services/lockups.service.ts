@@ -54,6 +54,11 @@ interface DomainDepartmentsLockupQuery extends PaginationQuery {
   domainId: string;
 }
 
+interface GroupTechniciansQuery extends PaginationQuery {
+  name?: string;
+  job?: string;
+}
+
 const usersRepository = PostgresDataSource.getRepository(User);
 const permissionsRepository = PostgresDataSource.getRepository(Permission);
 const universitiesRepository = PostgresDataSource.getRepository(University);
@@ -367,5 +372,108 @@ export const getDomainDepartmentsLockupService = async (
     id: d.id,
     name: d.name?.en || "",
     description: d.description?.en || "",
+  }));
+};
+
+export const getGroupTechniciansLockupService = async (
+  groupId: string,
+  query: GroupTechniciansQuery
+) => {
+  const qb = groupsRepository
+    .createQueryBuilder("group")
+    .leftJoin("group.technicians", "tg")
+    .leftJoin("tg.user", "user")
+    .where("group.id = :groupId", { groupId })
+    .select([
+      "user.id AS id",
+      "user.firstName AS firstName",
+      "user.midName AS midName",
+      "user.lastName AS lastName",
+      "user.job AS job",
+    ]);
+
+  if (query.name) {
+    qb.andWhere(
+      `(
+          user."firstName"->>'en' ILIKE :name OR user."firstName"->>'ar' ILIKE :name OR
+          user."midName"->>'en' ILIKE :name OR user."midName"->>'ar' ILIKE :name OR
+          user."lastName"->>'en' ILIKE :name OR user."lastName"->>'ar' ILIKE :name
+      )`,
+      { name: `%${query.name}%` }
+    );
+  }
+
+  if (query.job) {
+    qb.andWhere(
+      `(
+          user."job"->>'en' ILIKE :job OR
+          user."job"->>'ar' ILIKE :job
+      )`,
+      { job: `%${query.job}%` }
+    );
+  }
+
+  const rows = await qb.getRawMany();
+
+  return rows.map((t) => ({
+    id: t.id,
+    first_name: t.firstname,
+    mid_name: t.midname,
+    last_name: t.lastname,
+    job_title: t.job,
+  }));
+};
+
+export const getGroupNonTechniciansLockupService = async (
+  groupId: string,
+  query: GroupTechniciansQuery
+) => {
+  const qb = usersRepository
+    .createQueryBuilder("user")
+    .where("user.user_type = :type", { type: "Technician" })
+    .andWhere(
+      `
+      user.id NOT IN (
+        SELECT tg."userId" 
+        FROM technician_groups tg 
+        WHERE tg."groupId" = :groupId
+      )
+    `,
+      { groupId }
+    )
+    .select([
+      "user.id AS id",
+      "user.firstName AS firstName",
+      "user.midName AS midName",
+      "user.lastName AS lastName",
+      "user.job AS job",
+    ]);
+
+  if (query.name) {
+    qb.andWhere(
+      `(
+        user."firstName"->>'en' ILIKE :name OR user."firstName"->>'ar' ILIKE :name OR
+        user."midName"->>'en' ILIKE :name OR user."midName"->>'ar' ILIKE :name OR
+        user."lastName"->>'en' ILIKE :name OR user."lastName"->>'ar' ILIKE :name
+      )`,
+      { name: `%${query.name}%` }
+    );
+  }
+
+  if (query.job) {
+    qb.andWhere(
+      `(user."job"->>'en' ILIKE :job OR user."job"->>'ar' ILIKE :job)`,
+      { job: `%${query.job}%` }
+    );
+  }
+
+  const rows = await qb.getRawMany();
+
+  return rows.map((t) => ({
+    id: t.id,
+    first_name: t.firstname,
+    mid_name: t.midname,
+    last_name: t.lastname,
+    job_title: t.job,
   }));
 };
