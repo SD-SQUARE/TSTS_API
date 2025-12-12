@@ -14,6 +14,8 @@ import {
   englishMenNames,
   englishNames,
 } from "./personNamesDataSet.js";
+import { Faker, en, ar } from "@faker-js/faker";
+import { downloadAvatarImage } from "./downloadAvatarImage.js";
 
 // ---------- Helpers ----------
 function getRandomItem<T>(arr: T[]): T {
@@ -46,6 +48,10 @@ export async function seedTechnicians(
   dataSource: DataSource,
   count = 100
 ): Promise<void> {
+  const faker = new Faker({
+    locale: [en, ar],
+  });
+
   const deptRepo = dataSource.getRepository(Department);
   const profileRepo = dataSource.getRepository(PermissionProfile);
   const specRepo = dataSource.getRepository(Specialization);
@@ -160,7 +166,9 @@ export async function seedTechnicians(
       `🚀 [TechniciansSeed] Creating technician ${i}: ${email} (uni=${randomDept.uniId}, domain=${randomDept.domainId}, dept=${randomDept.deptId}, profile=${randomProfile.id})`
     );
 
-    const result = await createTechnicianService(dto);
+    const avatarUrl = faker.image.avatar();
+    const avatarFile = await downloadAvatarImage(avatarUrl);
+    const result = await createTechnicianService(dto, avatarFile);
 
     if (!result.is_added) {
       console.error(
