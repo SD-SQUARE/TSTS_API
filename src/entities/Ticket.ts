@@ -27,7 +27,7 @@ export class Ticket {
   @Column({ type: "varchar", length: 100 })
   title: string;
 
-  @Column({ type: "varchar", length: 2000 })
+  @Column({ type: "text", length: 2000 })
   description: string;
 
   @ManyToOne(() => User, (user) => user.requestedTickets, { nullable: false })
