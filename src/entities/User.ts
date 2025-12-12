@@ -11,6 +11,11 @@ import { Domain } from "./Domain.js";
 import { UserStatus } from "../enums/UserStatus.enum.js";
 import { UserType } from "../enums/UserType.enum.js";
 import { Group } from "./Group.js";
+import { Ticket } from "./Ticket.js";
+import { TicketChat } from "./TicketChat.js";
+import { TicketListener } from "./TicketListener.js";
+import { NotificationRead } from "./NotificationRead.js";
+import { ChatMessage } from "./ChatMessage.js";
 
 @Entity({ name: "users" })
 @Unique(["email"])
@@ -60,13 +65,13 @@ export class User extends BaseEntity {
   @Column({ type: "jsonb", nullable: true })
   job?: { en?: string; ar?: string };
 
-  @OneToMany(() => TechnicianGroup, (tg) => tg.user, )
+  @OneToMany(() => TechnicianGroup, (tg) => tg.user)
   technicianGroups!: TechnicianGroup[];
 
   @OneToMany(() => AllowedSpecialization, (as) => as.user, { lazy: true })
   allowedSpecializations!: AllowedSpecialization[];
 
-  @OneToMany(() => GroupHead, (gh) => gh.user, )
+  @OneToMany(() => GroupHead, (gh) => gh.user)
   groupHeads!: GroupHead[];
 
   @OneToMany(() => UsersPermissions, (up) => up.user, { lazy: true })
@@ -75,6 +80,21 @@ export class User extends BaseEntity {
   @OneToMany(() => UserDepartment, (ud) => ud.user, { lazy: true })
   userDepartments!: UserDepartment[];
 
-  @OneToMany(() => Group, (g) => g.teamLeader, )
+  @OneToMany(() => Group, (g) => g.teamLeader)
   ledGroups!: Group[];
+
+  @OneToMany(() => Ticket, (ticket) => ticket.requester)
+  requestedTickets: Ticket[];
+
+  @OneToMany(() => TicketChat, (chat) => chat.sender)
+  chats: TicketChat[];
+
+  @OneToMany(() => TicketListener, (listener) => listener.user)
+  listenedTickets: TicketListener[];
+
+  @OneToMany(() => NotificationRead, (read) => read.user)
+  notificationsRead: NotificationRead[];
+
+  @OneToMany(() => ChatMessage, (msg) => msg.sender)
+  messages: ChatMessage[];
 }
