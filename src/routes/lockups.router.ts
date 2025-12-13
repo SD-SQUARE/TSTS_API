@@ -14,6 +14,7 @@ import {
   getTechniciansLockup,
   getUniversitiesLockupController,
   getUniversityDomainsLockupController,
+  getUserTicketsLockupController,
 } from "../controllers/lockups..controller.js";
 
 const router = Router();
@@ -32,5 +33,6 @@ router.get("/universities/:id/domains", getUniversityDomainsLockupController);
 router.get("/domains/:id/departments", getDomainDepartmentsLockupController);
 router.get("/group/:groupId/technicians", getGroupTechnicians);
 router.get("/group/:groupId/non-members-technicians", getGroupNonTechnicians);
+router.get("/ticket/:id", getUserTicketsLockupController);
 
 export default router;

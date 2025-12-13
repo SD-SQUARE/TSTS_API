@@ -11,6 +11,7 @@ import { Domain } from "../entities/Domain.js";
 import { Department } from "../entities/Department.js";
 import { Specialization } from "../entities/Specialization.js";
 import { Group } from "../entities/Group.js";
+import { Ticket } from "../entities/Ticket.js";
 
 interface UsersLockupQuery {
   first_name?: string;
@@ -67,6 +68,7 @@ const departmentsRepository = PostgresDataSource.getRepository(Department);
 const specializationsRepository =
   PostgresDataSource.getRepository(Specialization);
 const groupsRepository = PostgresDataSource.getRepository(Group);
+const ticketsRepository = PostgresDataSource.getRepository(Ticket);
 
 export const getUsersLockupService = async (query: UsersLockupQuery) => {
   const { skip, take } = buildPagination({
@@ -475,5 +477,24 @@ export const getGroupNonTechniciansLockupService = async (
     mid_name: t.midname,
     last_name: t.lastname,
     job_title: t.job,
+  }));
+};
+
+export const getUserTicketsLockupService = async (userId: string) => {
+  const tickets = await ticketsRepository
+    .createQueryBuilder("ticket")
+    .leftJoinAndSelect("ticket.requester", "requester")
+    .leftJoinAndSelect("ticket.specialization", "specialization")
+    .leftJoinAndSelect("ticket.assigneeList", "assignee")
+    .where("requester.id = :userId", { userId })
+    .orWhere("assignee.id = :userId", { userId })
+    .orderBy("ticket.createdAt", "DESC")
+    .getMany();
+
+  return tickets.map((ticket) => ({
+    id: ticket.id,
+    title: ticket.title,
+    description: ticket.description,
+    status: ticket.status,
   }));
 };

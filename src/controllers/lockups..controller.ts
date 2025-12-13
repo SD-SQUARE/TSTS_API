@@ -11,6 +11,7 @@ import {
   getUniversitiesLockupService,
   getUniversityDomainsLockupService,
   getUsersLockupService,
+  getUserTicketsLockupService,
 } from "../services/lockups.service.js";
 import { UserType } from "../enums/UserType.enum.js";
 
@@ -127,4 +128,15 @@ export const getGroupNonTechnicians = async (req: Request, res: Response) => {
   );
 
   res.status(200).json({ technicians });
+};
+
+export const getUserTicketsLockupController = async (
+  req: Request,
+  res: Response
+) => {
+  const { id } = req.params;
+
+  const tickets = await getUserTicketsLockupService(id);
+
+  return res.status(200).json(tickets);
 };
