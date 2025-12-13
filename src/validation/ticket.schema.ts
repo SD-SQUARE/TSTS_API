@@ -22,3 +22,20 @@ export const createTicketSchema = (t: Request["t"]) =>
       .nullable()
       .optional(),
   });
+
+export const getTicketsSchema = (t: Request["t"]) =>
+  z.object({
+    title: z.string().optional(),
+
+    specialization: z.string().uuid(t("invalid_specialization_id")).optional(),
+
+    status: z.string().optional(),
+
+    priority: z.string().optional(),
+
+    page_index: z.coerce.number().int().min(1).optional(),
+
+    page_size: z.coerce.number().int().min(1).max(100).optional(),
+  });
+
+export type GetTicketsQuery = z.infer<ReturnType<typeof getTicketsSchema>>;
