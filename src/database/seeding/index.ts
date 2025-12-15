@@ -31,10 +31,10 @@ async function runSeeds() {
     await seedGroups(PostgresDataSource);
 
     // 2) dynamic admins (random uni/domain/dept/profile/specs)
-    await seedAdmins(PostgresDataSource, 100);
+    await seedAdmins(PostgresDataSource, 10);
 
-    await seedTechnicians(PostgresDataSource, 100); // 100 technicians
-    await seedRequesters(PostgresDataSource, 200);
+    await seedTechnicians(PostgresDataSource, 10); // 100 technicians
+    await seedRequesters(PostgresDataSource, 10);
 
     // 4) group ↔ specs & group ↔ heads
     await seedGroupRelations(PostgresDataSource);

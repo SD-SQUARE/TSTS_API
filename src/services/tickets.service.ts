@@ -21,7 +21,7 @@ const mediaRepo = PostgresDataSource.getRepository(Media);
 const specializationRepo = PostgresDataSource.getRepository(Specialization);
 const ticketActivityRepo = PostgresDataSource.getRepository(TicketActivity);
 
-const logTicketActivity = async (
+export const logTicketActivity = async (
   ticket: Ticket,
   title: string,
   type: TicketActivityType,

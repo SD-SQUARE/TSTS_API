@@ -9,6 +9,10 @@ import {
   getSingleTicketService,
   getTicketActivitiesService,
 } from "../services/tickets.service.js";
+import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
+import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
+import { deleteTicketService } from "../services/tickets/ticket.command.service.js";
+import { t } from "i18next";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -60,4 +64,27 @@ export const getTicketActivitiesController = async (
 
   const activities = await getTicketActivitiesService(ticketId);
   return res.status(200).json(activities);
+};
+
+export const deleteTicketController = async (req: Request, res: Response) => {
+  const id = req.params.id;
+  const isValid = uuidValidationSchema.safeParse(id);
+
+  if (!id || !isValid.success) {
+    logger.info(
+      "[server][tickets][controller] Validation failed: invalid ticket id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_deleted: false, message: t("ticket.invalid_id") });
+  }
+
+  const result = await deleteTicketService(id);
+  if (!result.is_deleted) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_deleted: result.is_deleted, message: result.message });
+  }
+
+  return res.status(ResponseStatus.SUCCESS).json(result);
 };

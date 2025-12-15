@@ -10,4 +10,5 @@ export enum TicketActivityType {
   REOPENED = "reopened",
   VIEW = "view",
   FIRST_OPEN = "first_open",
+  Deleted = "deleted",
 }
