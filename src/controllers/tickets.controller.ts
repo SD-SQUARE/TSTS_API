@@ -13,6 +13,8 @@ import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 import { deleteTicketService } from "../services/tickets/ticket.command.service.js";
 import { t } from "i18next";
+import { editTicketForAdminAndTechniciansSchema } from "../validation/tickets/edit-for-admins-and-technicians.js";
+import { editTicketForAdminAndTechniciansService } from "../services/tickets/command/edit-for-admins-and-technicians.service.js";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -64,6 +66,39 @@ export const getTicketActivitiesController = async (
 
   const activities = await getTicketActivitiesService(ticketId);
   return res.status(200).json(activities);
+};
+
+export const editTicketForAdminsAndTechniciansController = async (
+  req: Request,
+  res: Response
+) => {
+  const ticketId = req.params.id;
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][controller] Validation failed: invalid ticket id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_deleted: false, message: t("ticket.invalid_id") });
+  }
+
+  // Validate request body
+  const schema = editTicketForAdminAndTechniciansSchema(req.t);
+
+  const parsed = schema.safeParse(req.body);
+
+  const result = await editTicketForAdminAndTechniciansService(
+    ticketId,
+    parsed.data
+  );
+
+  if (!result.is_edited) {
+    return res.status(ResponseStatus.BAD_REQUEST).json(result);
+  }
+
+  return res.status(ResponseStatus.SUCCESS).json(result);
 };
 
 export const deleteTicketController = async (req: Request, res: Response) => {
