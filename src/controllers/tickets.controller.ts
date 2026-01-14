@@ -18,6 +18,8 @@ import { TokenHelper } from "../helpers/TokenHelper.js";
 import { editTicketForRequesterService } from "../services/tickets/command/edit-for-requester.service.js";
 import { editTicketForRequesterSchema } from "../validation/tickets/edit-for-requester.js";
 import { uploadTicketMediaSchema } from "../validation/tickets/media/upload-ticket-media-schema.js";
+import { uploadTicketAssetsService } from "../services/tickets/tickets-media/command/upload-tickets-assets.service.js";
+import { file } from "zod";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -170,16 +172,6 @@ export const uploadTicketAssetController = async (req: any, res: Response) => {
   const userData = TokenHelper.getUserFromReqUser(req.user);
   const ticketId = req.params.id;
 
-  const validation = uploadTicketMediaSchema.safeParse({
-    files: req.files,
-  });
-
-  if (!validation.success) {
-    return res
-      .status(ResponseStatus.BAD_REQUEST)
-      .json({ message: t("ticket.at_least_one_file_required") });
-  }
-
   // Validate ticket ID
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
@@ -191,7 +183,19 @@ export const uploadTicketAssetController = async (req: any, res: Response) => {
       .json({ is_added: false, message: t("ticket.invalid_id") });
   }
 
+  const validation = uploadTicketMediaSchema.safeParse({
+    files: req.files,
+  });
+
+  if (!validation.success) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: t("ticket.at_least_one_file_required") });
+  }
+
   const files = req.files;
+
+  const result = await uploadTicketAssetsService(ticketId, files, userData);
 
   logger.info(
     `[server][tickets][uploadTicketAssetController] User ${
@@ -201,9 +205,9 @@ export const uploadTicketAssetController = async (req: any, res: Response) => {
       .join(", ")}`
   );
 
-  return res
-    .status(ResponseStatus.SUCCESS)
-    .json({ message: "Files uploaded successfully", files: files });
+  if (!result.is_added) return res.status(ResponseStatus.BAD_REQUEST).json(res);
+
+  return res.status(ResponseStatus.SUCCESS).json(result);
 };
 
 export const getAllTicketAssetsController = async (req: any, res: Response) => {

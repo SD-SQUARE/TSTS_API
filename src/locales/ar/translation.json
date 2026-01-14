@@ -110,6 +110,8 @@
     "invalid_id": "معرف التذكرة غير صالح",
     "not_found": "التذكرة غير موجودة",
     "deleted": "تم حذف التذكرة",
-    "at_least_one_file_required": "يجب تحميل ملف واحد على الأقل"
+    "at_least_one_file_required": "يجب تحميل ملف واحد على الأقل",
+    "media_uploaded": "تم رفع وسائط التذكرة بنجاح",
+    "media_upload_failed": "فشل رفع وسائط التذكرة"
   }
 }

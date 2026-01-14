@@ -115,6 +115,8 @@
     "invalid_id": "invalid ticket id",
     "not_found": "ticket not found",
     "deleted": "ticket deleted",
-    "at_least_one_file_required": "At least one file required"
+    "at_least_one_file_required": "At least one file required",
+    "media_uploaded": "Ticket media uploaded successfully",
+    "media_upload_failed": "Ticket media upload failed"
   }
 }
