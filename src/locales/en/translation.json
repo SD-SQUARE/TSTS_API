@@ -119,6 +119,7 @@
     "media_uploaded": "Ticket media uploaded successfully",
     "media_upload_failed": "Ticket media upload failed",
     "asset_not_found": "ticket asset not found",
-    "asset_loaded": "Ticket asset loaded"
+    "asset_loaded": "Ticket asset loaded",
+    "asset_deleted": "Ticket asset deleted"
   }
 }

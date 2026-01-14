@@ -8,6 +8,7 @@ import { formatActor } from "../../../../helpers/formatActor.js";
 import { logTicketActivity } from "../../../tickets.service.js";
 import { TicketActivityType } from "../../../../enums/TicketActivity.enum.js";
 import { IDeleteResponse } from "../../../../interfaces/response/IDeleteResponse.js";
+import { deleteFile } from "../../../../utils/storage.js";
 
 export const deleteSingleTicketAssetService = async (
   ticketId: string,
@@ -54,6 +55,8 @@ export const deleteSingleTicketAssetService = async (
       ],
     };
   }
+
+  await deleteFile(process.env.MINIO_BUCKET, asset.url);
 
   // Delete the asset
   await mediaRepo.remove(asset);
