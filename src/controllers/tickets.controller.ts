@@ -17,6 +17,7 @@ import { editTicketForAdminAndTechniciansService } from "../services/tickets/com
 import { TokenHelper } from "../helpers/TokenHelper.js";
 import { editTicketForRequesterService } from "../services/tickets/command/edit-for-requester.service.js";
 import { editTicketForRequesterSchema } from "../validation/tickets/edit-for-requester.js";
+import { uploadTicketMediaSchema } from "../validation/tickets/media/upload-ticket-media-schema.js";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -81,11 +82,11 @@ export const editTicketForAdminsAndTechniciansController = async (
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
     logger.info(
-      "[server][tickets][controller] Validation failed: invalid ticket id"
+      "[server][tickets][editTicketForAdminsAndTechniciansController] Validation failed: invalid ticket id"
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
-      .json({ is_deleted: false, message: t("ticket.invalid_id") });
+      .json({ is_edited: false, message: t("ticket.invalid_id") });
   }
 
   // Validate request body
@@ -117,11 +118,11 @@ export const editTicketForRequesterController = async (
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
     logger.info(
-      "[server][tickets][controller] Validation failed: invalid ticket id"
+      "[server][tickets][editTicketForRequesterController] Validation failed: invalid ticket id"
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
-      .json({ is_deleted: false, message: t("ticket.invalid_id") });
+      .json({ is_edited: false, message: t("ticket.invalid_id") });
   }
 
   // Validate request body
@@ -148,7 +149,7 @@ export const deleteTicketController = async (req: Request, res: Response) => {
 
   if (!id || !isValid.success) {
     logger.info(
-      "[server][tickets][controller] Validation failed: invalid ticket id"
+      "[server][tickets][deleteTicketController] Validation failed: invalid ticket id"
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -163,4 +164,127 @@ export const deleteTicketController = async (req: Request, res: Response) => {
   }
 
   return res.status(ResponseStatus.SUCCESS).json(result);
+};
+
+export const uploadTicketAssetController = async (req: any, res: Response) => {
+  const userData = TokenHelper.getUserFromReqUser(req.user);
+  const ticketId = req.params.id;
+
+  const validation = uploadTicketMediaSchema.safeParse({
+    files: req.files,
+  });
+
+  if (!validation.success) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: t("ticket.at_least_one_file_required") });
+  }
+
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][uploadTicketAssetController] Validation failed: invalid ticket id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_added: false, message: t("ticket.invalid_id") });
+  }
+
+  const files = req.files;
+
+  logger.info(
+    `[server][tickets][uploadTicketAssetController] User ${
+      userData.id
+    } uploaded files to ticket ${ticketId}: ${files
+      .map((file: any) => file.originalname)
+      .join(", ")}`
+  );
+
+  return res
+    .status(ResponseStatus.SUCCESS)
+    .json({ message: "Files uploaded successfully", files: files });
+};
+
+export const getAllTicketAssetsController = async (req: any, res: Response) => {
+  const ticketId = req.params.id;
+
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][getAllTicketAssetsController] Validation failed: invalid ticket id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: t("ticket.invalid_id") });
+  }
+
+  return res.status(ResponseStatus.SUCCESS).json({ message: "successfully" });
+};
+
+export const getSingleTicketAssetController = async (
+  req: any,
+  res: Response
+) => {
+  const ticketId = req.params.id;
+  const aid = req.params.aid; // asset ID
+
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][getSingleTicketAssetController] Validation failed: invalid ticket id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: req.t("ticket.invalid_id") });
+  }
+
+  // Validate asset ID (aid)
+  const assetIdValidation = uuidValidationSchema.safeParse(aid);
+  if (!aid || !assetIdValidation.success) {
+    logger.info(
+      "[server][tickets][getSingleTicketAssetController] Validation failed: invalid asset id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: req.t("asset.invalid_id") });
+  }
+
+  return res
+    .status(ResponseStatus.SUCCESS)
+    .json({ message: "Successfully validated ticket and asset ID" });
+};
+
+export const deleteTicketAssetController = async (
+  req: Request,
+  res: Response
+) => {
+  const ticketId = req.params.id;
+  const aid = req.params.aid; // asset ID
+
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][deleteTicketAssetController] Validation failed: invalid ticket id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: req.t("ticket.invalid_id") });
+  }
+
+  // Validate asset ID (aid)
+  const assetIdValidation = uuidValidationSchema.safeParse(aid);
+  if (!aid || !assetIdValidation.success) {
+    logger.info(
+      "[server][tickets][deleteTicketAssetController] Validation failed: invalid asset id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: req.t("asset.invalid_id") });
+  }
+
+  return res.status(ResponseStatus.SUCCESS).json("deleted");
 };

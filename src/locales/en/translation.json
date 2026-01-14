@@ -114,6 +114,7 @@
   "ticket": {
     "invalid_id": "invalid ticket id",
     "not_found": "ticket not found",
-    "deleted": "ticket deleted"
+    "deleted": "ticket deleted",
+    "at_least_one_file_required": "At least one file required"
   }
 }
