@@ -24,6 +24,7 @@ import {
   getSingleTicketAssetService,
   getTicketAssetsService,
 } from "../services/tickets/tickets-media/query/get-ticket-assets.service.js";
+import { deleteSingleTicketAssetService } from "../services/tickets/tickets-media/command/delete-asset-ticket.service.js";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -275,10 +276,9 @@ export const getSingleTicketAssetController = async (
   return res.status(ResponseStatus.SUCCESS).json(result.data);
 };
 
-export const deleteTicketAssetController = async (
-  req: Request,
-  res: Response
-) => {
+export const deleteTicketAssetController = async (req: any, res: Response) => {
+  const userData = TokenHelper.getUserFromReqUser(req.user);
+
   const ticketId = req.params.id;
   const aid = req.params.aid; // asset ID
 
@@ -304,5 +304,12 @@ export const deleteTicketAssetController = async (
       .json({ message: req.t("asset.invalid_id") });
   }
 
-  return res.status(ResponseStatus.SUCCESS).json("deleted");
+  const result = await deleteSingleTicketAssetService(ticketId, aid, userData);
+  if (!result.is_deleted) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_deleted: result.is_deleted, message: result.message });
+  }
+
+  return res.status(ResponseStatus.SUCCESS).json(result);
 };
