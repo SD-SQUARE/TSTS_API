@@ -16,7 +16,7 @@ import { IEditResponse } from "../../../interfaces/response/IEditResponse.js";
 import { UserData } from "../../../types/UserData.js";
 
 // todo  Emit WebSocket event
-export const editTicketForAdminAndTechniciansService = async (
+export const editTicketForRequesterService = async (
   ticketId: string,
   updateData: any,
   userData: UserData
@@ -57,36 +57,6 @@ export const editTicketForAdminAndTechniciansService = async (
     false
   );
 
-  applyPrimitiveUpdate(
-    "status",
-    updateData,
-    existingTicket,
-    updates,
-    changes,
-    wsFlag,
-    true
-  );
-
-  applyPrimitiveUpdate(
-    "priority",
-    updateData,
-    existingTicket,
-    updates,
-    changes,
-    wsFlag,
-    false
-  );
-
-  applyPrimitiveUpdate(
-    "isOutOfService",
-    updateData,
-    existingTicket,
-    updates,
-    changes,
-    wsFlag,
-    true
-  );
-
   const specializationError = await handleSpecializationUpdate(
     updateData,
     existingTicket,
@@ -94,15 +64,6 @@ export const editTicketForAdminAndTechniciansService = async (
     changes
   );
   if (specializationError) return specializationError;
-
-  const assigneeError = await handleAssigneeListUpdate(
-    updateData,
-    existingTicket,
-    updates,
-    changes,
-    wsFlag
-  );
-  if (assigneeError) return assigneeError;
 
   const updatedTicket = await saveTicketUpdates(existingTicket, updates);
 

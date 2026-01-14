@@ -1,4 +1,3 @@
-// src/controllers/tickets.controller.ts
 import { Request, Response } from "express";
 import { createTicketSchema } from "../validation/ticket.schema.js";
 import logger from "../utils/logger.js";
@@ -15,6 +14,9 @@ import { deleteTicketService } from "../services/tickets/ticket.command.service.
 import { t } from "i18next";
 import { editTicketForAdminAndTechniciansSchema } from "../validation/tickets/edit-for-admins-and-technicians.js";
 import { editTicketForAdminAndTechniciansService } from "../services/tickets/command/edit-for-admins-and-technicians.service.js";
+import { TokenHelper } from "../helpers/TokenHelper.js";
+import { editTicketForRequesterService } from "../services/tickets/command/edit-for-requester.service.js";
+import { editTicketForRequesterSchema } from "../validation/tickets/edit-for-requester.js";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -69,9 +71,11 @@ export const getTicketActivitiesController = async (
 };
 
 export const editTicketForAdminsAndTechniciansController = async (
-  req: Request,
+  req: any,
   res: Response
 ) => {
+  const userData = TokenHelper.getUserFromReqUser(req.user);
+
   const ticketId = req.params.id;
   // Validate ticket ID
   const idValidation = uuidValidationSchema.safeParse(ticketId);
@@ -91,7 +95,44 @@ export const editTicketForAdminsAndTechniciansController = async (
 
   const result = await editTicketForAdminAndTechniciansService(
     ticketId,
-    parsed.data
+    parsed.data,
+    userData
+  );
+
+  if (!result.is_edited) {
+    return res.status(ResponseStatus.BAD_REQUEST).json(result);
+  }
+
+  return res.status(ResponseStatus.SUCCESS).json(result);
+};
+
+export const editTicketForRequesterController = async (
+  req: any,
+  res: Response
+) => {
+  const userData = TokenHelper.getUserFromReqUser(req.user);
+
+  const ticketId = req.params.id;
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][controller] Validation failed: invalid ticket id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_deleted: false, message: t("ticket.invalid_id") });
+  }
+
+  // Validate request body
+  const schema = editTicketForRequesterSchema(req.t);
+
+  const parsed = schema.safeParse(req.body);
+
+  const result = await editTicketForRequesterService(
+    ticketId,
+    parsed.data,
+    userData
   );
 
   if (!result.is_edited) {

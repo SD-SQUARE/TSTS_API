@@ -3,10 +3,12 @@ import { Specialization } from "../../entities/index.js";
 import { Ticket } from "../../entities/Ticket.js";
 import { User } from "../../entities/User.js";
 import { TicketActivityType } from "../../enums/TicketActivity.enum.js";
+import { formatActor } from "../../helpers/formatActor.js";
 import { mapStatusToActivityType } from "../../helpers/ticketsHelper.js";
 import { IEditResponse } from "../../interfaces/response/IEditResponse.js";
 import { assigneeNotFound } from "../../responses/assignees.js";
 import { specializationNotFound } from "../../responses/specializations.js";
+import { UserData } from "../../types/UserData.js";
 import logger from "../../utils/logger.js";
 import { logTicketActivity } from "../tickets.service.js";
 
@@ -148,23 +150,29 @@ export const buildActivityContent = (changes: ChangeMap) => {
 
 export const logGeneralUpdateActivity = async (
   updatedTicket: Ticket,
-  changes: ChangeMap
+  changes: ChangeMap,
+  userData: UserData
 ) => {
   const activityContent = buildActivityContent(changes);
+
+  const { actor, actorText } = formatActor(userData);
 
   await logTicketActivity(
     updatedTicket,
     "Ticket Updated",
     TicketActivityType.INFO,
-    `Ticket "${updatedTicket.title}" was updated: ${activityContent}`,
-    { changes, updatedFields: Object.keys(changes) }
+    `Ticket "${updatedTicket.title}" was updated by ${actorText}: ${activityContent}`,
+    { actor, changes, updatedFields: Object.keys(changes) }
   );
 };
 
 export const logSpecificActivities = async (
   updatedTicket: Ticket,
-  changes: ChangeMap
+  changes: ChangeMap,
+  userdata: UserData
 ) => {
+  const { actor, actorText } = formatActor(userdata);
+
   if (changes.status) {
     const activityType = mapStatusToActivityType(changes.status.to);
 
@@ -172,8 +180,8 @@ export const logSpecificActivities = async (
       updatedTicket,
       "Status Changed",
       activityType,
-      `Ticket status changed from ${changes.status.from} to ${changes.status.to}`,
-      { statusChange: changes.status }
+      `Ticket status changed by ${actorText} from ${changes.status.from} to ${changes.status.to}`,
+      { actor, statusChange: changes.status }
     );
   }
 
@@ -182,8 +190,8 @@ export const logSpecificActivities = async (
       updatedTicket,
       "Assignees Updated",
       TicketActivityType.ASSIGNEE,
-      `Ticket assignees updated`,
-      { assigneeChange: changes.assigneeList }
+      `Ticket assignees updated by ${actorText}`,
+      { actor, assigneeChange: changes.assigneeList }
     );
   }
 
@@ -192,10 +200,10 @@ export const logSpecificActivities = async (
       updatedTicket,
       "Service Status Changed",
       TicketActivityType.OUT_OF_SERVICE,
-      `Ticket service status changed to ${
+      `Ticket service status changed by ${actorText} to ${
         changes.isOutOfService.to ? "out of service" : "in service"
       }`,
-      { serviceStatusChange: changes.isOutOfService }
+      { actor, serviceStatusChange: changes.isOutOfService }
     );
   }
 };

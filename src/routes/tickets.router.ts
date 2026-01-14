@@ -7,6 +7,7 @@ import {
   getSingleTicketController,
   getTicketActivitiesController,
   editTicketForAdminsAndTechniciansController,
+  editTicketForRequesterController,
 } from "../controllers/tickets.controller.js";
 import { validate } from "../validation/zod-middleware.js";
 import { getTicketsSchema } from "../validation/ticket.schema.js";
@@ -15,6 +16,7 @@ import { typeBasedAuthMiddleware } from "../middleware/typeBasedAuthMiddleware.j
 import { UserType } from "../enums/UserType.enum.js";
 import { editTicketForAdminAndTechniciansSchema } from "../validation/tickets/edit-for-admins-and-technicians.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { editTicketForRequesterSchema } from "../validation/tickets/edit-for-requester.js";
 
 const router = Router();
 
@@ -24,18 +26,28 @@ router.post("/", upload.array("media"), (req, res) =>
 router.get("/", validate(getTicketsSchema), getAllTicketsController);
 router.get("/:id", getSingleTicketController);
 router.get("/:id/activities", getTicketActivitiesController);
-router.put(
-  "/:id/co-ordinate",
-  upload.none(),
-  authMiddleware,
-  typeBasedAuthMiddleware([
-    UserType.ADMIN,
-    UserType.SUPER_ADMIN,
-    UserType.TECHNICIAN,
-  ]),
-  validate(editTicketForAdminAndTechniciansSchema),
-  asyncHandler(editTicketForAdminsAndTechniciansController)
-);
+
+router
+  .put(
+    "/:id/co-ordinate",
+    upload.none(),
+    authMiddleware,
+    typeBasedAuthMiddleware([
+      UserType.ADMIN,
+      UserType.SUPER_ADMIN,
+      UserType.TECHNICIAN,
+    ]),
+    validate(editTicketForAdminAndTechniciansSchema),
+    asyncHandler(editTicketForAdminsAndTechniciansController)
+  )
+  .put(
+    "/:id",
+    upload.none(),
+    authMiddleware,
+    typeBasedAuthMiddleware([UserType.REQUESTER]),
+    validate(editTicketForRequesterSchema),
+    asyncHandler(editTicketForRequesterController)
+  );
 
 router.delete(
   "/:id",
