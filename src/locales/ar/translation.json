@@ -112,6 +112,8 @@
     "deleted": "تم حذف التذكرة",
     "at_least_one_file_required": "يجب تحميل ملف واحد على الأقل",
     "media_uploaded": "تم رفع وسائط التذكرة بنجاح",
-    "media_upload_failed": "فشل رفع وسائط التذكرة"
+    "media_upload_failed": "فشل رفع وسائط التذكرة",
+    "asset_not_found": "لم يتم العثور على مرفق التذكرة",
+    "asset_loaded": "تم تحميل مرفق التذكرة"
   }
 }

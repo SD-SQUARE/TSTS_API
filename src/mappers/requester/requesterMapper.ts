@@ -1,11 +1,8 @@
-// src/mappers/requester/requesterMapper.ts
 
 import { Request } from "express";
-import {
-  CreateRequesterBody,
-  CreateRequesterMapped,
-} from "../../interfaces/ICreateRequester.js";
+
 import { parseArray } from "../../utils/jsonArrayParser.js";
+import { CreateRequesterBody, CreateRequesterMapped } from "../../interfaces/requester/ICreateRequester.js";
 
 // If you use multer, extend Request to include `file`
 export type RequestWithFileAndBody = Request<

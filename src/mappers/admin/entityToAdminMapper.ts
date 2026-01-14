@@ -1,7 +1,6 @@
 import { User } from "../../entities/index.js";
 import {
   fetchAllAdminsGroupsAsHeadsService,
-  fetchAllTechniciansGroupsService,
 } from "../../services/users/profile/profileQueryService.js";
 import { getPresignedUrl } from "../../utils/storage.js";
 import { GroupDto } from "../groups/toGroupDto.js";

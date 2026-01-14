@@ -20,6 +20,7 @@ import { editTicketForRequesterSchema } from "../validation/tickets/edit-for-req
 import { uploadTicketMediaSchema } from "../validation/tickets/media/upload-ticket-media-schema.js";
 import { uploadTicketAssetsService } from "../services/tickets/tickets-media/command/upload-tickets-assets.service.js";
 import { file } from "zod";
+import { getTicketAssetsService } from "../services/tickets/tickets-media/query/get-ticket-assets.service.js";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -224,7 +225,13 @@ export const getAllTicketAssetsController = async (req: any, res: Response) => {
       .json({ message: t("ticket.invalid_id") });
   }
 
-  return res.status(ResponseStatus.SUCCESS).json({ message: "successfully" });
+  const result = await getTicketAssetsService(ticketId);
+
+  if (!result.ok)
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: result.message, errors: result.errors });
+  return res.status(ResponseStatus.SUCCESS).json(result.data);
 };
 
 export const getSingleTicketAssetController = async (

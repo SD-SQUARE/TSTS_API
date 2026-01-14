@@ -2,7 +2,7 @@ import { User } from "../../entities/User.js";
 import { UserType } from "../../enums/UserType.enum.js";
 import { UserStatus } from "../../enums/UserStatus.enum.js";
 import { hashPassword } from "../../utils/secrets.js";
-import { CreateTechnicianMapped } from "../../interfaces/users/ICreateTechnician.js";
+import { CreateTechnicianMapped } from "../../interfaces/technician/ICreateTechnician.js";
 
 export const mapTechnicianToUserEntity = async (
   dto: CreateTechnicianMapped
