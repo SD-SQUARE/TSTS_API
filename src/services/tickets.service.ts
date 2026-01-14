@@ -101,7 +101,7 @@ export const createTicket = async (dto, files) => {
     for (const file of files) {
       const key = await uploadFilesWithUniqueKey(
         IMAGE_PATHS.TicketMedia,
-        requesterUser.id,
+        ticket.id,
         file
       );
 
