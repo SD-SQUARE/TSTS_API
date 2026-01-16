@@ -22,7 +22,6 @@ export const createRequester = async (
   res: Response
 ) => {
   const requesterDto = mapCreateRequester(req);
-
   const result = await createRequesterService(requesterDto, req.file);
   if (!result.is_added) {
     result.message = t("user_not_created");

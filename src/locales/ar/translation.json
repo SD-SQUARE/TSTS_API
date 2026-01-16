@@ -115,6 +115,9 @@
     "media_upload_failed": "فشل رفع وسائط التذكرة",
     "asset_not_found": "لم يتم العثور على مرفق التذكرة",
     "asset_loaded": "تم تحميل مرفق التذكرة",
-    "asset_deleted": "تم حذف مرفق التذكرة"
+    "asset_deleted": "تم حذف مرفق التذكرة",
+    "sender_id_invalid": "معرّف المُرسل غير صالح",
+    "message_too_long": "الرسالة طويلة جدًا (الحد الأقصى 2000 حرف)",
+    "media_id_invalid": "معرّف الوسائط غير صالح"
   }
 }

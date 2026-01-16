@@ -313,3 +313,78 @@ export const deleteTicketAssetController = async (req: any, res: Response) => {
 
   return res.status(ResponseStatus.SUCCESS).json(result);
 };
+
+export const uploadTicketChatMediaController = async (
+  req: any,
+  res: Response
+) => {
+  const userData = TokenHelper.getUserFromReqUser(req.user);
+  const ticketId = req.params.id;
+
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][uploadTicketChatMediaController] Validation failed: invalid ticket id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_added: false, message: t("ticket.invalid_id") });
+  }
+
+  const validation = uploadTicketMediaSchema.safeParse({
+    files: req.files,
+  });
+
+  if (!validation.success) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: t("ticket.at_least_one_file_required") });
+  }
+
+  const files = req.files;
+
+  return res.status(ResponseStatus.SUCCESS).json({ files, ticketId });
+};
+
+export const sendChatMessageController = async (req: any, res: Response) => {
+  const userData = TokenHelper.getUserFromReqUser(req.user);
+  const ticketId = req.params.id;
+
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][sendChatMessageController] Validation failed: invalid ticket id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_added: false, message: t("ticket.invalid_id") });
+  }
+
+  const { senderId, message, mediaIds } = req.body;
+
+  return res
+    .status(ResponseStatus.SUCCESS)
+    .json({ ticketId, senderId, message, mediaIds });
+};
+
+export const getChatMessagesForTicketController = async (
+  req: any,
+  res: Response
+) => {
+  const ticketId = req.params.id;
+
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][getChatMessagesForTicketController] Validation failed: invalid ticket id"
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_added: false, message: t("ticket.invalid_id") });
+  }
+
+  return res.status(ResponseStatus.SUCCESS).json({ ticketId });
+};

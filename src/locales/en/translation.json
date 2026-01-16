@@ -120,6 +120,9 @@
     "media_upload_failed": "Ticket media upload failed",
     "asset_not_found": "ticket asset not found",
     "asset_loaded": "Ticket asset loaded",
-    "asset_deleted": "Ticket asset deleted"
+    "asset_deleted": "Ticket asset deleted",
+    "sender_id_invalid": "Invalid sender ID",
+    "message_too_long": "Message is too long (maximum 2000 characters)",
+    "media_id_invalid": "Invalid media ID"
   }
 }
