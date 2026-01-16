@@ -25,6 +25,7 @@ import {
   getTicketAssetsService,
 } from "../services/tickets/tickets-media/query/get-ticket-assets.service.js";
 import { deleteSingleTicketAssetService } from "../services/tickets/tickets-media/command/delete-asset-ticket.service.js";
+import { uploadTicketChatMediaService } from "../services/tickets/tickets-chat/upload-chat-media.service.js";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -344,7 +345,20 @@ export const uploadTicketChatMediaController = async (
 
   const files = req.files;
 
-  return res.status(ResponseStatus.SUCCESS).json({ files, ticketId });
+  const result = await uploadTicketChatMediaService(ticketId, files, userData);
+
+  logger.info(
+    `[server][tickets][uploadTicketAssetController] User ${
+      userData.id
+    } uploaded files to ticket ${ticketId}: ${files
+      .map((file: any) => file.originalname)
+      .join(", ")}`
+  );
+
+  if (!result.ok)
+    return res.status(ResponseStatus.BAD_REQUEST).json(result.data);
+
+  return res.status(ResponseStatus.SUCCESS).json(result.data);
 };
 
 export const sendChatMessageController = async (req: any, res: Response) => {
