@@ -22,3 +22,4 @@ export * from "./TicketActivity.js";
 export * from "./TicketChat.js";
 export * from "./TicketListener.js";
 export * from "./ChatMessage.js";
+export * from "./TicketChatMessage.js";
