@@ -14,3 +14,4 @@ export * from "./Specialization.js";
 export * from "./WorkHour.js";
 export * from "./Permission.js";
 export * from "./PermissionProfile.js";
+export * from "./KnowledgeItem.js"
