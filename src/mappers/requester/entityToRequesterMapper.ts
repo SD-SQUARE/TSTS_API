@@ -32,7 +32,7 @@ type RequesterDto = {
 
 export const toRequester = async (
   entity: User,
-  lang: "en" | "ar"
+  lang: "en" | "ar",
 ): Promise<RequesterDto> => {
   const university = entity.university ? await entity.university : null;
   const domain = entity.domain ? await entity.domain : null;
@@ -53,7 +53,7 @@ export const toRequester = async (
         id: dept.id,
         name: dept.name?.[lang], // dept.name is { en, ar }
       };
-    })
+    }),
   );
 
   return {
@@ -91,7 +91,7 @@ export const toRequester = async (
       : null,
 
     departments: departments.filter(
-      (d): d is { id: string; name: string } => d !== null
+      (d): d is { id: string; name: string } => d !== null,
     ),
 
     contacts: {
