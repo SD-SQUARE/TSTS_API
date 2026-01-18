@@ -27,7 +27,7 @@ app.use(
   cors({
     origin: process.env.CORS_ORIGIN || true,
     credentials: true,
-  })
+  }),
 );
 
 // Rate limiter
@@ -52,6 +52,8 @@ import {
   groupsRouter,
   lockupsRouter,
   ticketsRouter,
+  chatRouter,
+  notificationRouter,
 } from "./routes/index.js";
 import universitiesRouter from "./routes/universities.router.js";
 import domainsRouter from "./routes/domains.router.js";
@@ -69,6 +71,8 @@ app.use("/api/v1/departments", departmentsRouter);
 app.use("/api/v1/specializations", specializationsRouter);
 app.use("/api/v1/work-hours", workHourRouter);
 app.use("/api/v1/tickets", ticketsRouter);
+app.use("/api/v1/chat", chatRouter);
+app.use("/api/v1/notifications", notificationRouter);
 
 app.use(errorHandler);
 

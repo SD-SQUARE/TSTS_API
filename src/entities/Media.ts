@@ -22,7 +22,7 @@ export class Media {
   mime: string;
 
   @ManyToOne(() => Ticket, (ticket) => ticket.media, {
-    nullable: false,
+    nullable: true,
     onDelete: "CASCADE",
   })
   ticket: Ticket;

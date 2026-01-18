@@ -28,6 +28,9 @@ export class ChatMessage {
 
   @ManyToOne(() => User, { nullable: true })
   recipient?: User; // Personal 1:1 chat
+  
+  @Column({ type: "boolean", default: false })
+  isRead: boolean;
 
   @ManyToMany(() => Media)
   @JoinTable({ name: "chat_message_media" })
