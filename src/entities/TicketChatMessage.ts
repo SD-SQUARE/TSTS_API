@@ -9,6 +9,7 @@ import {
 } from "typeorm";
 import { User } from "./User.js";
 import { Media } from "./Media.js";
+import { Ticket } from "./Ticket.js";
 
 @Entity("ticket_chat_messages")
 export class TicketChatMessage {
@@ -27,4 +28,9 @@ export class TicketChatMessage {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @ManyToOne(() => Ticket, (ticket) => ticket.chats, {
+    onDelete: "CASCADE",
+  })
+  ticket: Ticket;
 }

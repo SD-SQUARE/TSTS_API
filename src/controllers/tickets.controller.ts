@@ -28,6 +28,7 @@ import { deleteSingleTicketAssetService } from "../services/tickets/tickets-medi
 import { uploadTicketChatMediaService } from "../services/tickets/tickets-chat/upload-chat-media.service.js";
 import { createTicketChatMessageService } from "../services/tickets/tickets-chat/send-chat-message.service.js";
 import { ICreateResponse } from "../interfaces/response/ICreateResponse.js";
+import { getChatMessagesForTicketServices } from "../services/tickets/tickets-chat/get-chat-messages-for-ticket.service.js";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -380,7 +381,6 @@ export const sendChatMessageController = async (req: any, res: Response) => {
   const { senderId, message, mediaIds } = req.body;
   const lang = req.language;
 
-  console.log(lang);
   var result = await createTicketChatMessageService(
     ticketId,
     senderId,
@@ -410,6 +410,7 @@ export const getChatMessagesForTicketController = async (
   res: Response,
 ) => {
   const ticketId = req.params.id;
+  const lang = req.language;
 
   // Validate ticket ID
   const idValidation = uuidValidationSchema.safeParse(ticketId);
@@ -422,5 +423,6 @@ export const getChatMessagesForTicketController = async (
       .json({ is_added: false, message: t("ticket.invalid_id") });
   }
 
-  return res.status(ResponseStatus.SUCCESS).json({ ticketId });
+  const result = await getChatMessagesForTicketServices(ticketId, lang);
+  return res.status(ResponseStatus.SUCCESS).json(result.data);
 };

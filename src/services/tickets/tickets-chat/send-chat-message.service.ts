@@ -72,6 +72,7 @@ export const createTicketChatMessageService = async (
 
     // Create chat message entity
     const chat = ticketChatRepo.create({
+      ticket: existingTicket,
       sender,
       message: message ?? null,
       attachments: mediaRows,

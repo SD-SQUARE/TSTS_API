@@ -121,6 +121,8 @@
     "message_too_long": "الرسالة طويلة جدًا (الحد الأقصى 2000 حرف)",
     "media_id_invalid": "معرّف الوسائط غير صالح",
     "message_sent": "تم إرسال الرسالة",
-    "message_send_failed": "فشل إرسال الرسالة"
+    "message_send_failed": "فشل إرسال الرسالة",
+    "chats_loaded": "تم تحميل المحادثات",
+    "chats_load_failed": "فشل تحميل المحادثات"
   }
 }
