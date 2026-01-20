@@ -1,13 +1,31 @@
 import { Router } from "express";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import {
+  forgetPasswordController,
+  getCsrfToken,
+  login,
+  logout,
+  refreshToken,
+  resetPasswordController,
+  verifyOtpController,
+} from "../controllers/auth.controller.js";
 
 const router = Router();
 
-router.post("/login", asyncHandler(async(req, res, next) => {
-    console.log("login");
-    console.log(req);
-    console.log(req.language);
-    res.send("login");
-}));
+// Login
+router.post("/login", login);
+
+// Logout
+router.post("/logout", logout);
+
+// CSRF token
+router.get("/csrf-token", getCsrfToken);
+
+// Refresh token
+router.get("/refresh-token/:id", refreshToken);
+
+// Forget password
+router.post("/forget-password", forgetPasswordController);
+router.post("/forget-password/verify-otp", verifyOtpController);
+router.post("/forget-password/reset-password", resetPasswordController);
 
 export default router;

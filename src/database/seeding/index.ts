@@ -22,8 +22,8 @@ async function runSeeds() {
 
     // Order is important because of FK dependencies
 
-    await seedSpecializations(PostgresDataSource);
 
+    await seedSpecializations(PostgresDataSource);
     await seedUniversities(PostgresDataSource);
     await seedDomains(PostgresDataSource);
     await seedDepartments(PostgresDataSource);

@@ -5,12 +5,11 @@ import cors from "cors";
 import compression from "compression";
 import hpp from "hpp";
 import cookieParser from "cookie-parser";
-import {xss} from "express-xss-sanitizer";
+import { xss } from "express-xss-sanitizer";
 import * as i18nextMiddleware from "i18next-http-middleware";
 import i18n from "./config/i18n.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { csrfMiddleware } from "./config/csrf.js";
-
 
 const app = express();
 
@@ -44,16 +43,34 @@ app.use(i18nextMiddleware.handle(i18n));
 // CSRF (set up if using cookies and forms; for API token flows consider disabling)
 // @AhmedElsenaty
 // TODO: enable in prod
-if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "test") app.use(csrfMiddleware);
+if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "test")
+  app.use(csrfMiddleware);
 
-import { 
+import {
   authRouter,
-  usersRouter
+  usersRouter,
+  groupsRouter,
+  lockupsRouter,
 } from "./routes/index.js";
+import universitiesRouter from "./routes/universities.router.js";
+import domainsRouter from "./routes/domains.router.js";
+import departmentsRouter from "./routes/departments.router.js";
+import specializationsRouter from "./routes/specializations.router.js";
+import workHourRouter from "./routes/workHour.router.js";
+import knowlegeBaseRouter from "./routes/knowlegeBase.router.js";
 
 // routes
-app.use("/api/v1/auth", authRouter );
-app.use("/api/v1/users", usersRouter );
+app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/users", usersRouter);
+app.use("/api/v1/groups", groupsRouter);
+app.use("/api/v1/lockups", lockupsRouter);
+app.use("/api/v1/universities", universitiesRouter );
+app.use("/api/v1/domains", domainsRouter );
+app.use("/api/v1/departments", departmentsRouter );
+app.use("/api/v1/specializations", specializationsRouter );
+app.use("/api/v1/work-hours", workHourRouter );
+app.use("/api/v1/knowledge-base", knowlegeBaseRouter );
+
 
 
 app.use(errorHandler);

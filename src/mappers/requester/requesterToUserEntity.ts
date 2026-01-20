@@ -1,5 +1,5 @@
 import { User } from "../../entities/User.js";
-import { CreateRequesterMapped } from "../../interfaces/ICreateRequester.js";
+import { CreateRequesterMapped } from "../../interfaces/requester/ICreateRequester.js";
 import { UserType } from "../../enums/UserType.enum.js";
 import { UserStatus } from "../../enums/UserStatus.enum.js";
 import { hashPassword } from "../../utils/secrets.js";
