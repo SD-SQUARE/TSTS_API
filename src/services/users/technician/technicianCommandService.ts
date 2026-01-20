@@ -18,7 +18,7 @@ import { uploadFilesWithUniqueKey } from "../../../helpers/ImagesHelper.js";
 import { IDeleteResponse } from "../../../interfaces/response/IDeleteResponse.js";
 
 import { mapTechnicianToUserEntity } from "../../../mappers/technician/technicianToUserEntity.js";
-import { CreateTechnicianMapped } from "../../../interfaces/users/ICreateTechnician.js";
+import { CreateTechnicianMapped } from "../../../interfaces/technician/ICreateTechnician.js";
 
 export const createTechnicianService = async (
   technicianDto: CreateTechnicianMapped,
