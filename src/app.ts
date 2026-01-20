@@ -57,6 +57,8 @@ import domainsRouter from "./routes/domains.router.js";
 import departmentsRouter from "./routes/departments.router.js";
 import specializationsRouter from "./routes/specializations.router.js";
 import workHourRouter from "./routes/workHour.router.js";
+import knowlegeBaseRouter from "./routes/knowlegeBase.router.js";
+
 // routes
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
@@ -67,6 +69,7 @@ app.use("/api/v1/domains", domainsRouter );
 app.use("/api/v1/departments", departmentsRouter );
 app.use("/api/v1/specializations", specializationsRouter );
 app.use("/api/v1/work-hours", workHourRouter );
+app.use("/api/v1/knowledge-base", knowlegeBaseRouter );
 
 
 
