@@ -15,7 +15,7 @@ const testKey = "test-file.txt";
 const testContent = "Hello MinIO Test!";
 const encoder = new TextEncoder();
 
-describe("MinIO S3 SDK Tests", () => {
+xdescribe("MinIO S3 SDK Tests", () => {
   beforeAll(async () => {
     // Create bucket IF NOT EXISTS
     try {

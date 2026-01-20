@@ -4,7 +4,7 @@ import { Request } from "express";
 import {
   CreateRequesterBody,
   CreateRequesterMapped,
-} from "../../interfaces/ICreateRequester.js";
+} from "../../interfaces/requester/ICreateRequester.js";
 import { parseArray } from "../../utils/jsonArrayParser.js";
 
 // If you use multer, extend Request to include `file`

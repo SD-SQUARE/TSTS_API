@@ -50,7 +50,8 @@ export const createRequesterSchema = (t: Request["t"]) =>
         message: t("password_must_contain_special_char"),
       }),
 
-    user_type: z.nativeEnum(UserType),
+    // TODO: remove user_type      
+    // user_type: z.nativeEnum(UserType).optional(),
 
     // English names
     first_name_en: z
@@ -156,9 +157,10 @@ export const createRequesterSchema = (t: Request["t"]) =>
       return [];
     }, z.array(z.string().uuid({ message: t("specialization_id_invalid") })).default([])),
 
-    permission_profile: z
-      .string()
-      .uuid({ message: t("permission_profile_required") }),
+    // TODO: add permission profile
+    // permission_profile: z
+    //   .string()
+    //   .uuid({ message: t("permission_profile_required") }).optional(),
 
     extra_permissions: z.preprocess((val) => {
       if (typeof val === "string") {

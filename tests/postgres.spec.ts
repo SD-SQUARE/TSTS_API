@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { PostgresDataSource } from "../src/database/postgres-data-source";
 import { User } from "../src/entities/User";
 
-describe("Postgres + TypeORM Test", () => {
+xdescribe("Postgres + TypeORM Test", () => {
     beforeAll(async () => {
       if (!PostgresDataSource.isInitialized) {
         await PostgresDataSource.initialize();

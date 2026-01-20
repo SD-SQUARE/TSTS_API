@@ -3,7 +3,7 @@ import { parseArray, parseIfJson } from "../../utils/jsonArrayParser.js";
 import {
   CreateTechnicianBody,
   CreateTechnicianMapped,
-} from "../../interfaces/users/ICreateTechnician.js";
+} from "../../interfaces/technician/ICreateTechnician.js";
 
 export type RequestWithFileAndBody = Request<
   unknown,

@@ -18,7 +18,6 @@ export abstract class BaseEntity extends TypeORMBase {
   @UpdateDateColumn({ type: "timestamptz" })
   updatedAt!: Date;
 
-  @Column({ type: "timestamptz", nullable: true })
-  // @DeleteDateColumn({ type: "timestamptz", nullable: true })
+  @DeleteDateColumn({ type: "timestamptz", nullable: true })
   deletedAt?: Date | null;
 }
