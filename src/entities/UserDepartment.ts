@@ -7,11 +7,11 @@ import { Department } from "./Department.js";
 @Entity({ name: "user_departments" })
 export class UserDepartment extends BaseEntity {
   @ManyToOne(() => User, (u) => u.userDepartments, { onDelete: "CASCADE", lazy: true })
-  user!: User;
+  user!: any;
 
   @ManyToOne(() => Department, (d) => d.userDepartments, {
     onDelete: "CASCADE",
     lazy: true,
   })
-  department!: Department;
+  department!: any;
 }

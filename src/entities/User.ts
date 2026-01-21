@@ -45,11 +45,10 @@ export class User extends BaseEntity {
   contacts?: { mobile?: string[]; phone?: string[] };
 
   @ManyToOne(() => University, (u) => u.domains, { nullable: true, lazy: true })
-  @ManyToOne(() => University, (u) => u.domains, { nullable: true, lazy: true })
-  university?: University;
+  university?: any;
 
   @ManyToOne(() => Domain, { nullable: true, lazy: true })
-  domain?: Domain;
+  domain?: any;
 
   @Column({ type: "varchar", length: 255, nullable: true })
   refreshToken?: string;
@@ -61,20 +60,20 @@ export class User extends BaseEntity {
   job?: { en?: string; ar?: string };
 
   @OneToMany(() => TechnicianGroup, (tg) => tg.user, )
-  technicianGroups!: TechnicianGroup[];
+  technicianGroups!: any[];
 
   @OneToMany(() => AllowedSpecialization, (as) => as.user, { lazy: true })
-  allowedSpecializations!: AllowedSpecialization[];
+  allowedSpecializations!: any[];
 
   @OneToMany(() => GroupHead, (gh) => gh.user, )
-  groupHeads!: GroupHead[];
+  groupHeads!: any[];
 
   @OneToMany(() => UsersPermissions, (up) => up.user, { lazy: true })
-  usersPermissions!: UsersPermissions[];
+  usersPermissions!: any[];
 
   @OneToMany(() => UserDepartment, (ud) => ud.user, { lazy: true })
-  userDepartments!: UserDepartment[];
+  userDepartments!: any[];
 
   @OneToMany(() => Group, (g) => g.teamLeader, )
-  ledGroups!: Group[];
+  ledGroups!: any[];
 }
