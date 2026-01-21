@@ -23,7 +23,7 @@ type PaginatedResult<T> = {
 @Entity({ name: "domains" })
 export class Domain extends BaseEntity {
   @ManyToOne(() => University, (u) => u.domains, { onDelete: "CASCADE", lazy: true })
-  university!: University;
+  university!: any;
 
   @Column({ type: "jsonb" })
   name!: { en: string; ar: string };
@@ -32,7 +32,7 @@ export class Domain extends BaseEntity {
   description?: { en?: string; ar?: string };
 
   @OneToMany(() => Department, (d) => d.domain, { lazy: true })
-  departments!: Department[];
+  departments!: any[];
 
   toApi() {
       return {

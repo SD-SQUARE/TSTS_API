@@ -34,7 +34,7 @@ export class Department extends BaseEntity {
     onDelete: "CASCADE",
     lazy: true,
   })
-  domain!: Domain;
+  domain!: any;
 
   @Column({ type: "jsonb" })
   name!: { en: string; ar?: string };
@@ -43,7 +43,7 @@ export class Department extends BaseEntity {
   description?: { en?: string; ar?: string };
 
   @OneToMany(() => UserDepartment, (ud) => ud.department, { lazy: true })
-  userDepartments!: UserDepartment[];
+  userDepartments!: any[];
 
   toApi() {
       return {

@@ -28,10 +28,10 @@ export class Specialization extends BaseEntity {
   description?: { en?: string; ar?: string };
 
   @OneToMany(() => AllowedSpecialization, (as) => as.specialization, { lazy: true })
-  allowed!: AllowedSpecialization[];
+  allowed!: any[];
 
   @OneToMany(() => GroupSpecialization, (gs) => gs.specialization, )
-  groupSpecializations!: GroupSpecialization[];
+  groupSpecializations!: any[];
 
   toApi() {
       return {
