@@ -25,6 +25,10 @@ import {
   getTicketAssetsService,
 } from "../services/tickets/tickets-media/query/get-ticket-assets.service.js";
 import { deleteSingleTicketAssetService } from "../services/tickets/tickets-media/command/delete-asset-ticket.service.js";
+import { uploadTicketChatMediaService } from "../services/tickets/tickets-chat/upload-chat-media.service.js";
+import { createTicketChatMessageService } from "../services/tickets/tickets-chat/send-chat-message.service.js";
+import { ICreateResponse } from "../interfaces/response/ICreateResponse.js";
+import { getChatMessagesForTicketServices } from "../services/tickets/tickets-chat/get-chat-messages-for-ticket.service.js";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -33,7 +37,7 @@ export const createTicketController = async (req: Request, res: Response) => {
   if (!parsed.success) {
     logger.info(
       "[server][tickets][controller] Validation failed: " +
-        parsed.error.issues.map((e) => e.message).join(", ")
+        parsed.error.issues.map((e) => e.message).join(", "),
     );
     throw new AppError(parsed.error.issues[0].message, 400);
   }
@@ -53,7 +57,7 @@ export const getAllTicketsController = async (req: Request, res: Response) => {
 
 export const getSingleTicketController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { id } = req.params;
   const lang = (req.language || "en") as "ar" | "en";
@@ -70,7 +74,7 @@ export const getSingleTicketController = async (
 
 export const getTicketActivitiesController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const ticketId = req.params.id;
 
@@ -80,7 +84,7 @@ export const getTicketActivitiesController = async (
 
 export const editTicketForAdminsAndTechniciansController = async (
   req: any,
-  res: Response
+  res: Response,
 ) => {
   const userData = TokenHelper.getUserFromReqUser(req.user);
 
@@ -89,7 +93,7 @@ export const editTicketForAdminsAndTechniciansController = async (
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
     logger.info(
-      "[server][tickets][editTicketForAdminsAndTechniciansController] Validation failed: invalid ticket id"
+      "[server][tickets][editTicketForAdminsAndTechniciansController] Validation failed: invalid ticket id",
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -104,7 +108,7 @@ export const editTicketForAdminsAndTechniciansController = async (
   const result = await editTicketForAdminAndTechniciansService(
     ticketId,
     parsed.data,
-    userData
+    userData,
   );
 
   if (!result.is_edited) {
@@ -116,7 +120,7 @@ export const editTicketForAdminsAndTechniciansController = async (
 
 export const editTicketForRequesterController = async (
   req: any,
-  res: Response
+  res: Response,
 ) => {
   const userData = TokenHelper.getUserFromReqUser(req.user);
 
@@ -125,7 +129,7 @@ export const editTicketForRequesterController = async (
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
     logger.info(
-      "[server][tickets][editTicketForRequesterController] Validation failed: invalid ticket id"
+      "[server][tickets][editTicketForRequesterController] Validation failed: invalid ticket id",
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -140,7 +144,7 @@ export const editTicketForRequesterController = async (
   const result = await editTicketForRequesterService(
     ticketId,
     parsed.data,
-    userData
+    userData,
   );
 
   if (!result.is_edited) {
@@ -156,7 +160,7 @@ export const deleteTicketController = async (req: Request, res: Response) => {
 
   if (!id || !isValid.success) {
     logger.info(
-      "[server][tickets][deleteTicketController] Validation failed: invalid ticket id"
+      "[server][tickets][deleteTicketController] Validation failed: invalid ticket id",
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -181,7 +185,7 @@ export const uploadTicketAssetController = async (req: any, res: Response) => {
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
     logger.info(
-      "[server][tickets][uploadTicketAssetController] Validation failed: invalid ticket id"
+      "[server][tickets][uploadTicketAssetController] Validation failed: invalid ticket id",
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -207,7 +211,7 @@ export const uploadTicketAssetController = async (req: any, res: Response) => {
       userData.id
     } uploaded files to ticket ${ticketId}: ${files
       .map((file: any) => file.originalname)
-      .join(", ")}`
+      .join(", ")}`,
   );
 
   if (!result.is_added) return res.status(ResponseStatus.BAD_REQUEST).json(res);
@@ -222,7 +226,7 @@ export const getAllTicketAssetsController = async (req: any, res: Response) => {
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
     logger.info(
-      "[server][tickets][getAllTicketAssetsController] Validation failed: invalid ticket id"
+      "[server][tickets][getAllTicketAssetsController] Validation failed: invalid ticket id",
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -240,7 +244,7 @@ export const getAllTicketAssetsController = async (req: any, res: Response) => {
 
 export const getSingleTicketAssetController = async (
   req: any,
-  res: Response
+  res: Response,
 ) => {
   const ticketId = req.params.id;
   const aid = req.params.aid; // asset ID
@@ -249,7 +253,7 @@ export const getSingleTicketAssetController = async (
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
     logger.info(
-      "[server][tickets][getSingleTicketAssetController] Validation failed: invalid ticket id"
+      "[server][tickets][getSingleTicketAssetController] Validation failed: invalid ticket id",
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -260,7 +264,7 @@ export const getSingleTicketAssetController = async (
   const assetIdValidation = uuidValidationSchema.safeParse(aid);
   if (!aid || !assetIdValidation.success) {
     logger.info(
-      "[server][tickets][getSingleTicketAssetController] Validation failed: invalid asset id"
+      "[server][tickets][getSingleTicketAssetController] Validation failed: invalid asset id",
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -286,7 +290,7 @@ export const deleteTicketAssetController = async (req: any, res: Response) => {
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
     logger.info(
-      "[server][tickets][deleteTicketAssetController] Validation failed: invalid ticket id"
+      "[server][tickets][deleteTicketAssetController] Validation failed: invalid ticket id",
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -297,7 +301,7 @@ export const deleteTicketAssetController = async (req: any, res: Response) => {
   const assetIdValidation = uuidValidationSchema.safeParse(aid);
   if (!aid || !assetIdValidation.success) {
     logger.info(
-      "[server][tickets][deleteTicketAssetController] Validation failed: invalid asset id"
+      "[server][tickets][deleteTicketAssetController] Validation failed: invalid asset id",
     );
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -312,4 +316,113 @@ export const deleteTicketAssetController = async (req: any, res: Response) => {
   }
 
   return res.status(ResponseStatus.SUCCESS).json(result);
+};
+
+export const uploadTicketChatMediaController = async (
+  req: any,
+  res: Response,
+) => {
+  const userData = TokenHelper.getUserFromReqUser(req.user);
+  const ticketId = req.params.id;
+
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][uploadTicketChatMediaController] Validation failed: invalid ticket id",
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_added: false, message: t("ticket.invalid_id") });
+  }
+
+  const validation = uploadTicketMediaSchema.safeParse({
+    files: req.files,
+  });
+
+  if (!validation.success) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ message: t("ticket.at_least_one_file_required") });
+  }
+
+  const files = req.files;
+
+  const result = await uploadTicketChatMediaService(ticketId, files, userData);
+
+  logger.info(
+    `[server][tickets][uploadTicketAssetController] User ${
+      userData.id
+    } uploaded files to ticket ${ticketId}: ${files
+      .map((file: any) => file.originalname)
+      .join(", ")}`,
+  );
+
+  if (!result.ok)
+    return res.status(ResponseStatus.BAD_REQUEST).json(result.data);
+
+  return res.status(ResponseStatus.SUCCESS).json(result.data);
+};
+
+export const sendChatMessageController = async (req: any, res: Response) => {
+  const ticketId = req.params.id;
+
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][sendChatMessageController] Validation failed: invalid ticket id",
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_added: false, message: t("ticket.invalid_id") });
+  }
+
+  const { senderId, message, mediaIds } = req.body;
+  const lang = req.language;
+
+  var result = await createTicketChatMessageService(
+    ticketId,
+    senderId,
+    mediaIds,
+    message,
+    lang,
+  );
+
+  if (!result.ok) {
+    const payload: ICreateResponse = {
+      is_added: false,
+      message: result.message,
+      errors: result.errors?.map((e) => ({
+        key: e.key,
+        message: e.message,
+      })),
+    };
+
+    return res.status(ResponseStatus.BAD_REQUEST).json(payload);
+  }
+
+  return res.status(ResponseStatus.CREATED).json(result.data);
+};
+
+export const getChatMessagesForTicketController = async (
+  req: any,
+  res: Response,
+) => {
+  const ticketId = req.params.id;
+  const lang = req.language;
+
+  // Validate ticket ID
+  const idValidation = uuidValidationSchema.safeParse(ticketId);
+  if (!ticketId || !idValidation.success) {
+    logger.info(
+      "[server][tickets][getChatMessagesForTicketController] Validation failed: invalid ticket id",
+    );
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_added: false, message: t("ticket.invalid_id") });
+  }
+
+  const result = await getChatMessagesForTicketServices(ticketId, lang);
+  return res.status(ResponseStatus.SUCCESS).json(result.data);
 };
