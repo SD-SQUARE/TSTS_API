@@ -12,6 +12,7 @@ import { TechnicianGroup } from "./TechnicianGroup.js";
 import { GroupHead } from "./GroupHead.js";
 import { GroupSpecialization } from "./GroupSpecialization.js";
 import { User } from "./User.js";
+import { ChatMessage } from "./ChatMessage.js";
 
 @Entity({ name: "groups" })
 export class Group extends BaseEntity {
@@ -36,4 +37,7 @@ export class Group extends BaseEntity {
   @ManyToOne(() => User, { nullable: true, lazy: true })
   @JoinColumn({ name: "teamLeaderId" })
   teamLeader?: any;
+
+  @OneToMany(() => ChatMessage, (msg) => msg.group)
+  chat: any[];
 }

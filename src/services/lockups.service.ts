@@ -11,6 +11,7 @@ import { Domain } from "../entities/Domain.js";
 import { Department } from "../entities/Department.js";
 import { Specialization } from "../entities/Specialization.js";
 import { Group } from "../entities/Group.js";
+import { Ticket } from "../entities/Ticket.js";
 
 interface UsersLockupQuery {
   first_name?: string;
@@ -54,6 +55,11 @@ interface DomainDepartmentsLockupQuery extends PaginationQuery {
   domainId: string;
 }
 
+interface GroupTechniciansQuery extends PaginationQuery {
+  name?: string;
+  job?: string;
+}
+
 const usersRepository = PostgresDataSource.getRepository(User);
 const permissionsRepository = PostgresDataSource.getRepository(Permission);
 const universitiesRepository = PostgresDataSource.getRepository(University);
@@ -62,9 +68,10 @@ const departmentsRepository = PostgresDataSource.getRepository(Department);
 const specializationsRepository =
   PostgresDataSource.getRepository(Specialization);
 const groupsRepository = PostgresDataSource.getRepository(Group);
+const ticketsRepository = PostgresDataSource.getRepository(Ticket);
 
 export const getUsersLockupService = async (query: UsersLockupQuery) => {
-  const { skip, take, meta } = buildPagination({
+  const { skip, take } = buildPagination({
     page: query.page,
     limit: query.limit,
   });
@@ -77,21 +84,21 @@ export const getUsersLockupService = async (query: UsersLockupQuery) => {
   // Filters
   if (query.first_name) {
     qb.andWhere(
-      `user.firstName->>'en' ILIKE :first_name OR user.firstName->>'ar' ILIKE :first_name`,
+      `("user"."firstName"->>'en' ILIKE :first_name OR "user"."firstName"->>'ar' ILIKE :first_name)`,
       { first_name: `%${query.first_name}%` }
     );
   }
 
   if (query.mid_name) {
     qb.andWhere(
-      `user.midName->>'en' ILIKE :mid_name OR user.midName->>'ar' ILIKE :mid_name`,
+      `("user"."midName"->>'en' ILIKE :mid_name OR "user"."midName"->>'ar' ILIKE :mid_name)`,
       { mid_name: `%${query.mid_name}%` }
     );
   }
 
   if (query.last_name) {
     qb.andWhere(
-      `user.lastName->>'en' ILIKE :last_name OR user.lastName->>'ar' ILIKE :last_name`,
+      `("user"."lastName"->>'en' ILIKE :last_name OR "user"."lastName"->>'ar' ILIKE :last_name)`,
       { last_name: `%${query.last_name}%` }
     );
   }
@@ -100,25 +107,23 @@ export const getUsersLockupService = async (query: UsersLockupQuery) => {
     qb.andWhere("user.user_type = :user_type", { user_type: query.user_type });
   }
 
-  // Get total count
-  const total = await qb.getCount();
+  qb.skip(skip).take(take);
 
   // Get paginated results
   const users = await qb.getMany();
 
-  // Map to lockup format
-  const mappedUsers = users.map((u) => ({
-    id: u.id,
-    image: u.image || "",
-    email: u.email,
-    first_name: u.firstName?.en || "",
-    mid_name: u.midName?.en || "",
-    last_name: u.lastName?.en || "",
-    user_type: u.user_type || "",
-    status: u.status,
-  }));
-
-  return mappedUsers;
+  return {
+    users: users.map((u) => ({
+      id: u.id,
+      image: u.image || "",
+      email: u.email,
+      first_name: u.firstName?.en || "",
+      mid_name: u.midName?.en || "",
+      last_name: u.lastName?.en || "",
+      user_type: u.user_type || "",
+      status: u.status,
+    })),
+  };
 };
 
 interface PermissionsLockupQuery {
@@ -369,5 +374,127 @@ export const getDomainDepartmentsLockupService = async (
     id: d.id,
     name: d.name?.en || "",
     description: d.description?.en || "",
+  }));
+};
+
+export const getGroupTechniciansLockupService = async (
+  groupId: string,
+  query: GroupTechniciansQuery
+) => {
+  const qb = groupsRepository
+    .createQueryBuilder("group")
+    .leftJoin("group.technicians", "tg")
+    .leftJoin("tg.user", "user")
+    .where("group.id = :groupId", { groupId })
+    .select([
+      "user.id AS id",
+      "user.firstName AS firstName",
+      "user.midName AS midName",
+      "user.lastName AS lastName",
+      "user.job AS job",
+    ]);
+
+  if (query.name) {
+    qb.andWhere(
+      `(
+          user."firstName"->>'en' ILIKE :name OR user."firstName"->>'ar' ILIKE :name OR
+          user."midName"->>'en' ILIKE :name OR user."midName"->>'ar' ILIKE :name OR
+          user."lastName"->>'en' ILIKE :name OR user."lastName"->>'ar' ILIKE :name
+      )`,
+      { name: `%${query.name}%` }
+    );
+  }
+
+  if (query.job) {
+    qb.andWhere(
+      `(
+          user."job"->>'en' ILIKE :job OR
+          user."job"->>'ar' ILIKE :job
+      )`,
+      { job: `%${query.job}%` }
+    );
+  }
+
+  const rows = await qb.getRawMany();
+
+  return rows.map((t) => ({
+    id: t.id,
+    first_name: t.firstname,
+    mid_name: t.midname,
+    last_name: t.lastname,
+    job_title: t.job,
+  }));
+};
+
+export const getGroupNonTechniciansLockupService = async (
+  groupId: string,
+  query: GroupTechniciansQuery
+) => {
+  const qb = usersRepository
+    .createQueryBuilder("user")
+    .where("user.user_type = :type", { type: "Technician" })
+    .andWhere(
+      `
+      user.id NOT IN (
+        SELECT tg."userId" 
+        FROM technician_groups tg 
+        WHERE tg."groupId" = :groupId
+      )
+    `,
+      { groupId }
+    )
+    .select([
+      "user.id AS id",
+      "user.firstName AS firstName",
+      "user.midName AS midName",
+      "user.lastName AS lastName",
+      "user.job AS job",
+    ]);
+
+  if (query.name) {
+    qb.andWhere(
+      `(
+        user."firstName"->>'en' ILIKE :name OR user."firstName"->>'ar' ILIKE :name OR
+        user."midName"->>'en' ILIKE :name OR user."midName"->>'ar' ILIKE :name OR
+        user."lastName"->>'en' ILIKE :name OR user."lastName"->>'ar' ILIKE :name
+      )`,
+      { name: `%${query.name}%` }
+    );
+  }
+
+  if (query.job) {
+    qb.andWhere(
+      `(user."job"->>'en' ILIKE :job OR user."job"->>'ar' ILIKE :job)`,
+      { job: `%${query.job}%` }
+    );
+  }
+
+  const rows = await qb.getRawMany();
+
+  return rows.map((t) => ({
+    id: t.id,
+    first_name: t.firstname,
+    mid_name: t.midname,
+    last_name: t.lastname,
+    job_title: t.job,
+  }));
+};
+
+export const getUserTicketsLockupService = async (userId: string) => {
+  const tickets = await ticketsRepository
+    .createQueryBuilder("ticket")
+    .leftJoinAndSelect("ticket.requester", "requester")
+    .leftJoinAndSelect("ticket.specialization", "specialization")
+    .leftJoinAndSelect("ticket.assigneeList", "assignee")
+    .where("requester.id = :userId", { userId })
+    .orWhere("assignee.id = :userId", { userId })
+    .orderBy("ticket.createdAt", "DESC")
+    .getMany();
+
+  return tickets.map((ticket) => ({
+    id: ticket.id,
+    title: ticket.title,
+    description: ticket.description,
+    status: ticket.status,
   }));
 };

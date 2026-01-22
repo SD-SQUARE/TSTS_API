@@ -11,6 +11,11 @@ import { Domain } from "./Domain.js";
 import { UserStatus } from "../enums/UserStatus.enum.js";
 import { UserType } from "../enums/UserType.enum.js";
 import { Group } from "./Group.js";
+import { Ticket } from "./Ticket.js";
+import { TicketChat } from "./TicketChat.js";
+import { TicketListener } from "./TicketListener.js";
+import { NotificationRead } from "./NotificationRead.js";
+import { ChatMessage } from "./ChatMessage.js";
 
 @Entity({ name: "users" })
 @Unique(["email"])
@@ -74,6 +79,21 @@ export class User extends BaseEntity {
   @OneToMany(() => UserDepartment, (ud) => ud.user, { lazy: true })
   userDepartments!: any[];
 
-  @OneToMany(() => Group, (g) => g.teamLeader, )
+  @OneToMany(() => Group, (g) => g.teamLeader)
   ledGroups!: any[];
+
+  @OneToMany(() => Ticket, (ticket) => ticket.requester)
+  requestedTickets: any[];
+
+  @OneToMany(() => TicketChat, (chat) => chat.sender)
+  chats: any[];
+
+  @OneToMany(() => TicketListener, (listener) => listener.user)
+  listenedTickets: any[];
+
+  @OneToMany(() => NotificationRead, (read) => read.user)
+  notificationsRead: any[];
+
+  @OneToMany(() => ChatMessage, (msg) => msg.sender)
+  messages: any[];
 }
