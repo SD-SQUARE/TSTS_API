@@ -16,10 +16,10 @@ export class NotificationRead {
   @ManyToOne(() => Notification, (notification) => notification.id, {
     onDelete: "CASCADE",
   })
-  notification: Notification;
+  notification: any;
 
   @ManyToOne(() => User, (user) => user.notificationsRead, { eager: true })
-  user: User;
+  user: any;
 
   @Column({ type: "boolean", default: false })
   isRead: boolean;

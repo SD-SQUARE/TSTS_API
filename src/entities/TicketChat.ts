@@ -17,12 +17,12 @@ export class TicketChat {
   message: string;
 
   @ManyToOne(() => User, (user) => user.chats, { eager: true })
-  sender: User;
+  sender: any;
 
   @ManyToOne(() => Ticket, (ticket) => ticket.chats, {
     onDelete: "CASCADE",
   })
-  ticket: Ticket;
+  ticket: any;
 
   @CreateDateColumn()
   createdAt: Date;

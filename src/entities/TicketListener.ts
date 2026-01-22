@@ -15,10 +15,10 @@ export class TicketListener {
   @ManyToOne(() => Ticket, (ticket) => ticket.listeners, {
     onDelete: "CASCADE",
   })
-  ticket: Ticket;
+  ticket: any;
 
   @ManyToOne(() => User, (user) => user.listenedTickets, { eager: true })
-  user: User;
+  user: any;
 
   @CreateDateColumn()
   createdAt: Date;

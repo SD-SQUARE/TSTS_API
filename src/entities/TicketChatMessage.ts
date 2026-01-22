@@ -17,14 +17,14 @@ export class TicketChatMessage {
   id: string;
 
   @ManyToOne(() => User, (user) => user.messages, { eager: true })
-  sender: User;
+  sender: any;
 
   @Column("text")
   message: string;
 
   @ManyToMany(() => Media)
   @JoinTable({ name: "ticket_chat_message_media" })
-  attachments: Media[];
+  attachments: any[];
 
   @CreateDateColumn()
   createdAt: Date;
@@ -32,5 +32,5 @@ export class TicketChatMessage {
   @ManyToOne(() => Ticket, (ticket) => ticket.chats, {
     onDelete: "CASCADE",
   })
-  ticket: Ticket;
+  ticket: any;
 }
