@@ -18,7 +18,7 @@ export class TicketActivity {
     onDelete: "CASCADE",
   })
   @JoinColumn({ name: "ticket_id" })
-  ticket: Ticket;
+  ticket: any;
 
   @Column({
     type: "enum",

@@ -17,24 +17,24 @@ export class ChatMessage {
   id: string;
 
   @ManyToOne(() => User, (user) => user.messages, { eager: true })
-  sender: User;
+  sender: any;
 
   @Column("text")
   content: string;
 
   // Only one of these should be set per message
   @ManyToOne(() => Group, (group) => group.id, { nullable: true })
-  group?: Group; // Group chat
+  group?: any; // Group chat
 
   @ManyToOne(() => User, { nullable: true })
-  recipient?: User; // Personal 1:1 chat
+  recipient?: any; // Personal 1:1 chat
   
   @Column({ type: "boolean", default: false })
   isRead: boolean;
 
   @ManyToMany(() => Media)
   @JoinTable({ name: "chat_message_media" })
-  attachments: Media[];
+  attachments: any[];
 
   @CreateDateColumn()
   createdAt: Date;

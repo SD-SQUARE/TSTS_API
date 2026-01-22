@@ -25,7 +25,7 @@ export class Media {
     nullable: true,
     onDelete: "CASCADE",
   })
-  ticket: Ticket;
+  ticket: any;
 
   @CreateDateColumn()
   createdAt: Date;

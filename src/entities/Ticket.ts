@@ -31,10 +31,10 @@ export class Ticket {
   description: string;
 
   @ManyToOne(() => User, (user) => user.requestedTickets, { nullable: false })
-  requester: User;
+  requester: any;
 
   @ManyToOne(() => Specialization, (spec) => spec.tickets, { nullable: true })
-  specialization: Specialization | null;
+  specialization: any | null;
 
   @Column({ type: "enum", enum: TicketStatus, default: TicketStatus.OPEN })
   status: TicketStatus;
@@ -51,10 +51,10 @@ export class Ticket {
     joinColumn: { name: "ticket_id", referencedColumnName: "id" },
     inverseJoinColumn: { name: "user_id", referencedColumnName: "id" },
   })
-  assigneeList: User[];
+  assigneeList: any[];
 
   @OneToMany(() => Media, (media) => media.ticket)
-  media: Media[];
+  media: any[];
 
   @CreateDateColumn()
   createdAt: Date;
@@ -66,11 +66,11 @@ export class Ticket {
   deletedAt?: Date;
 
   @OneToMany(() => TicketListener, (listener) => listener.ticket)
-  listeners: TicketListener[];
+  listeners: any[];
 
   @OneToMany(() => TicketActivity, (act) => act.ticket)
-  activities: TicketActivity[];
+  activities: any[];
 
   @OneToMany(() => TicketChat, (chat) => chat.ticket)
-  chats: TicketChat[];
+  chats: any[];
 }
