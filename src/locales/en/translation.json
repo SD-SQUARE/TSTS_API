@@ -114,6 +114,12 @@
   "ticket": {
     "invalid_id": "invalid ticket id",
     "not_found": "ticket not found",
-    "deleted": "ticket deleted"
+    "deleted": "ticket deleted",
+    "at_least_one_file_required": "At least one file required",
+    "media_uploaded": "Ticket media uploaded successfully",
+    "media_upload_failed": "Ticket media upload failed",
+    "asset_not_found": "ticket asset not found",
+    "asset_loaded": "Ticket asset loaded",
+    "asset_deleted": "Ticket asset deleted"
   }
 }
