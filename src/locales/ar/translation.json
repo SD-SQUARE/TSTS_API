@@ -88,7 +88,8 @@
   "status_invalid": "قيمة الحالة غير صالحة",
   "auth": {
     "user_not_authenticated": "المستخدم غير موثق",
-    "permissions_error": "ممنوع: الصلاحيات غير كافية"
+    "permissions_error": "ممنوع: الصلاحيات غير كافية",
+    "user_not_found": "المستخدم غير موجود"
   },
   "title_required": "العنوان مطلوب",
   "title_too_long": "العنوان طويل جداً",
@@ -115,6 +116,13 @@
     "media_upload_failed": "فشل رفع وسائط التذكرة",
     "asset_not_found": "لم يتم العثور على مرفق التذكرة",
     "asset_loaded": "تم تحميل مرفق التذكرة",
-    "asset_deleted": "تم حذف مرفق التذكرة"
+    "asset_deleted": "تم حذف مرفق التذكرة",
+    "sender_id_invalid": "معرّف المُرسل غير صالح",
+    "message_too_long": "الرسالة طويلة جدًا (الحد الأقصى 2000 حرف)",
+    "media_id_invalid": "معرّف الوسائط غير صالح",
+    "message_sent": "تم إرسال الرسالة",
+    "message_send_failed": "فشل إرسال الرسالة",
+    "chats_loaded": "تم تحميل المحادثات",
+    "chats_load_failed": "فشل تحميل المحادثات"
   }
 }

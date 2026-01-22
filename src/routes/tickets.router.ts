@@ -12,6 +12,9 @@ import {
   getSingleTicketAssetController,
   uploadTicketAssetController,
   deleteTicketAssetController,
+  uploadTicketChatMediaController,
+  sendChatMessageController,
+  getChatMessagesForTicketController,
 } from "../controllers/tickets.controller.js";
 import { validate } from "../validation/zod-middleware.js";
 import { getTicketsSchema } from "../validation/ticket.schema.js";
@@ -21,6 +24,7 @@ import { UserType } from "../enums/UserType.enum.js";
 import { editTicketForAdminAndTechniciansSchema } from "../validation/tickets/edit-for-admins-and-technicians.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { editTicketForRequesterSchema } from "../validation/tickets/edit-for-requester.js";
+import { createMessageSchema } from "../validation/tickets/chat/send-chat-message.schema.js";
 
 const router = Router();
 
@@ -28,12 +32,25 @@ router.post("/", upload.array("media"), (req, res) =>
   createTicketController(req, res)
 );
 
-router.post(
-  "/:id/media",
-  authMiddleware,
-  upload.array("files"),
-  asyncHandler(uploadTicketAssetController)
-);
+router
+  .post(
+    "/:id/media",
+    authMiddleware,
+    upload.array("files"),
+    asyncHandler(uploadTicketAssetController)
+  )
+  .post(
+    "/:id/chat/media",
+    authMiddleware,
+    upload.array("files"),
+    asyncHandler(uploadTicketChatMediaController)
+  )
+  .post(
+    "/:id/chat",
+    authMiddleware,
+    validate(createMessageSchema),
+    asyncHandler(sendChatMessageController)
+  );
 
 router.get("/", validate(getTicketsSchema), getAllTicketsController);
 router.get("/:id", getSingleTicketController);
@@ -45,6 +62,11 @@ router
     "/:id/media/:aid",
     authMiddleware,
     asyncHandler(getSingleTicketAssetController)
+  )
+  .get(
+    "/:id/chat",
+    authMiddleware,
+    asyncHandler(getChatMessagesForTicketController)
   );
 
 router

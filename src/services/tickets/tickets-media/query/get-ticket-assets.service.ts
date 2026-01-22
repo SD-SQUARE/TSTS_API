@@ -31,7 +31,7 @@ export const getTicketAssetsService = async (ticketId: string) => {
   const data: ITicketAssetDto[] = await Promise.all(
     assets.map(async (m: any) => ({
       id: m.id,
-      name: m.name,
+      fileName: m.name,
       mime: m.mime ?? null,
       url: await getPresignedUrl(process.env.MINIO_BUCKET, m.url, 3600),
     }))

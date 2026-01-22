@@ -1,6 +1,6 @@
 export interface ITicketAssetDto {
   id: string;
-  name: string;
+  fileName: string;
   mime: string | null;
   url: string;
 }
