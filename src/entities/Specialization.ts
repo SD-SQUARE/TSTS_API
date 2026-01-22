@@ -9,6 +9,7 @@ import { BaseEntity } from "./BaseEntity.js";
 import { AllowedSpecialization } from "./AllowedSpecialization.js";
 import { GroupSpecialization } from "./GroupSpecialization.js";
 import { mapJsonFields } from "../utils/formatter.js";
+import { Ticket } from "./Ticket.js";
 
 type PaginatedResult<T> = {
   specializations: T[];
@@ -30,18 +31,21 @@ export class Specialization extends BaseEntity {
   @OneToMany(() => AllowedSpecialization, (as) => as.specialization, { lazy: true })
   allowed!: any[];
 
-  @OneToMany(() => GroupSpecialization, (gs) => gs.specialization, )
+  @OneToMany(() => GroupSpecialization, (gs) => gs.specialization)
   groupSpecializations!: any[];
 
+  @OneToMany(() => Ticket, (ticket) => ticket.specialization)
+  tickets: any[];
+
   toApi() {
-      return {
-        ...this,
-        ...mapJsonFields(this.name, { fields: { name_en: "en", name_ar: "ar" } }),
-        ...mapJsonFields(this.description ?? {}, {
-          fields: { description_en: "en", description_ar: "ar" },
-        }),
-      };
-    }
+    return {
+      ...this,
+      ...mapJsonFields(this.name, { fields: { name_en: "en", name_ar: "ar" } }),
+      ...mapJsonFields(this.description ?? {}, {
+        fields: { description_en: "en", description_ar: "ar" },
+      }),
+    };
+  }
   static async paginate(
     page = 1,
     limit = 20,
@@ -51,7 +55,9 @@ export class Specialization extends BaseEntity {
     includeGroups = false
   ): Promise<PaginatedResult<Specialization>> {
     if (!repo) {
-      throw new Error("Repository not provided. Pass AppDataSource.getRepository(Specialization).");
+      throw new Error(
+        "Repository not provided. Pass AppDataSource.getRepository(Specialization)."
+      );
     }
 
     page = Math.max(1, Math.floor(page));
@@ -96,7 +102,7 @@ export class Specialization extends BaseEntity {
 
     const formattedData = data.map((d) => d.toApi());
     return {
-      specializations:formattedData,
+      specializations: formattedData,
       meta: {
         total,
         page_index: page,
