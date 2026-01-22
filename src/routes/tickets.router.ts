@@ -8,6 +8,10 @@ import {
   getTicketActivitiesController,
   editTicketForAdminsAndTechniciansController,
   editTicketForRequesterController,
+  getAllTicketAssetsController,
+  getSingleTicketAssetController,
+  uploadTicketAssetController,
+  deleteTicketAssetController,
 } from "../controllers/tickets.controller.js";
 import { validate } from "../validation/zod-middleware.js";
 import { getTicketsSchema } from "../validation/ticket.schema.js";
@@ -23,9 +27,25 @@ const router = Router();
 router.post("/", upload.array("media"), (req, res) =>
   createTicketController(req, res)
 );
+
+router.post(
+  "/:id/media",
+  authMiddleware,
+  upload.array("files"),
+  asyncHandler(uploadTicketAssetController)
+);
+
 router.get("/", validate(getTicketsSchema), getAllTicketsController);
 router.get("/:id", getSingleTicketController);
 router.get("/:id/activities", getTicketActivitiesController);
+
+router
+  .get("/:id/media", authMiddleware, asyncHandler(getAllTicketAssetsController))
+  .get(
+    "/:id/media/:aid",
+    authMiddleware,
+    asyncHandler(getSingleTicketAssetController)
+  );
 
 router
   .put(
@@ -49,11 +69,13 @@ router
     asyncHandler(editTicketForRequesterController)
   );
 
-router.delete(
-  "/:id",
-  authMiddleware,
-  typeBasedAuthMiddleware([UserType.ADMIN, UserType.SUPER_ADMIN]),
-  deleteTicketController
-);
+router
+  .delete(
+    "/:id",
+    authMiddleware,
+    typeBasedAuthMiddleware([UserType.ADMIN, UserType.SUPER_ADMIN]),
+    deleteTicketController
+  )
+  .delete("/:id/media/:aid", authMiddleware, deleteTicketAssetController);
 
 export default router;

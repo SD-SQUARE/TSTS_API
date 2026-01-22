@@ -93,7 +93,7 @@
   "title_required": "العنوان مطلوب",
   "title_too_long": "العنوان طويل جداً",
   "description_required": "الوصف مطلوب",
-  "description_too_long": "الوصف طويل جداً", 
+  "description_too_long": "الوصف طويل جداً",
   "invalid_requester": "معرف مقدم الطلب غير صالح",
   "invalid_specialization": "معرف التخصص غير صالح",
   "invalid_status": "الحالة غير صالحة",
@@ -109,6 +109,12 @@
   "ticket": {
     "invalid_id": "معرف التذكرة غير صالح",
     "not_found": "التذكرة غير موجودة",
-    "deleted": "تم حذف التذكرة"
+    "deleted": "تم حذف التذكرة",
+    "at_least_one_file_required": "يجب تحميل ملف واحد على الأقل",
+    "media_uploaded": "تم رفع وسائط التذكرة بنجاح",
+    "media_upload_failed": "فشل رفع وسائط التذكرة",
+    "asset_not_found": "لم يتم العثور على مرفق التذكرة",
+    "asset_loaded": "تم تحميل مرفق التذكرة",
+    "asset_deleted": "تم حذف مرفق التذكرة"
   }
 }
