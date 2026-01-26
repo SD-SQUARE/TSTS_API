@@ -35,6 +35,7 @@ export const createTicketController = async (req: Request, res: Response) => {
   const parsed = schema.safeParse(req.body);
 
   if (!parsed.success) {
+    logger.info("[server][tickets][controller] Validation with body: ", req.body);
     logger.info(
       "[server][tickets][controller] Validation failed: " +
         parsed.error.issues.map((e) => e.message).join(", "),

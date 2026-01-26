@@ -45,7 +45,7 @@ app.use(i18nextMiddleware.handle(i18n));
 // CSRF (set up if using cookies and forms; for API token flows consider disabling)
 // @AhmedElsenaty
 // TODO: enable in prod
-if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "test")
+if (process.env.NODE_ENV === "production")
   app.use(csrfMiddleware);
 
 import {

@@ -38,6 +38,9 @@ export const getChatMessagesForTicketServices = async (
       relations: {
         attachments: true,
       } as any,
+      order: {
+        createdAt: "DESC",
+      },
     });
 
     const data: ITicketChatMessageResponseDto[] = await Promise.all(
@@ -82,7 +85,7 @@ export const getChatMessagesForTicketServices = async (
       ok: true,
       message: t("ticket.chats_loaded") || "Chats loaded",
       errors: [],
-      data,
+      data: data.sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     };
   } catch (e: any) {
     logger.error(
@@ -108,3 +111,4 @@ export const getChatMessagesForTicketServices = async (
     };
   }
 };
+
