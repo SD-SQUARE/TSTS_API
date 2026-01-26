@@ -12,7 +12,7 @@ import { seedGroupRelations } from "./group-relations.seed.js";
 import { addAvatarsToUsers } from "./seedAvatars.js";
 import { seedSpecializations } from "./specializations.seed.js";
 
-async function runSeeds() {
+export async function runSeeds() {
   try {
     if (!PostgresDataSource.isInitialized) {
       await PostgresDataSource.initialize();

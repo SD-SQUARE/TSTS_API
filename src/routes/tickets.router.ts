@@ -28,7 +28,7 @@ import { createMessageSchema } from "../validation/tickets/chat/send-chat-messag
 
 const router = Router();
 
-router.post("/", upload.array("media"), (req, res) =>
+router.post("/",authMiddleware, upload.array("media"), (req, res) =>
   createTicketController(req, res)
 );
 
