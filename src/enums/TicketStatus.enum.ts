@@ -5,4 +5,5 @@ export enum TicketStatus {
   CLOSED = "closed",
   RESOLVED = "resolved",
   REOPEN = "re_open",
+  OUT_OF_SERVICE = "out_of_service",
 }
