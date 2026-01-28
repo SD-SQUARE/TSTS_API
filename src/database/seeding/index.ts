@@ -9,6 +9,7 @@ import { seedTechnicians } from "./technicians.seed.js";
 import { seedRequesters } from "./requesters.seed.js";
 import { seedGroups } from "./groups.seed.js";
 import { seedGroupRelations } from "./group-relations.seed.js";
+import { addAvatarsToUsers } from "./seedAvatars.js";
 import { seedSpecializations } from "./specializations.seed.js";
 
 async function runSeeds() {
@@ -20,6 +21,8 @@ async function runSeeds() {
     console.log("🚀 Starting database seeding...");
 
     // Order is important because of FK dependencies
+
+
     await seedSpecializations(PostgresDataSource);
     await seedUniversities(PostgresDataSource);
     await seedDomains(PostgresDataSource);
@@ -31,10 +34,12 @@ async function runSeeds() {
     await seedGroups(PostgresDataSource);
 
     // 2) dynamic admins (random uni/domain/dept/profile/specs)
-    await seedAdmins(PostgresDataSource, 100);
+    await seedAdmins(PostgresDataSource, 50);
 
-    await seedTechnicians(PostgresDataSource, 100); // 100 technicians
-    await seedRequesters(PostgresDataSource, 200);
+    await seedTechnicians(PostgresDataSource, 50);
+    await seedRequesters(PostgresDataSource, 50);
+
+    // await addAvatarsToUsers(PostgresDataSource);
 
     // 4) group ↔ specs & group ↔ heads
     await seedGroupRelations(PostgresDataSource);

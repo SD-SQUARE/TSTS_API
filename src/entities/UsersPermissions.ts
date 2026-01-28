@@ -7,10 +7,10 @@ import { PermissionProfile } from "./PermissionProfile.js";
 @Entity({ name: "users_permissions" })
 export class UsersPermissions extends BaseEntity {
   @ManyToOne(() => User, (u) => u.usersPermissions, { onDelete: "CASCADE", lazy: true })
-  user!: User;
+  user!: any;
 
   @ManyToOne(() => PermissionProfile, { onDelete: "SET NULL", nullable: true, lazy: true })
-  permissionProfile?: PermissionProfile;
+  permissionProfile?: any;
 
   // arrays stored as jsonb (list of uuids)
   @Column({ type: "jsonb", nullable: true })

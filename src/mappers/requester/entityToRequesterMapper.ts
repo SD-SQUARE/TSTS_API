@@ -20,6 +20,7 @@ type RequesterDto = {
   university: { id: string; name: string } | null;
   domain: { id: string; name: string } | null;
   departments: { id: string; name: string }[];
+  specializations: { id: string; name: string }[];
   contacts: {
     phones: string[];
     mobiles: string[];
@@ -32,12 +33,15 @@ type RequesterDto = {
 
 export const toRequester = async (
   entity: User,
-  lang: "en" | "ar"
+  lang: "en" | "ar",
 ): Promise<RequesterDto> => {
   const university = entity.university ? await entity.university : null;
   const domain = entity.domain ? await entity.domain : null;
   const userDepartments = entity.userDepartments
     ? await entity.userDepartments
+    : [];
+  const userspecializations = entity.allowedSpecializations
+    ? await entity.allowedSpecializations
     : [];
 
   // 2) for each userDepartment, load department (lazy) and map it
@@ -53,7 +57,22 @@ export const toRequester = async (
         id: dept.id,
         name: dept.name?.[lang], // dept.name is { en, ar }
       };
-    })
+    }),
+  );
+
+  const specializations = await Promise.all(
+    userspecializations.map(async (us) => {
+      const spec = us.specialization ? await us.specialization : null;
+
+      if (!spec) {
+        return null;
+      }
+
+      return {
+        id: spec.id,
+        name: spec.name?.[lang],
+      };
+    }),
   );
 
   return {
@@ -91,8 +110,10 @@ export const toRequester = async (
       : null,
 
     departments: departments.filter(
-      (d): d is { id: string; name: string } => d !== null
+      (d): d is { id: string; name: string } => d !== null,
     ),
+
+    specializations: specializations,
 
     contacts: {
       phones: entity.contacts?.phone ?? [],

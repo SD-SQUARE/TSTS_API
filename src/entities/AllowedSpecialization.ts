@@ -10,8 +10,8 @@ export class AllowedSpecialization extends BaseEntity {
     onDelete: "CASCADE",
     lazy: true,
   })
-  user!: User;
+  user!: any;
 
   @ManyToOne(() => Specialization, (s) => s.allowed, { onDelete: "CASCADE", lazy: true })
-  specialization!: Specialization;
+  specialization!: any;
 }

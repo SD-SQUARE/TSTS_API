@@ -21,7 +21,7 @@ export class University extends BaseEntity {
   description?: { en?: string; ar?: string };
 
   @OneToMany(() => Domain, (d) => d.university, { lazy: true })
-  domains!: Domain[];
+  domains!: any[];
 
   toApi() {
     return {
