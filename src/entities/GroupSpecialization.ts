@@ -7,10 +7,10 @@ import { Specialization } from "./Specialization.js";
 @Entity({ name: "group_specializations" })
 export class GroupSpecialization extends BaseEntity {
   @ManyToOne(() => Group, (g) => g.specializations, { onDelete: "CASCADE",})
-  group!: Group;
+  group!: any;
 
   @ManyToOne(() => Specialization, (s) => s.groupSpecializations, {
     onDelete: "CASCADE",
   })
-  specialization!: Specialization;
+  specialization!: any;
 }

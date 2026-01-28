@@ -35,6 +35,10 @@ import {
   getUserProfileById,
   getUserSpecializations,
 } from "../controllers/profile.controller.js";
+import {
+  getGroupsForUserPagedController,
+  getSpecializationsForUserPagedController,
+} from "../controllers/users.controller.js";
 
 const router = Router();
 
@@ -50,7 +54,12 @@ router
   .get("/profile/:id/view/groups", asyncHandler(getUserGroups))
   .get(
     "/profile/:id/view/specializations",
-    asyncHandler(getUserSpecializations)
+    asyncHandler(getUserSpecializations),
+  )
+  .get("/:id/groups", asyncHandler(getGroupsForUserPagedController))
+  .get(
+    "/:id/specializations",
+    asyncHandler(getSpecializationsForUserPagedController),
   );
 
 router
@@ -59,21 +68,21 @@ router
     upload.single("image"),
     validate(createRequesterSchema),
     validateEmailAndSsnMiddleware,
-    asyncHandler(createRequester)
+    asyncHandler(createRequester),
   )
   .post(
     "/technicians",
     upload.single("image"),
     validate(createTechnicianSchema),
     validateEmailAndSsnMiddleware,
-    asyncHandler(createTechnician)
+    asyncHandler(createTechnician),
   )
   .post(
     "/admins",
     upload.single("image"),
     validate(createAdminSchema),
     validateEmailAndSsnMiddleware,
-    asyncHandler(createAdmin)
+    asyncHandler(createAdmin),
   );
 
 router
@@ -82,21 +91,21 @@ router
     upload.single("image"),
     validate(createRequesterSchema),
     validateEmailEditSsnMiddleware,
-    asyncHandler(EditRequester)
+    asyncHandler(EditRequester),
   )
   .put(
     "/technicians/:id",
     upload.single("image"),
     validate(createTechnicianSchema),
     validateEmailEditSsnMiddleware,
-    asyncHandler(EditTechnician)
+    asyncHandler(EditTechnician),
   )
   .put(
     "/admins/:id",
     upload.single("image"),
     validate(createAdminSchema),
     validateEmailEditSsnMiddleware,
-    asyncHandler(EditAdmin)
+    asyncHandler(EditAdmin),
   );
 router
   .delete("/requesters/:id", asyncHandler(deleteRequester))

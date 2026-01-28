@@ -25,7 +25,7 @@ export const PostgresDataSource = new DataSource({
   logging: true,
   logger: "file",
   migrationsTableName: "migration",
-  migrations: [path.join(__dirname, "src/migration/*.ts")],
+  migrations: [path.join(__dirname, "src/migrations/*.ts")],
   entities: Object.values(entities),
 });
 

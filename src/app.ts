@@ -27,6 +27,8 @@ app.use(xss());
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cookieParser());
 
 // CORS
@@ -67,6 +69,8 @@ import domainsRouter from "./routes/domains.router.js";
 import departmentsRouter from "./routes/departments.router.js";
 import specializationsRouter from "./routes/specializations.router.js";
 import workHourRouter from "./routes/workHour.router.js";
+import knowlegeBaseRouter from "./routes/knowlegeBase.router.js";
+
 import logger from "./utils/logger.js";
 // routes
 app.get("/api/v1/health", (req, res) => {
@@ -98,6 +102,7 @@ app.use("/api/v1/domains", domainsRouter );
 app.use("/api/v1/departments", departmentsRouter );
 app.use("/api/v1/specializations", specializationsRouter );
 app.use("/api/v1/work-hours", workHourRouter );
+app.use("/api/v1/knowledge-base", knowlegeBaseRouter );
 
 
 

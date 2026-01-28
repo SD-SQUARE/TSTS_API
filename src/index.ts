@@ -1,9 +1,9 @@
+import "reflect-metadata";
 
 import dotenv from "dotenv";
 import path from "path";
 dotenv.config({ path: path.join(process.cwd(), "src/.env") });
 
-import "reflect-metadata";
 import { initDataSource } from "./database/postgres-data-source.js";
 import app from "./app.js";
 import logger from "./utils/logger.js";

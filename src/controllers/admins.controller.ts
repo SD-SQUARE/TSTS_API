@@ -15,7 +15,6 @@ import {
   getAdminByIdService,
   getAllAdminsService,
 } from "../services/users/admin/adminQueryService.js";
-import { validate } from "../validation/zod-middleware.js";
 import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 
 export const createAdmin = async (

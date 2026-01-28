@@ -1,4 +1,3 @@
-// src/database/seeding/admins.seed.ts
 import { DataSource } from "typeorm";
 import {
   Department,
@@ -9,6 +8,14 @@ import {
 import { UserType } from "../../enums/UserType.enum.js";
 import { CreateAdminMapped } from "../../interfaces/admin/ICreateAdmin.js";
 import { createAdminService } from "../../services/users/admin/adminCommandService.js";
+import {
+  arabicMenNames,
+  englishMenNames,
+  arabicNames,
+  englishNames,
+} from "./personNamesDataSet.js";
+import { downloadAvatarImage } from "./downloadAvatarImage.js";
+import { Faker, ar, en } from "@faker-js/faker";
 
 // ---------- Helpers ----------
 function getRandomItem<T>(arr: T[]): T {
@@ -17,7 +24,7 @@ function getRandomItem<T>(arr: T[]): T {
 
 function getRandomSubset<T>(arr: T[], maxCount: number): T[] {
   if (arr.length === 0) return [];
-  const count = Math.floor(Math.random() * Math.min(maxCount, arr.length)) + 1; // 1..maxCount
+  const count = Math.floor(Math.random() * Math.min(maxCount, arr.length)) + 1;
   const copy = [...arr];
   const result: T[] = [];
 
@@ -31,22 +38,25 @@ function getRandomSubset<T>(arr: T[], maxCount: number): T[] {
   return result;
 }
 
-// structure we’ll use to keep things simple
+// Structure to store department/domain/university details
 type DeptTriple = {
   deptId: string;
   domainId: string;
   uniId: string;
 };
 
-// Call this from your master seeder:
-// await seedAdmins(PostgresDataSource, 100);
+// Main function to seed admins
 export async function seedAdmins(dataSource: DataSource, count = 100) {
+  const faker = new Faker({
+    locale: [en, ar],
+  });
+
   const deptRepo = dataSource.getRepository(Department);
   const profileRepo = dataSource.getRepository(PermissionProfile);
   const specRepo = dataSource.getRepository(Specialization);
   const userRepo = dataSource.getRepository(User);
 
-  // 1) Load dept/domain/university IDs in one raw query (NO lazy-rel issues)
+  // Load department/domain/university IDs
   const deptTriplesRaw = await deptRepo
     .createQueryBuilder("dep")
     .innerJoin("dep.domain", "domain")
@@ -73,6 +83,7 @@ export async function seedAdmins(dataSource: DataSource, count = 100) {
     .where("s.deletedAt IS NULL")
     .getMany();
 
+  // Check if we have data to proceed with
   if (deptTriples.length === 0) {
     console.warn(
       "⚠️ [AdminsSeed] No departments with valid domains/universities found."
@@ -95,11 +106,11 @@ export async function seedAdmins(dataSource: DataSource, count = 100) {
     `ℹ️ [AdminsSeed] Loaded: ${deptTriples.length} dept/domain/uni triples, ${profiles.length} profiles, ${specs.length} specs.`
   );
 
-  // 2) Loop and create N admins
+  // Loop to create admins
   for (let i = 1; i <= count; i++) {
     const email = `admin${i}@example.com`;
 
-    // Idempotent: skip if already exists
+    // Check if the admin already exists
     const existing = await userRepo
       .createQueryBuilder("u")
       .where("u.email = :email", { email })
@@ -111,36 +122,30 @@ export async function seedAdmins(dataSource: DataSource, count = 100) {
       continue;
     }
 
-    // pick random dept/domain/uni triple
+    // Pick random dept/domain/uni triple
     const randomDeptTriple = getRandomItem(deptTriples);
-
-    // pick random profile
     const randomProfile = getRandomItem(profiles);
-
-    // pick random subset of specializations (1..3)
     const randomSpecs = getRandomSubset(specs, 3);
     const allowedSpecializations = randomSpecs.map((s) => s.id);
 
-    // deterministic SSN & mobile just to be unique
-    const ssn = (10000000000000 + i).toString(); // 14 digits
+    // Generate deterministic SSN & mobile
+    const ssn = (10000000000000 + i).toString();
     const mobile = `010${String(1000000 + i).slice(-7)}`;
 
+    // Prepare admin data
     const adminDto: CreateAdminMapped = {
-      // -------- auth --------
       email,
-      password: "Admin@123456", // will be hashed by mapAdminToUserEntity
+      password: "Admin@123456", // Admin password (hashed in service)
 
-      // -------- name fields (based on mapAdminToUserEntity) --------
-      firstNameEn: "Admin",
-      firstNameAr: "مسؤول",
+      firstNameAr: arabicNames[i % arabicNames.length],
+      firstNameEn: englishNames[i % englishNames.length],
 
-      midNameEn: `mid${i}`,
-      midNameAr: `نص${i}`,
+      midNameEn: englishMenNames[(i + 1) % englishMenNames.length],
+      midNameAr: arabicMenNames[(i + 1) % arabicMenNames.length],
 
-      lastNameEn: `#${i}`,
-      lastNameAr: `رقم ${i}`,
+      lastNameEn: englishMenNames[(i + 2) % englishMenNames.length],
+      lastNameAr: arabicMenNames[(i + 2) % arabicMenNames.length],
 
-      // -------- identity / contacts --------
       ssn,
       mobiles: [mobile, mobile],
       phones: [mobile],
@@ -148,28 +153,28 @@ export async function seedAdmins(dataSource: DataSource, count = 100) {
       jobEn: "System Administrator",
       jobAr: "مسؤول نظام",
 
-      // -------- relations (IDs) --------
-      // validateEntities(university, domain, departments) should accept these IDs
       university: randomDeptTriple.uniId,
       domain: randomDeptTriple.domainId,
       departments: [randomDeptTriple.deptId],
 
-      // permissions
       permissionProfile: randomProfile.id,
       extraPermissions: [],
       revokedPermissions: [],
 
-      // specs
       allowedSpecializations,
-
       userType: UserType.ADMIN,
-    } as CreateAdminMapped;
+    };
 
     console.log(
       `🚀 [AdminsSeed] Creating admin ${i}: ${email} (uni=${randomDeptTriple.uniId}, domain=${randomDeptTriple.domainId}, dept=${randomDeptTriple.deptId}, profile=${randomProfile.id})`
     );
 
-    const result = await createAdminService(adminDto);
+    // Generate avatar URL and download the avatar image
+    const avatarUrl = faker.image.avatar();
+    const avatarFile = await downloadAvatarImage(avatarUrl);
+
+    // Create the admin and pass the avatar file
+    const result = await createAdminService(adminDto, avatarFile);
 
     if (!result.is_added) {
       console.error(

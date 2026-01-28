@@ -8,6 +8,14 @@ import {
 import { UserType } from "../../enums/UserType.enum.js";
 import { CreateTechnicianMapped } from "../../interfaces/technician/ICreateTechnician.js";
 import { createTechnicianService } from "../../services/users/technician/technicianCommandService.js";
+import {
+  arabicMenNames,
+  arabicNames,
+  englishMenNames,
+  englishNames,
+} from "./personNamesDataSet.js";
+import { Faker, en, ar } from "@faker-js/faker";
+import { downloadAvatarImage } from "./downloadAvatarImage.js";
 
 // ---------- Helpers ----------
 function getRandomItem<T>(arr: T[]): T {
@@ -40,6 +48,10 @@ export async function seedTechnicians(
   dataSource: DataSource,
   count = 100
 ): Promise<void> {
+  const faker = new Faker({
+    locale: [en, ar],
+  });
+
   const deptRepo = dataSource.getRepository(Department);
   const profileRepo = dataSource.getRepository(PermissionProfile);
   const specRepo = dataSource.getRepository(Specialization);
@@ -121,14 +133,14 @@ export async function seedTechnicians(
       email,
       password: "Tech@123456",
 
-      firstNameEn: "Technician",
-      firstNameAr: "فني",
+      firstNameAr: arabicNames[i % arabicNames.length], // English name
+      firstNameEn: englishNames[i % englishNames.length], // Arabic name
 
-      midNameEn: `mid${i}`,
-      midNameAr: `نص${i}`,
+      midNameEn: englishMenNames[(i + 1) % englishMenNames.length], // English middle name
+      midNameAr: arabicMenNames[(i + 1) % arabicMenNames.length], // Arabic middle name
 
-      lastNameEn: `#${i}`,
-      lastNameAr: `رقم ${i}`,
+      lastNameEn: englishMenNames[(i + 2) % englishMenNames.length], // English last name
+      lastNameAr: arabicMenNames[(i + 2) % arabicMenNames.length], // Arabic last name
 
       ssn,
       mobiles: [mobile, mobile],
@@ -154,7 +166,9 @@ export async function seedTechnicians(
       `🚀 [TechniciansSeed] Creating technician ${i}: ${email} (uni=${randomDept.uniId}, domain=${randomDept.domainId}, dept=${randomDept.deptId}, profile=${randomProfile.id})`
     );
 
-    const result = await createTechnicianService(dto);
+    const avatarUrl = faker.image.avatar();
+    const avatarFile = await downloadAvatarImage(avatarUrl);
+    const result = await createTechnicianService(dto, avatarFile);
 
     if (!result.is_added) {
       console.error(

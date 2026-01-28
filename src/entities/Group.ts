@@ -25,15 +25,15 @@ export class Group extends BaseEntity {
   color?: string;
 
   @OneToMany(() => TechnicianGroup, (tg) => tg.group, )
-  technicians!: TechnicianGroup[];
+  technicians!: any[];
 
   @OneToMany(() => GroupHead, (gh) => gh.group, )
-  heads!: GroupHead[];
+  heads!: any[];
 
   @OneToMany(() => GroupSpecialization, (gs) => gs.group, )
-  specializations!: GroupSpecialization[];
+  specializations!: any[];
 
   @ManyToOne(() => User, { nullable: true, lazy: true })
   @JoinColumn({ name: "teamLeaderId" })
-  teamLeader?: User;
+  teamLeader?: any;
 }

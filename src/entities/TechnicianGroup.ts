@@ -7,8 +7,8 @@ import { User } from "./User.js";
 @Entity({ name: "technician_groups" })
 export class TechnicianGroup extends BaseEntity {
   @ManyToOne(() => User, (u) => u.technicianGroups, { onDelete: "CASCADE", lazy: false })
-  user!: User;
+  user!: any;
 
   @ManyToOne(() => Group, (g) => g.technicians, { onDelete: "CASCADE", lazy: true })
-  group!: Group;
+  group!: any;
 }
