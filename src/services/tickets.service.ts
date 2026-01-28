@@ -14,6 +14,7 @@ import { buildPagination } from "../utils/pagination.js";
 import { buildLocalizedName } from "../utils/localizeName.js";
 import { TicketActivity } from "../entities/TicketActivity.js";
 import { TicketActivityType } from "../enums/TicketActivity.enum.js";
+import { ReqUserPayload } from "../types/ReqUserPayload.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
@@ -134,7 +135,8 @@ export const createTicket = async (dto, files) => {
 
 export const getAllTicketsService = async (
   query: GetTicketsQuery,
-  lang: "ar" | "en"
+  lang: "ar" | "en",
+  user: ReqUserPayload,
 ) => {
   logger.info("[server][tickets] getAllTickets | start", {
     lang,
@@ -158,6 +160,22 @@ export const getAllTicketsService = async (
     .leftJoinAndSelect("ticket.requester", "requester")
     .leftJoinAndSelect("ticket.specialization", "specialization")
     .leftJoinAndSelect("ticket.assigneeList", "assignee");
+
+  if (user.role === UserType.REQUESTER) {
+    qb.andWhere("requester.id = :userId", {
+      userId: user.id,
+    });
+
+    logger.info("[tickets] requester access applied", { userId: user.id });
+  }
+
+  if (user.role === UserType.TECHNICIAN) {
+    qb.andWhere("assignee.id = :userId", {
+      userId: user.id,
+    });
+
+    logger.info("[tickets] technician access applied", { userId: user.id });
+  }
 
   logger.info("[server][tickets] getAllTickets | base query initialized");
 
@@ -278,7 +296,8 @@ export const getAllTicketsService = async (
 
 export const getSingleTicketService = async (
   ticketId: string,
-  lang: "ar" | "en"
+  lang: "ar" | "en",
+  userId: string,
 ) => {
   logger.info("[server][tickets] getSingleTicket | start", { ticketId, lang });
 
@@ -335,7 +354,7 @@ export const getSingleTicketService = async (
     ticket,
     "Ticket Viewed",
     TicketActivityType.VIEW,
-    `Ticket "${ticket.title}" was viewed`,
+    `Ticket "${ticket.title}" was viewed by ${userId}`,
     { ticketId: ticket.id }
   );
 

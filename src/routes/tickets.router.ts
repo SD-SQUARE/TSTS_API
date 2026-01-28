@@ -52,8 +52,13 @@ router
     asyncHandler(sendChatMessageController)
   );
 
-router.get("/", validate(getTicketsSchema), getAllTicketsController);
-router.get("/:id", getSingleTicketController);
+router.get(
+  "/",
+  authMiddleware,
+  validate(getTicketsSchema),
+  getAllTicketsController,
+);
+router.get("/:id", authMiddleware, getSingleTicketController);
 router.get("/:id/activities", getTicketActivitiesController);
 
 router
