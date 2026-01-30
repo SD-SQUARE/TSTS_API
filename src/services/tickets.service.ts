@@ -298,6 +298,7 @@ export const getSingleTicketService = async (
   ticketId: string,
   lang: "ar" | "en",
   userId: string,
+  userName: string
 ) => {
   logger.info("[server][tickets] getSingleTicket | start", { ticketId, lang });
 
@@ -354,8 +355,10 @@ export const getSingleTicketService = async (
     ticket,
     "Ticket Viewed",
     TicketActivityType.VIEW,
-    `Ticket "${ticket.title}" was viewed by ${userId}`,
-    { ticketId: ticket.id }
+    `Ticket "${ticket.title}" was viewed by ${userName}`,
+    { ticketId: ticket.id,
+      userId: userId,
+     }
   );
 
   logger.info("[server][tickets] getSingleTicket | completed", {
