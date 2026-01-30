@@ -50,8 +50,9 @@ export const createTicketController = async (req: Request, res: Response) => {
 
 export const getAllTicketsController = async (req: Request, res: Response) => {
   const lang = (req.language || "en") as "ar" | "en";
+  const user = (req as any).user;
 
-  const result = await getAllTicketsService(req.query, lang);
+  const result = await getAllTicketsService(req.query, lang, user);
 
   return res.status(200).json(result);
 };
@@ -62,8 +63,9 @@ export const getSingleTicketController = async (
 ) => {
   const { id } = req.params;
   const lang = (req.language || "en") as "ar" | "en";
+  const userId = (req as any).user.id;
 
-  const ticket = await getSingleTicketService(id, lang);
+  const ticket = await getSingleTicketService(id, lang, userId);
 
   if (!ticket) {
     logger.info(`[server][tickets] Ticket not found: ${id}`);
