@@ -1,6 +1,8 @@
 import winston from "winston";
 
-const transports:winston.transport[] = [new winston.transports.File({ filename: "logs/app.log" })];
+const transports: winston.transport[] = [
+  new winston.transports.File({ filename: "logs/app.log" }),
+];
 
 // Add console transport only if not in test mode
 if (process.env.TEST_MODE !== "true") {
@@ -20,10 +22,12 @@ const logger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
     winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-    winston.format.printf(
-      ({ level, message, timestamp }) =>
-        `${timestamp} [${level.toUpperCase()}]: ${message}`
-    )
+    winston.format.printf(({ level, message, timestamp, ...meta }) => {
+      const metaString =
+        Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : "";
+
+      return `${timestamp} [${level.toUpperCase()}]: ${message} |${metaString}`;
+    })
   ),
   transports,
 });

@@ -14,4 +14,13 @@ export * from "./Specialization.js";
 export * from "./WorkHour.js";
 export * from "./Permission.js";
 export * from "./PermissionProfile.js";
-export * from "./KnowledgeItem.js"
+export * from "./KnowledgeItem.js";
+export * from "./Media.js";
+export * from "./Notification.js";
+export * from "./NotificationRead.js";
+export * from "./Ticket.js";
+export * from "./TicketActivity.js";
+export * from "./TicketChat.js";
+export * from "./TicketListener.js";
+export * from "./ChatMessage.js";
+export * from "./TicketChatMessage.js";
