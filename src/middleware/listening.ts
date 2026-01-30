@@ -1,7 +1,7 @@
 import { Socket } from "socket.io";
 import { userTicketsId } from "../helpers/userTicketListener.Helper.js";
 
-export const listening = (socket: Socket, next: (err?: any) => void) => {
+export const listening = async (socket: Socket, next: (err?: any) => void) => {
   try {
     const userId = socket.data.user?.id;
     if (!userId) {
@@ -9,7 +9,7 @@ export const listening = (socket: Socket, next: (err?: any) => void) => {
     }
     const roomName = `user:${userId}`;
     const broadcastRoom = "broadcast";
-    const ticketRooms = userTicketsId(userId).map(id => `ticket:${id}`);
+    const ticketRooms = await userTicketsId(userId);
     ticketRooms.forEach(room => socket.join(room));
     socket.join(roomName);
     socket.join(broadcastRoom);
