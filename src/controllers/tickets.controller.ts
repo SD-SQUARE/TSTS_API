@@ -64,8 +64,10 @@ export const getSingleTicketController = async (
   const { id } = req.params;
   const lang = (req.language || "en") as "ar" | "en";
   const userId = (req as any).user.id;
+  const userFullName = (req as any).user.name;
+  const userName = userFullName.first + " " + userFullName.mid + " " + userFullName.last;
 
-  const ticket = await getSingleTicketService(id, lang, userId);
+  const ticket = await getSingleTicketService(id, lang, userId, userName);
 
   if (!ticket) {
     logger.info(`[server][tickets] Ticket not found: ${id}`);
