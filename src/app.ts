@@ -36,13 +36,13 @@ app.use(
   cors({
     origin: process.env.CORS_ORIGIN || true,
     credentials: true,
-  })
+  }),
 );
 
 // Rate limiter
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000,
 });
 app.use(limiter);
 
@@ -55,7 +55,7 @@ app.use(socketIoMiddleware(socketIoInstance));
 // CSRF (set up if using cookies and forms; for API token flows consider disabling)
 // @AhmedElsenaty
 // TODO: enable in prod
-if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "test")
+if (process.env.NODE_ENV === "production")
   app.use(csrfMiddleware);
 
 import {
@@ -63,6 +63,9 @@ import {
   usersRouter,
   groupsRouter,
   lockupsRouter,
+  ticketsRouter,
+  chatRouter,
+  notificationRouter,
 } from "./routes/index.js";
 import universitiesRouter from "./routes/universities.router.js";
 import domainsRouter from "./routes/domains.router.js";
@@ -97,14 +100,21 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/groups", groupsRouter);
 app.use("/api/v1/lockups", lockupsRouter);
-app.use("/api/v1/universities", universitiesRouter );
-app.use("/api/v1/domains", domainsRouter );
-app.use("/api/v1/departments", departmentsRouter );
-app.use("/api/v1/specializations", specializationsRouter );
-app.use("/api/v1/work-hours", workHourRouter );
-app.use("/api/v1/knowledge-base", knowlegeBaseRouter );
+app.use("/api/v1/universities", universitiesRouter);
+app.use("/api/v1/domains", domainsRouter);
+app.use("/api/v1/departments", departmentsRouter);
+app.use("/api/v1/specializations", specializationsRouter);
+app.use("/api/v1/work-hours", workHourRouter);
+app.use("/api/v1/knowledge-base", knowlegeBaseRouter);
 
-
+app.use("/api/v1/universities", universitiesRouter);
+app.use("/api/v1/domains", domainsRouter);
+app.use("/api/v1/departments", departmentsRouter);
+app.use("/api/v1/specializations", specializationsRouter);
+app.use("/api/v1/work-hours", workHourRouter);
+app.use("/api/v1/tickets", ticketsRouter);
+app.use("/api/v1/chat", chatRouter);
+app.use("/api/v1/notifications", notificationRouter);
 
 app.use(errorHandler);
 
