@@ -30,9 +30,9 @@ async function main() {
 
        
 
-        initSocket(server);
-    server.listen(PORT, () => {
+        server.listen(PORT, () => {
             logger.info(`[server] listening on http://${HOST}:${PORT}`);
+            initSocket(server);
         });
     } catch (err) {
         logger.error("❌ Server failed to start", err);
