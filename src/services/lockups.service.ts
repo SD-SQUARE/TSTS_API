@@ -107,7 +107,7 @@ export const getUsersLockupService = async (query: UsersLockupQuery) => {
     qb.andWhere("user.user_type = :user_type", { user_type: query.user_type });
   }
 
-  qb.skip(skip).take(take);
+  // qb.skip(skip).take(take);
 
   // Get paginated results
   const users = await qb.getMany();
@@ -309,7 +309,8 @@ export const getGroupsLockupService = async (query: GroupsLockupQuery) => {
     );
   }
 
-  const [groups] = await qb.skip(skip).take(take).getManyAndCount();
+  // const [groups] = await qb.skip(skip).take(take).getManyAndCount();
+  const [groups] = await qb.getManyAndCount();
 
   return groups.map((g) => ({
     id: g.id,
