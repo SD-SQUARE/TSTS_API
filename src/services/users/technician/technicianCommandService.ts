@@ -8,7 +8,6 @@ import { validateEntities } from "../../../helpers/EntitiesValidatorHelper.js";
 import { validateExistingPermission } from "../../../helpers/ProfileAndPermissionValidatorHelper.js";
 import { validateExistingSpecializations } from "../../../helpers/specializationValidatorHelper.js";
 import { PostgresDataSource } from "../../../database/postgres-data-source.js";
-import { UserDepartment } from "../../../entities/UserDepartment.js";
 import { UsersPermissions } from "../../../entities/UsersPermissions.js";
 import { AllowedSpecialization } from "../../../entities/AllowedSpecialization.js";
 import { User } from "../../../entities/index.js";
@@ -22,13 +21,12 @@ import { CreateTechnicianMapped } from "../../../interfaces/technician/ICreateTe
 
 export const createTechnicianService = async (
   technicianDto: CreateTechnicianMapped,
-  imageFile?: Express.Multer.File
+  imageFile?: Express.Multer.File,
 ): Promise<ICreateResponse> => {
-  // 2) university + domain + departments in ONE helper
+  // 2) university + domain in ONE helper
   const entitiesResult = await validateEntities(
     technicianDto.university,
     technicianDto.domain,
-    technicianDto.departments
   );
 
   if (!entitiesResult.is_valid) {
@@ -39,17 +37,13 @@ export const createTechnicianService = async (
     };
   }
 
-  const {
-    university,
-    domain,
-    departments: existingDepartments = [],
-  } = entitiesResult;
+  const { university, domain } = entitiesResult;
 
   // 3) validate permission profile + extra/revoked permissions
   const permResult = await validateExistingPermission(
     technicianDto.permissionProfile,
     technicianDto.extraPermissions,
-    technicianDto.revokedPermissions
+    technicianDto.revokedPermissions,
   );
 
   if (!permResult.is_valid) {
@@ -61,7 +55,7 @@ export const createTechnicianService = async (
   }
 
   const specsResult = await validateExistingSpecializations(
-    technicianDto.allowedSpecializations
+    technicianDto.allowedSpecializations,
   );
 
   if (!specsResult.is_valid) {
@@ -85,7 +79,7 @@ export const createTechnicianService = async (
     const safeKey = await uploadFilesWithUniqueKey(
       IMAGE_PATHS.UsersImages,
       technicianDto.ssn,
-      imageFile
+      imageFile,
     );
     userData.image = safeKey;
   }
@@ -93,45 +87,33 @@ export const createTechnicianService = async (
   // 10) Save user
   const user = await userRepository.createAndSave(userData);
   logger.info(`[server] [user] Creating user ${userData.email}`);
-  const userDepartmentsRepo = PostgresDataSource.getRepository(UserDepartment);
   const usersPermissionsRepo =
     PostgresDataSource.getRepository(UsersPermissions);
   const allowedSpecializationsRepo = PostgresDataSource.getRepository(
-    AllowedSpecialization
+    AllowedSpecialization,
   );
-
-  // 11) Save departments
-  if (existingDepartments.length > 0) {
-    const userDepartments = existingDepartments.map((dept) =>
-      userDepartmentsRepo.create({
-        user,
-        department: dept,
-      })
-    );
-    await userDepartmentsRepo.save(userDepartments);
-  }
 
   const profile = permResult.profile!;
 
-  // 12) Save usersPermissions
+  // 11) Save usersPermissions
   await usersPermissionsRepo.save(
     usersPermissionsRepo.create({
       user,
       permissionProfile: profile,
       extraPermissions: technicianDto.extraPermissions,
       revokedPermissions: technicianDto.revokedPermissions,
-    })
+    }),
   );
 
-  // 13) Save allowedSpecializations
+  // 12) Save allowedSpecializations
   if (technicianDto.allowedSpecializations?.length > 0) {
     await allowedSpecializationsRepo.save(
       technicianDto.allowedSpecializations.map((specId) =>
         allowedSpecializationsRepo.create({
           user,
           specialization: { id: specId } as any,
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -141,35 +123,29 @@ export const createTechnicianService = async (
 export const editTechnicianService = async (
   id: string,
   technicianDto: CreateTechnicianMapped,
-  imageFile?: Express.Multer.File
+  imageFile?: Express.Multer.File,
 ): Promise<IEditResponse> => {
   const userRepo = PostgresDataSource.getRepository(User);
-  const userDepartmentsRepo = PostgresDataSource.getRepository(UserDepartment);
   const usersPermissionsRepo =
     PostgresDataSource.getRepository(UsersPermissions);
   const allowedSpecializationsRepo = PostgresDataSource.getRepository(
-    AllowedSpecialization
+    AllowedSpecialization,
   );
 
   // 0) Load existing user
   const userEntity = await userRepo.findOne({
     where: { id },
-    relations: [
-      "userDepartments",
-      "usersPermissions",
-      "allowedSpecializations",
-    ],
+    relations: ["usersPermissions", "allowedSpecializations"],
   });
 
   if (!userEntity) {
     return { is_edited: false, message: t("user_not_found"), errors: [] };
   }
 
-  // 2) Validate university + domain + departments
+  // 2) Validate university + domain
   const entitiesResult = await validateEntities(
     technicianDto.university,
     technicianDto.domain,
-    technicianDto.departments
   );
 
   if (!entitiesResult.is_valid) {
@@ -180,17 +156,13 @@ export const editTechnicianService = async (
     };
   }
 
-  const {
-    university,
-    domain,
-    departments: existingDepartments = [],
-  } = entitiesResult;
+  const { university, domain } = entitiesResult;
 
   // 3) Validate permission profile + extra/revoked permissions
   const permResult = await validateExistingPermission(
     technicianDto.permissionProfile,
     technicianDto.extraPermissions,
-    technicianDto.revokedPermissions
+    technicianDto.revokedPermissions,
   );
 
   if (!permResult.is_valid) {
@@ -203,7 +175,7 @@ export const editTechnicianService = async (
 
   // 4) Validate allowed specializations
   const specsResult = await validateExistingSpecializations(
-    technicianDto.allowedSpecializations
+    technicianDto.allowedSpecializations,
   );
 
   if (!specsResult.is_valid) {
@@ -233,7 +205,7 @@ export const editTechnicianService = async (
     const safeKey = await uploadFilesWithUniqueKey(
       IMAGE_PATHS.UsersImages,
       technicianDto.ssn,
-      imageFile
+      imageFile,
     );
     userEntity.image = safeKey;
   }
@@ -245,20 +217,7 @@ export const editTechnicianService = async (
 
   // 9) Clear old relations and re-create them
 
-  // 9.1) UserDepartments
-  await userDepartmentsRepo.delete({ user: { id: user.id } as any });
-
-  if (existingDepartments.length > 0) {
-    const userDepartments = existingDepartments.map((dept) =>
-      userDepartmentsRepo.create({
-        user,
-        department: dept,
-      })
-    );
-    await userDepartmentsRepo.save(userDepartments);
-  }
-
-  // 9.2) UsersPermissions – assume one row per user, so delete & recreate
+  // 9.1) UsersPermissions – assume one row per user, so delete & recreate
   await usersPermissionsRepo.delete({ user: { id: user.id } as any });
 
   const profile = permResult.profile!;
@@ -268,10 +227,10 @@ export const editTechnicianService = async (
       permissionProfile: profile,
       extraPermissions: technicianDto.extraPermissions,
       revokedPermissions: technicianDto.revokedPermissions,
-    })
+    }),
   );
 
-  // 9.3) AllowedSpecializations – clear then add
+  // 9.2) AllowedSpecializations – clear then add
   await allowedSpecializationsRepo.delete({ user: { id: user.id } as any });
 
   if (technicianDto.allowedSpecializations?.length > 0) {
@@ -280,8 +239,8 @@ export const editTechnicianService = async (
         allowedSpecializationsRepo.create({
           user,
           specialization: { id: specId } as any,
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -289,7 +248,7 @@ export const editTechnicianService = async (
 };
 
 export const deleteTechnicianService = async (
-  id: string
+  id: string,
 ): Promise<IDeleteResponse> => {
   const userRepo = PostgresDataSource.getRepository(User);
 
