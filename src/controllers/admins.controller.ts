@@ -16,10 +16,11 @@ import {
   getAllAdminsService,
 } from "../services/users/admin/adminQueryService.js";
 import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
+import { Lang } from "../types/lang.types.js";
 
 export const createAdmin = async (
   req: RequestWithFileAndBody,
-  res: Response
+  res: Response,
 ) => {
   const adminDto = mapCreateAdmin(req);
 
@@ -45,7 +46,7 @@ export const getAdminsPaged = async (req, res) => {
 
 export const getAdminById = async (req, res) => {
   const id = req.params.id;
-  const lang = req.language as "en" | "ar";
+  const lang = req.language as Lang;
 
   const isValid = uuidValidationSchema.safeParse(id);
 

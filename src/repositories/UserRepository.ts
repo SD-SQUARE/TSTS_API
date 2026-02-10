@@ -13,6 +13,7 @@ import {
   GroupHead,
   Specialization,
 } from "../entities/index.js";
+import { Lang } from "../types/lang.types.js";
 
 export class UserRepository {
   private repo = PostgresDataSource.getRepository(User);
@@ -23,7 +24,7 @@ export class UserRepository {
 
   async checkEmailOrSsnConflictForAdd(
     email: string,
-    ssn?: string
+    ssn?: string,
   ): Promise<EmailSsnConflictResult> {
     const emailExists = await this.repo.exists({ where: { email } });
     const ssnExists = ssn ? await this.repo.exists({ where: { ssn } }) : false;
@@ -46,7 +47,7 @@ export class UserRepository {
   async checkEmailOrSsnConflictForEdit(
     id: string,
     email: string,
-    ssn?: string
+    ssn?: string,
   ): Promise<EmailSsnConflictResult> {
     const emailExists = await this.repo.exists({
       where: { email, id: Not(id) },
@@ -77,7 +78,7 @@ export class UserRepository {
 
   async getAllRequestersWithFilter(
     query: GetUsersQuery,
-    lang: "en" | "ar"
+    lang: "en" | "ar",
   ): Promise<[User[], number]> {
     const repo = PostgresDataSource.getRepository(User);
 
@@ -144,7 +145,7 @@ export class UserRepository {
 
   async getAllTechniciansWithFilter(
     query: GetUsersQuery,
-    lang: "en" | "ar"
+    lang: "en" | "ar",
   ): Promise<[User[], number]> {
     const repo = PostgresDataSource.getRepository(User);
 
@@ -213,7 +214,7 @@ export class UserRepository {
 
   async getAllAdminsWithFilter(
     query: GetUsersQuery,
-    lang: "en" | "ar"
+    lang: Lang,
   ): Promise<[User[], number]> {
     const repo = PostgresDataSource.getRepository(User);
 
@@ -221,8 +222,6 @@ export class UserRepository {
       .createQueryBuilder("user")
       .leftJoinAndSelect("user.university", "university")
       .leftJoinAndSelect("user.domain", "domain")
-      .leftJoinAndSelect("user.userDepartments", "userDepartments")
-      .leftJoinAndSelect("userDepartments.department", "department")
       .where("1 = 1");
 
     qb.andWhere("user.user_type = :userType", {
@@ -256,10 +255,6 @@ export class UserRepository {
       qb.andWhere("user.user_type = :ut", { ut: query.user_type });
     }
 
-    if (query.departments) {
-      qb.andWhere("department.id = :dep", { dep: query.departments });
-    }
-
     if (query.universities && query.domains) {
       qb.andWhere("(university.id = :un OR domain.id = :dm)", {
         un: query.universities,
@@ -290,7 +285,7 @@ export class UserRepository {
 
   async getTechniciansGroupsPaged(
     userId: string,
-    query?: IPagination
+    query?: IPagination,
   ): Promise<[Group[], number]> {
     const tgRepo = PostgresDataSource.getRepository(TechnicianGroup);
     const qb = tgRepo
@@ -317,7 +312,7 @@ export class UserRepository {
 
   async getAdminsGroupsHeadsPaged(
     userId: string,
-    query?: IPagination
+    query?: IPagination,
   ): Promise<[Group[], number]> {
     const ghRepo = PostgresDataSource.getRepository(GroupHead);
 
@@ -341,7 +336,7 @@ export class UserRepository {
   }
   async getUserSpecializations(
     userId: string,
-    query?: IPagination
+    query?: IPagination,
   ): Promise<[Specialization[], number]> {
     const allowedRepo = PostgresDataSource.getRepository(AllowedSpecialization);
 
@@ -364,7 +359,7 @@ export class UserRepository {
 
     // if specialization is lazy, it may be Promise<Specialization>
     const specializations = await Promise.all(
-      allowedList.map((a) => a.specialization)
+      allowedList.map((a) => a.specialization),
     );
 
     return [specializations, total];
