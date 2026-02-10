@@ -152,7 +152,7 @@ export async function seedDepartments() {
 
       if (!university) {
         console.log(
-          `⚠️  University "${data.universityName}" not found, skipping...`
+          `⚠️  University "${data.universityName}" not found, skipping...`,
         );
         continue;
       }
@@ -166,7 +166,7 @@ export async function seedDepartments() {
 
       if (!domain) {
         console.log(
-          `⚠️  Domain "${data.domainName}" at "${data.universityName}" not found, skipping...`
+          `⚠️  Domain "${data.domainName}" at "${data.universityName}" not found, skipping...`,
         );
         continue;
       }
@@ -184,7 +184,7 @@ export async function seedDepartments() {
 
         if (existing) {
           console.log(
-            `⏭️  Department "${deptData.name.en}" already exists, skipping...`
+            `⏭️  Department "${deptData.name.en}" already exists, skipping...`,
           );
           continue;
         }
@@ -196,7 +196,7 @@ export async function seedDepartments() {
 
         await departmentRepository.save(department);
         console.log(
-          `✅ Created department: ${deptData.name.en} in ${data.domainName}`
+          `✅ Created department: ${deptData.name.en} in ${data.domainName}`,
         );
       }
     }

@@ -1,25 +1,22 @@
 import { DataSource } from "typeorm";
-import { University } from "../../entities/index.js";
+import { University } from "../../../entities/index.js";
 
 const universitiesSeedData: Array<{
   name: { en: string; ar: string };
   description?: { en?: string; ar?: string };
 }> = [
   {
-    name: { en: "Helwan University", ar: "جامعة حلوان" },
-    description: {
-      en: "Public university in Egypt",
-      ar: "جامعة حكومية في مصر",
-    },
+    name: { en: "Capital University", ar: "جامعة العاصمة" },
   },
   {
-    name: { en: "Cairo University", ar: "جامعة القاهرة" },
-    description: {
-      en: "One of the oldest universities in Egypt",
-      ar: "واحدة من أقدم الجامعات في مصر",
+    name: { en: "Helwan National University", ar: "جامعة حلوان الاهلية" },
+  },
+  {
+    name: {
+      en: "Helwan Technological University",
+      ar: "جامعة حلوان التكنولوجية",
     },
   },
-  // ➕ add more if needed
 ];
 
 export async function seedUniversities(dataSource: DataSource) {

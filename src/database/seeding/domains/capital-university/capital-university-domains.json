@@ -1,0 +1,222 @@
+[
+  {
+    "name_ar": "مكتب رئيس الجامعة",
+    "name_en": "Office of the University President"
+  },
+  {
+    "name_ar": "مكتب نائب رئيس الجامعة للدراسات العليا والبحوث",
+    "name_en": "Office of the Vice President for Graduate Studies and Research"
+  },
+  {
+    "name_ar": "مكتب نائب رئيس الجامعة لشئون التعليم والطلاب",
+    "name_en": "Office of the Vice President for Education and Student Affairs"
+  },
+  {
+    "name_ar": "مكتب نائب رئيس الجامعة لشئون خدمة المجتمع والبيئة",
+    "name_en": "Office of the Vice President for Community Service and Environmental Development"
+  },
+  {
+    "name_ar": "مكتب أمين عام الجامعة",
+    "name_en": "Office of the University Secretary-General"
+  },
+  {
+    "name_ar": "مكتب أمين عام الجامعة المساعد لشئون الدراسات العليا والبحوث",
+    "name_en": "Office of the Assistant Secretary-General for Graduate Studies and Research"
+  },
+  {
+    "name_ar": "مكتب أمين عام الجامعة المساعد لشئون التعليم والطلاب",
+    "name_en": "Office of the Assistant Secretary-General for Education and Student Affairs"
+  },
+  {
+    "name_ar": "مكتب أمين عام الجامعة المساعد لشئون خدمة المجتمع والبيئة",
+    "name_en": "Office of the Assistant Secretary-General for Community Service and Environmental Development"
+  },
+  {
+    "name_ar": "الإدارة المركزية لعمليات الموارد البشرية",
+    "name_en": "Central Administration for Human Resources Operations"
+  },
+  {
+    "name_ar": "أمانة مجلس الجامعة",
+    "name_en": "Secretariat of the University Council"
+  },
+  {
+    "name_ar": "الادارة العامة للعلاقات العامة والاعلام",
+    "name_en": "General Administration of Public Relations and Media"
+  },
+  {
+    "name_ar": "الإدارة العامة لشئون التعليم والطلاب",
+    "name_en": "General Administration for Education and Student Affairs"
+  },
+  {
+    "name_ar": "الادارة العامة لرعاية الطلاب",
+    "name_en": "General Administration for Student Welfare"
+  },
+  {
+    "name_ar": "الإدارة العامة للدراسات العليا والبحوث",
+    "name_en": "General Administration for Graduate Studies and Research"
+  },
+  {
+    "name_ar": "الإدارة العامة للعلاقات الثقافية",
+    "name_en": "General Administration for Cultural Relations"
+  },
+  {
+    "name_ar": "الادارة العامة للشئون الهندسية",
+    "name_en": "General Administration for Engineering Affairs"
+  },
+  {
+    "name_ar": "مركز الصيانة التنفيذية",
+    "name_en": "Executive Maintenance Center"
+  },
+  {
+    "name_ar": "الادارة العامة للإحتياجات",
+    "name_en": "General Administration for Requirements"
+  },
+  {
+    "name_ar": "الادارة العامة للموارد البشرية",
+    "name_en": "General Administration for Human Resources"
+  },
+  {
+    "name_ar": "الادارة العامة لادارة وتنمية المواهب",
+    "name_en": "General Administration for Talent Management and Development"
+  },
+  {
+    "name_ar": "الادارة العامة للتطوير المؤسسى",
+    "name_en": "General Administration for Institutional Development"
+  },
+  {
+    "name_ar": "الإدارة العامة الإستراتيجية",
+    "name_en": "General Administration for Strategic Affairs"
+  },
+  {
+    "name_ar": "الادارة العامة للاستحقاقات والمزايا",
+    "name_en": "General Administration for Entitlements and Benefits"
+  },
+  {
+    "name_ar": "الإدارة العامة للحسابات والموازنة",
+    "name_en": "General Administration for Accounts and Budget"
+  },
+  {
+    "name_ar": "الادارة العامة للصناديق الخاصة والوحدات ذات الطابع الخاص",
+    "name_en": "General Administration for Special Funds and Special-Nature Units"
+  },
+  {
+    "name_ar": "الإدارة العامة للمراجعة الداخلية والحوكمة",
+    "name_en": "General Administration for Internal Audit and Governance"
+  },
+  {
+    "name_ar": "الإدارة العامة للسلامة والصحة المهنية",
+    "name_en": "General Administration for Occupational Safety and Health"
+  },
+  {
+    "name_ar": "الادارة العامة للشئون القانونية",
+    "name_en": "General Administration for Legal Affairs"
+  },
+  {
+    "name_ar": "الإدارة العامة للشئون الإدارية",
+    "name_en": "General Administration for Administrative Affairs"
+  },
+  {
+    "name_ar": "إدارة أمن الجامعة",
+    "name_en": "University Security Department"
+  },
+  {
+    "name_ar": "الإدارة العامة للمدن الجامعية",
+    "name_en": "General Administration for University Housing"
+  },
+  {
+    "name_ar": "الإدارة العامة للشئون الطبية",
+    "name_en": "General Administration for Medical Affairs"
+  },
+  { "name_ar": "نادي جامعة حلوان", "name_en": "Helwan University Club" },
+  {
+    "name_ar": "الإدارة العامة للمكتبات",
+    "name_en": "General Administration for Libraries"
+  },
+  {
+    "name_ar": "مركز الاتصالات وتكنولوجيا المعلومات",
+    "name_en": "Center for Communications and Information Technology"
+  },
+  {
+    "name_ar": "الإدارة العامة لنظم المعلومات والتحول الرقمي",
+    "name_en": "General Administration for Information Systems and Digital Transformation"
+  },
+
+  { "name_ar": "كلية الصيدلة", "name_en": "Faculty of Pharmacy" },
+  { "name_ar": "كلية الاداب", "name_en": "Faculty of Arts" },
+  { "name_ar": "كليه الخدمة الاجتماعية", "name_en": "Faculty of Social Work" },
+  {
+    "name_ar": "كليه التجارة وإدارة الاعمال",
+    "name_en": "Faculty of Commerce and Business Administration"
+  },
+  { "name_ar": "كليه العلوم", "name_en": "Faculty of Science" },
+  { "name_ar": "كلية التمريض", "name_en": "Faculty of Nursing" },
+  { "name_ar": "كلية التربية", "name_en": "Faculty of Education" },
+  { "name_ar": "كليه الحقوق", "name_en": "Faculty of Law" },
+  { "name_ar": "كلية الطب", "name_en": "Faculty of Medicine" },
+  {
+    "name_ar": "كلية الحاسبات والذكاء الاصطناعي",
+    "name_en": "Faculty of Computers and Artificial Intelligence"
+  },
+  {
+    "name_ar": "كلية الهندسة بحلوان",
+    "name_en": "Faculty of Engineering - Helwan"
+  },
+  {
+    "name_ar": "كلية السياحة والفنادق",
+    "name_en": "Faculty of Tourism and Hotels"
+  },
+  {
+    "name_ar": "كلية الاقتصاد المنزلى",
+    "name_en": "Faculty of Home Economics"
+  },
+  { "name_ar": "كلية الفنون التطبيقية", "name_en": "Faculty of Applied Arts" },
+  {
+    "name_ar": "كلية الهندسة المطرية",
+    "name_en": "Faculty of Engineering - Mataria"
+  },
+  {
+    "name_ar": "كلية التكنولوجيا والتعليم",
+    "name_en": "Faculty of Technology and Education"
+  },
+  {
+    "name_ar": "كلية التجارة - الزمالك",
+    "name_en": "Faculty of Commerce - Zamalek"
+  },
+  { "name_ar": "كلية الفنون الجميلة", "name_en": "Faculty of Fine Arts" },
+  { "name_ar": "كلية التربية الفنية", "name_en": "Faculty of Art Education" },
+  {
+    "name_ar": "كلية التربية الموسيقية",
+    "name_en": "Faculty of Music Education"
+  },
+  {
+    "name_ar": "كلية علوم الرياضية بنات",
+    "name_en": "Faculty of Physical Education (Women)"
+  },
+  {
+    "name_ar": "كلية علوم الرياضية بنين",
+    "name_en": "Faculty of Physical Education (Men)"
+  },
+  {
+    "name_ar": "كلية الدراسات البينية",
+    "name_en": "Faculty of Interdisciplinary Studies"
+  },
+  {
+    "name_ar": "معهد الملكية الفكرية",
+    "name_en": "Intellectual Property Institute"
+  },
+  {
+    "name_ar": "كلية علوم التغذية",
+    "name_en": "Faculty of Nutritional Sciences"
+  },
+
+  {
+    "name_ar": "وحدة التخطيط الإستراتيجى",
+    "name_en": "Strategic Planning Unit"
+  },
+  {
+    "name_ar": "دار الضيافة قاعة حسن حسنى",
+    "name_en": "Guest House - Hassan Hosny Hall"
+  },
+  { "name_ar": "المطعم المركزى", "name_en": "Central Restaurant" },
+  { "name_ar": "مدن المطرية", "name_en": "Mataria University Cities" }
+]

@@ -1,16 +1,17 @@
-import { seedUniversities } from "./universities.seed.js";
 import { seedDomains } from "./domains.seed.js";
 import { seedDepartments } from "./departments.seed.js";
 import { PostgresDataSource } from "../postgres-data-source.js";
 import { seedPermissionProfiles } from "./permission-profiles.seed.js";
 import { seedPermissions } from "./permissions.seed.js";
-import { seedAdmins } from "./admins.seed.js";
-import { seedTechnicians } from "./technicians.seed.js";
-import { seedRequesters } from "./requesters.seed.js";
-import { seedGroups } from "./groups.seed.js";
-import { seedGroupRelations } from "./group-relations.seed.js";
-import { addAvatarsToUsers } from "./seedAvatars.js";
-import { seedSpecializations } from "./specializations.seed.js";
+import { seedCapitalUniversityDomains } from "./domains/capital-university/capitalUniversityDomainSeeder.js";
+import { seedUniversities } from "./university/universities.seed.js";
+import { seedSpecializations } from "./specializations/specializations.seed.js";
+import { seedHelwanNationalUniversityDomains } from "./domains/helwan-national-university/helwanNationalUniversityDomainSeeder.js";
+import { seedAdmins } from "./users/admins.seed.js";
+import { seedRequesters } from "./users/requesters.seed.js";
+import { seedTechnicians } from "./users/technicians.seed.js";
+import { seedGroups } from "./groups-new/groups.seed.js";
+import { seedGroupRelations } from "./groups-new/group-relations.seed.js";
 
 export async function runSeeds() {
   try {
@@ -22,11 +23,13 @@ export async function runSeeds() {
 
     // Order is important because of FK dependencies
 
-
     await seedSpecializations(PostgresDataSource);
     await seedUniversities(PostgresDataSource);
-    await seedDomains(PostgresDataSource);
-    await seedDepartments(PostgresDataSource);
+
+    await seedCapitalUniversityDomains(PostgresDataSource);
+    await seedHelwanNationalUniversityDomains(PostgresDataSource);
+
+    // await seedDepartments(PostgresDataSource);
 
     await seedPermissions(PostgresDataSource);
     await seedPermissionProfiles(PostgresDataSource);
@@ -34,12 +37,9 @@ export async function runSeeds() {
     await seedGroups(PostgresDataSource);
 
     // 2) dynamic admins (random uni/domain/dept/profile/specs)
-    await seedAdmins(PostgresDataSource, 50);
-
+    await seedAdmins(PostgresDataSource, 10);
     await seedTechnicians(PostgresDataSource, 50);
     await seedRequesters(PostgresDataSource, 50);
-
-    // await addAvatarsToUsers(PostgresDataSource);
 
     // 4) group ↔ specs & group ↔ heads
     await seedGroupRelations(PostgresDataSource);

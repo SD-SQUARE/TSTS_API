@@ -23,22 +23,19 @@ const server = http.createServer(app);
  * If an error occurs during startup, logs the error and exits the process with a status code of 1.
  */
 async function main() {
-    try {
-        initDataSource();
-        connectRedis();
-        await ensureBucketExists(BUCKET);
+  try {
+    initDataSource();
+    connectRedis();
+    await ensureBucketExists(BUCKET);
 
-       
-
-        initSocket(server);
     server.listen(PORT, () => {
-            logger.info(`[server] listening on http://${HOST}:${PORT}`);
-        });
-    } catch (err) {
-        logger.error("❌ Server failed to start", err);
-        process.exit(1);
-    }
-    
+      logger.info(`[server] listening on http://${HOST}:${PORT}`);
+      initSocket(server);
+    });
+  } catch (err) {
+    logger.error("❌ Server failed to start", err);
+    process.exit(1);
+  }
 }
 
 main();
