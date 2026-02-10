@@ -17,7 +17,6 @@ export interface CreateTechnicianBody {
 
   university: string; // now a plain string
   domain: string; // now a plain string
-  departments: string[]; // array of strings
 
   contacts: {
     phones: string[];
@@ -53,7 +52,6 @@ export interface CreateTechnicianMapped {
 
   university: string;
   domain: string;
-  departments: string[];
 
   phones: string[];
   mobiles: string[];

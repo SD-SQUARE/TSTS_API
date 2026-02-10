@@ -145,7 +145,7 @@ export class UserRepository {
 
   async getAllTechniciansWithFilter(
     query: GetUsersQuery,
-    lang: "en" | "ar",
+    lang: Lang,
   ): Promise<[User[], number]> {
     const repo = PostgresDataSource.getRepository(User);
 
@@ -153,8 +153,6 @@ export class UserRepository {
       .createQueryBuilder("user")
       .leftJoinAndSelect("user.university", "university")
       .leftJoinAndSelect("user.domain", "domain")
-      .leftJoinAndSelect("user.userDepartments", "userDepartments")
-      .leftJoinAndSelect("userDepartments.department", "department")
       .where("1 = 1");
 
     qb.andWhere("user.user_type = :userType", {
@@ -186,10 +184,6 @@ export class UserRepository {
 
     if (query.user_type) {
       qb.andWhere("user.user_type = :ut", { ut: query.user_type });
-    }
-
-    if (query.departments) {
-      qb.andWhere("department.id = :dep", { dep: query.departments });
     }
 
     if (query.universities && query.domains) {
