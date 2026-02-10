@@ -55,7 +55,7 @@ export async function seedDepartments(dataSource: DataSource) {
 
     if (!parentDomain) {
       console.warn(
-        `⚠️ [Department] Parent Domain not found for department "${dept.name.en}" (domain: "${dept.domainEn}", university: "${dept.universityEn}")`
+        `⚠️ [Department] Parent Domain not found for department "${dept.name.en}" (domain: "${dept.domainEn}", university: "${dept.universityEn}")`,
       );
       continue;
     }
@@ -74,7 +74,7 @@ export async function seedDepartments(dataSource: DataSource) {
       existing.domain = parentDomain;
       await departmentRepo.save(existing);
       console.log(
-        `✅ [Department] Updated: ${dept.name.en} (Domain: ${dept.domainEn}, University: ${dept.universityEn})`
+        `✅ [Department] Updated: ${dept.name.en} (Domain: ${dept.domainEn}, University: ${dept.universityEn})`,
       );
     } else {
       const newDept = departmentRepo.create({
@@ -85,7 +85,7 @@ export async function seedDepartments(dataSource: DataSource) {
 
       await departmentRepo.save(newDept);
       console.log(
-        `✅ [Department] Inserted: ${dept.name.en} (Domain: ${dept.domainEn}, University: ${dept.universityEn})`
+        `✅ [Department] Inserted: ${dept.name.en} (Domain: ${dept.domainEn}, University: ${dept.universityEn})`,
       );
     }
   }

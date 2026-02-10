@@ -4,20 +4,20 @@ import {
   PermissionProfile,
   Specialization,
   User,
-} from "../../entities/index.js";
-import { UserType } from "../../enums/UserType.enum.js";
-import { CreateRequesterMapped } from "../../interfaces/requester/ICreateRequester.js";
-import { createRequesterService } from "../../services/users/requester/requesterCommandService.js";
+} from "../../../entities/index.js";
+import { UserType } from "../../../enums/UserType.enum.js";
+import { CreateAdminMapped } from "../../../interfaces/admin/ICreateAdmin.js";
+import { createAdminService } from "../../../services/users/admin/adminCommandService.js";
 import {
   arabicMenNames,
-  arabicNames,
   englishMenNames,
+  arabicNames,
   englishNames,
-} from "./personNamesDataSet.js";
-import { downloadAvatarImage } from "./downloadAvatarImage.js";
-import { Faker, en, ar } from "@faker-js/faker";
+} from ".././personNamesDataSet.js";
+import { downloadAvatarImage } from ".././downloadAvatarImage.js";
+import { Faker, ar, en } from "@faker-js/faker";
 
-// ---------- Helpers (could be shared with technicians.seed.ts) ----------
+// ---------- Helpers ----------
 function getRandomItem<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -38,25 +38,25 @@ function getRandomSubset<T>(arr: T[], maxCount: number): T[] {
   return result;
 }
 
+// Structure to store department/domain/university details
 type DeptTriple = {
   deptId: string;
   domainId: string;
   uniId: string;
 };
 
-export async function seedRequesters(
-  dataSource: DataSource,
-  count = 100
-): Promise<void> {
+// Main function to seed admins
+export async function seedAdmins(dataSource: DataSource, count = 100) {
   const faker = new Faker({
     locale: [en, ar],
   });
+
   const deptRepo = dataSource.getRepository(Department);
   const profileRepo = dataSource.getRepository(PermissionProfile);
   const specRepo = dataSource.getRepository(Specialization);
   const userRepo = dataSource.getRepository(User);
 
-  // 1) load dept/domain/university IDs
+  // Load department/domain/university IDs
   const deptTriplesRaw = await deptRepo
     .createQueryBuilder("dep")
     .innerJoin("dep.domain", "domain")
@@ -83,32 +83,34 @@ export async function seedRequesters(
     .where("s.deletedAt IS NULL")
     .getMany();
 
+  // Check if we have data to proceed with
   if (deptTriples.length === 0) {
     console.warn(
-      "⚠️ [RequestersSeed] No departments with valid domains/universities found."
+      "⚠️ [AdminsSeed] No departments with valid domains/universities found.",
     );
     return;
   }
 
   if (profiles.length === 0) {
-    console.warn("⚠️ [RequestersSeed] No permission profiles found.");
+    console.warn("⚠️ [AdminsSeed] No permission profiles found.");
     return;
   }
 
   if (specs.length === 0) {
     console.warn(
-      "⚠️ [RequestersSeed] No specializations found. Requesters will have empty allowedSpecializations."
+      "⚠️ [AdminsSeed] No specializations found. Admins will have empty allowedSpecializations.",
     );
   }
 
   console.log(
-    `ℹ️ [RequestersSeed] Loaded: ${deptTriples.length} dept/domain/uni triples, ${profiles.length} profiles, ${specs.length} specs.`
+    `ℹ️ [AdminsSeed] Loaded: ${deptTriples.length} dept/domain/uni triples, ${profiles.length} profiles, ${specs.length} specs.`,
   );
 
-  // 2) create N requesters
+  // Loop to create admins
   for (let i = 1; i <= count; i++) {
-    const email = `requester${i}@example.com`;
+    const email = `admin${i}@example.com`;
 
+    // Check if the admin already exists
     const existing = await userRepo
       .createQueryBuilder("u")
       .where("u.email = :email", { email })
@@ -116,67 +118,70 @@ export async function seedRequesters(
       .getOne();
 
     if (existing) {
-      console.log(`ℹ️ [RequestersSeed] Requester already exists: ${email}`);
+      console.log(`ℹ️ [AdminsSeed] Admin already exists: ${email}`);
       continue;
     }
 
-    const randomDept = getRandomItem(deptTriples);
+    // Pick random dept/domain/uni triple
+    const randomDeptTriple = getRandomItem(deptTriples);
     const randomProfile = getRandomItem(profiles);
-    const randomSpecs = getRandomSubset(specs, 2); // maybe fewer specs for requester
+    const randomSpecs = getRandomSubset(specs, 3);
     const allowedSpecializations = randomSpecs.map((s) => s.id);
 
-    const ssn = (30000000000000 + i).toString();
-    const mobile = `012${String(3000000 + i).slice(-7)}`;
+    // Generate deterministic SSN & mobile
+    const ssn = (10000000000000 + i).toString();
+    const mobile = `010${String(1000000 + i).slice(-7)}`;
 
-    const dto: CreateRequesterMapped = {
+    // Prepare admin data
+    const adminDto: CreateAdminMapped = {
       email,
-      password: "Req@123456",
+      password: "Admin@123456", // Admin password (hashed in service)
 
-      firstNameAr: arabicNames[i % arabicNames.length], // English name
-      firstNameEn: englishNames[i % englishNames.length], // Arabic name
+      firstNameAr: arabicNames[i % arabicNames.length],
+      firstNameEn: englishNames[i % englishNames.length],
 
-      midNameEn: englishMenNames[(i + 1) % englishMenNames.length], // English middle name
-      midNameAr: arabicMenNames[(i + 1) % arabicMenNames.length], // Arabic middle name
+      midNameEn: englishMenNames[(i + 1) % englishMenNames.length],
+      midNameAr: arabicMenNames[(i + 1) % arabicMenNames.length],
 
-      lastNameEn: englishMenNames[(i + 2) % englishMenNames.length], // English last name
-      lastNameAr: arabicMenNames[(i + 2) % arabicMenNames.length], // Arabic last name
+      lastNameEn: englishMenNames[(i + 2) % englishMenNames.length],
+      lastNameAr: arabicMenNames[(i + 2) % arabicMenNames.length],
 
       ssn,
       mobiles: [mobile, mobile],
       phones: [mobile],
 
-      jobEn: "Staff",
-      jobAr: "موظف",
+      jobEn: "System Administrator",
+      jobAr: "مسؤول نظام",
 
-      university: randomDept.uniId,
-      domain: randomDept.domainId,
-      departments: [randomDept.deptId],
+      university: randomDeptTriple.uniId,
+      domain: randomDeptTriple.domainId,
 
       permissionProfile: randomProfile.id,
       extraPermissions: [],
       revokedPermissions: [],
 
       allowedSpecializations,
-
-      userType: UserType.REQUESTER, // adapt to your enum values
-    } as CreateRequesterMapped;
+      userType: UserType.ADMIN,
+    };
 
     console.log(
-      `🚀 [RequestersSeed] Creating requester ${i}: ${email} (uni=${randomDept.uniId}, domain=${randomDept.domainId}, dept=${randomDept.deptId}, profile=${randomProfile.id})`
+      `🚀 [AdminsSeed] Creating admin ${i}: ${email} (uni=${randomDeptTriple.uniId}, domain=${randomDeptTriple.domainId}, dept=${randomDeptTriple.deptId}, profile=${randomProfile.id})`,
     );
 
+    // Generate avatar URL and download the avatar image
     const avatarUrl = faker.image.avatar();
     const avatarFile = await downloadAvatarImage(avatarUrl);
 
-    const result = await createRequesterService(dto, avatarFile);
+    // Create the admin and pass the avatar file
+    const result = await createAdminService(adminDto, avatarFile);
 
     if (!result.is_added) {
       console.error(
-        `❌ [RequestersSeed] Failed to create requester ${email}`,
-        result.errors
+        `❌ [AdminsSeed] Failed to create admin ${email}`,
+        result.errors,
       );
     } else {
-      console.log(`✅ [RequestersSeed] Requester created: ${email}`);
+      console.log(`✅ [AdminsSeed] Admin created: ${email}`);
     }
   }
 }

@@ -7,8 +7,8 @@ import {
   Specialization,
   User,
   TechnicianGroup,
-} from "../../entities/index.js";
-import { UserType } from "../../enums/UserType.enum.js";
+} from "../../../entities/index.js";
+import { UserType } from "../../../enums/UserType.enum.js";
 
 // ---------- Helpers ----------
 function getRandomItem<T>(arr: T[]): T {

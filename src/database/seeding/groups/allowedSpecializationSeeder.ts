@@ -39,7 +39,7 @@ const userSpecializationMappings: UserSpecMapping[] = [
 export async function seedAllowedSpecializations() {
   try {
     const allowedSpecRepository = PostgresDataSource.getRepository(
-      AllowedSpecialization
+      AllowedSpecialization,
     );
     const userRepository = PostgresDataSource.getRepository(User);
     const specializationRepository =
@@ -67,7 +67,7 @@ export async function seedAllowedSpecializations() {
 
         if (!specialization) {
           console.log(
-            `⚠️  Specialization "${specName}" not found, skipping...`
+            `⚠️  Specialization "${specName}" not found, skipping...`,
           );
           continue;
         }
@@ -82,7 +82,7 @@ export async function seedAllowedSpecializations() {
 
         if (existing) {
           console.log(
-            `⏭️  "${mapping.userEmail}" already allowed "${specName}", skipping...`
+            `⏭️  "${mapping.userEmail}" already allowed "${specName}", skipping...`,
           );
           continue;
         }

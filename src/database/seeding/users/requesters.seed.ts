@@ -4,27 +4,27 @@ import {
   PermissionProfile,
   Specialization,
   User,
-} from "../../entities/index.js";
-import { UserType } from "../../enums/UserType.enum.js";
-import { CreateTechnicianMapped } from "../../interfaces/technician/ICreateTechnician.js";
-import { createTechnicianService } from "../../services/users/technician/technicianCommandService.js";
+} from "../../../entities/index.js";
+import { UserType } from "../../../enums/UserType.enum.js";
+import { CreateRequesterMapped } from "../../../interfaces/requester/ICreateRequester.js";
+import { createRequesterService } from "../../../services/users/requester/requesterCommandService.js";
 import {
   arabicMenNames,
   arabicNames,
   englishMenNames,
   englishNames,
-} from "./personNamesDataSet.js";
+} from ".././personNamesDataSet.js";
+import { downloadAvatarImage } from ".././downloadAvatarImage.js";
 import { Faker, en, ar } from "@faker-js/faker";
-import { downloadAvatarImage } from "./downloadAvatarImage.js";
 
-// ---------- Helpers ----------
+// ---------- Helpers (could be shared with technicians.seed.ts) ----------
 function getRandomItem<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
 function getRandomSubset<T>(arr: T[], maxCount: number): T[] {
   if (arr.length === 0) return [];
-  const count = Math.floor(Math.random() * Math.min(maxCount, arr.length)) + 1; // 1..maxCount
+  const count = Math.floor(Math.random() * Math.min(maxCount, arr.length)) + 1;
   const copy = [...arr];
   const result: T[] = [];
 
@@ -44,14 +44,13 @@ type DeptTriple = {
   uniId: string;
 };
 
-export async function seedTechnicians(
+export async function seedRequesters(
   dataSource: DataSource,
   count = 100
 ): Promise<void> {
   const faker = new Faker({
     locale: [en, ar],
   });
-
   const deptRepo = dataSource.getRepository(Department);
   const profileRepo = dataSource.getRepository(PermissionProfile);
   const specRepo = dataSource.getRepository(Specialization);
@@ -86,29 +85,29 @@ export async function seedTechnicians(
 
   if (deptTriples.length === 0) {
     console.warn(
-      "⚠️ [TechniciansSeed] No departments with valid domains/universities found."
+      "⚠️ [RequestersSeed] No departments with valid domains/universities found."
     );
     return;
   }
 
   if (profiles.length === 0) {
-    console.warn("⚠️ [TechniciansSeed] No permission profiles found.");
+    console.warn("⚠️ [RequestersSeed] No permission profiles found.");
     return;
   }
 
   if (specs.length === 0) {
     console.warn(
-      "⚠️ [TechniciansSeed] No specializations found. Technicians will have empty allowedSpecializations."
+      "⚠️ [RequestersSeed] No specializations found. Requesters will have empty allowedSpecializations."
     );
   }
 
   console.log(
-    `ℹ️ [TechniciansSeed] Loaded: ${deptTriples.length} dept/domain/uni triples, ${profiles.length} profiles, ${specs.length} specs.`
+    `ℹ️ [RequestersSeed] Loaded: ${deptTriples.length} dept/domain/uni triples, ${profiles.length} profiles, ${specs.length} specs.`
   );
 
-  // 2) create N technicians
+  // 2) create N requesters
   for (let i = 1; i <= count; i++) {
-    const email = `technician${i}@example.com`;
+    const email = `requester${i}@example.com`;
 
     const existing = await userRepo
       .createQueryBuilder("u")
@@ -117,21 +116,21 @@ export async function seedTechnicians(
       .getOne();
 
     if (existing) {
-      console.log(`ℹ️ [TechniciansSeed] Technician already exists: ${email}`);
+      console.log(`ℹ️ [RequestersSeed] Requester already exists: ${email}`);
       continue;
     }
 
     const randomDept = getRandomItem(deptTriples);
     const randomProfile = getRandomItem(profiles);
-    const randomSpecs = getRandomSubset(specs, 3);
+    const randomSpecs = getRandomSubset(specs, 2); // maybe fewer specs for requester
     const allowedSpecializations = randomSpecs.map((s) => s.id);
 
-    const ssn = (20000000000000 + i).toString();
-    const mobile = `011${String(2000000 + i).slice(-7)}`;
+    const ssn = (30000000000000 + i).toString();
+    const mobile = `012${String(3000000 + i).slice(-7)}`;
 
-    const dto: CreateTechnicianMapped = {
+    const dto: CreateRequesterMapped = {
       email,
-      password: "Tech@123456",
+      password: "Req@123456",
 
       firstNameAr: arabicNames[i % arabicNames.length], // English name
       firstNameEn: englishNames[i % englishNames.length], // Arabic name
@@ -146,8 +145,8 @@ export async function seedTechnicians(
       mobiles: [mobile, mobile],
       phones: [mobile],
 
-      jobEn: "Support Technician",
-      jobAr: "فني دعم",
+      jobEn: "Staff",
+      jobAr: "موظف",
 
       university: randomDept.uniId,
       domain: randomDept.domainId,
@@ -159,24 +158,25 @@ export async function seedTechnicians(
 
       allowedSpecializations,
 
-      userType: UserType.TECHNICIAN, // adapt to your enum if name differs
-    } as CreateTechnicianMapped;
+      userType: UserType.REQUESTER, // adapt to your enum values
+    } as CreateRequesterMapped;
 
     console.log(
-      `🚀 [TechniciansSeed] Creating technician ${i}: ${email} (uni=${randomDept.uniId}, domain=${randomDept.domainId}, dept=${randomDept.deptId}, profile=${randomProfile.id})`
+      `🚀 [RequestersSeed] Creating requester ${i}: ${email} (uni=${randomDept.uniId}, domain=${randomDept.domainId}, dept=${randomDept.deptId}, profile=${randomProfile.id})`
     );
 
     const avatarUrl = faker.image.avatar();
     const avatarFile = await downloadAvatarImage(avatarUrl);
-    const result = await createTechnicianService(dto, avatarFile);
+
+    const result = await createRequesterService(dto, avatarFile);
 
     if (!result.is_added) {
       console.error(
-        `❌ [TechniciansSeed] Failed to create technician ${email}`,
+        `❌ [RequestersSeed] Failed to create requester ${email}`,
         result.errors
       );
     } else {
-      console.log(`✅ [TechniciansSeed] Technician created: ${email}`);
+      console.log(`✅ [RequestersSeed] Requester created: ${email}`);
     }
   }
 }
