@@ -13,7 +13,9 @@ export const getAllAdminsService = async (
     lang
   );
 
-  const admins = await Promise.all(users.map((u) => toAdmin(u, lang)));
+  const admins = await Promise.all(
+    users.filter((u) => u !== null).map((u) => toAdmin(u, lang))
+  );
 
   const pageIndex = Number(query.page_index ?? 1);
   const pageSize = Number(query.page_size ?? 10);

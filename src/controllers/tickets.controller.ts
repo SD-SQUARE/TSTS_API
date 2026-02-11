@@ -65,7 +65,21 @@ export const getSingleTicketController = async (
   const lang = (req.language || "en") as "ar" | "en";
   const userId = (req as any).user.id;
   const userFullName = (req as any).user.name;
-  const userName = userFullName.first + " " + userFullName.mid + " " + userFullName.last;
+  logger.info(`[server][tickets] getSingleTicket | user: ${userFullName}`, { userFullName });
+  const userName =
+    userFullName.first["en"] +
+    " " +
+    userFullName.mid["en"] +
+    " " +
+    userFullName.last["en"] +
+    " / " +
+    userFullName.first["ar"] +
+    " " +
+    userFullName.mid["ar"] +
+    " " +
+    userFullName.last["ar"] +
+    " / role:  " +
+    (req as any).user.role;
 
   const ticket = await getSingleTicketService(id, lang, userId, userName);
 

@@ -22,7 +22,7 @@ export const createGroupSchema = (t: Request["t"]) =>
 
     color: z.string().min(1).max(50),
 
-    team_leader: z.string().uuid({ message: t("invalid_team_leader") }),
+    team_leader_id: z.string().uuid({ message: t("invalid_team_leader") }),
 
     heads: z
       .array(z.string().uuid({ message: t("invalid_head_id") }))

@@ -10,15 +10,17 @@ export type GroupDto = {
 };
 
 export const toGroupDto = async (
-  entity: Group,
+  entity: Group | null,
   lang: "en" | "ar"
-): Promise<GroupDto> => {
+): Promise<GroupDto | null> => {
+  if (!entity) return null;
+
   return {
     id: entity.id,
-    name_en: entity.name.en ?? "",
-    name_ar: entity.name.ar ?? "",
-    description_en: entity.descriptions.en ?? "",
-    description_ar: entity.descriptions.ar ?? "",
+    name_en: entity.name?.en ?? "",
+    name_ar: entity.name?.ar ?? "",
+    description_en: entity.descriptions?.en ?? "",
+    description_ar: entity.descriptions?.ar ?? "",
     color: entity.color ?? null,
   };
 };
