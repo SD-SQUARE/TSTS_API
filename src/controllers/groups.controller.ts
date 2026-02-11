@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import {
   bulkAssignUsersToGroup,
   createGroup,
+  editGroup,
   getAllGroups,
   getGroupById,
   getGroupUsersService,
@@ -148,4 +149,32 @@ export const getGroupUsersController = async (req: Request, res: Response) => {
   return res.status(200).json({
     ...data,
   });
+};
+
+
+export const editGroupController = async (req: any, res: any) => {
+  const t = req.t;
+  const groupId = req.params.id;
+
+  logger.info("[server][groups][controller] editGroup request received", {
+    groupId,
+    body: req.body,
+  });
+
+  if (!groupId) {
+    throw new AppError(t("group_id_required"), 400);
+  }
+
+  try {
+    const result = await editGroup(groupId, req.body, t);
+    return res.status(200).json(result);
+  } catch (err: any) {
+    logger.error("[server][groups][controller] Error editing group", {
+      error: err,
+    });
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).json({ message: err.message });
+    }
+    return res.status(500).json({ message: t("internal_server_error") });
+  }
 };

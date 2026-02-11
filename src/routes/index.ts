@@ -5,6 +5,8 @@ import lockupsRouter from "./lockups.router.js";
 import ticketsRouter from "./tickets.router.js";
 import chatRouter from "./chat.router.js";
 import notificationRouter from "./notification.router.js";
+import trustedDevicesRouter from "./trustedDevices.routes.js";
+import authV2Router from "./auth.v2.router.js";
 
 export {
   authRouter,
@@ -14,4 +16,6 @@ export {
   ticketsRouter,
   chatRouter,
   notificationRouter,
+  trustedDevicesRouter,
+  authV2Router
 };

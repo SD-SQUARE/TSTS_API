@@ -65,20 +65,19 @@ export const toAdmin = async (
     }),
   );
 
-  const specializations = await Promise.all(
-    userspecializations.map(async (us) => {
-      const spec = us.specialization ? await us.specialization : null;
+  const specializations = (
+    await Promise.all(
+      userspecializations.map(async (us) => {
+        const spec = us.specialization ? await us.specialization : null;
+        if (!spec) return null;
+        return {
+          id: spec.id,
+          name: spec.name?.[lang],
+        };
+      })
+    )
+  ).filter(Boolean);
 
-      if (!spec) {
-        return null;
-      }
-
-      return {
-        id: spec.id,
-        name: spec.name?.[lang],
-      };
-    }),
-  );
 
   return {
     id: entity.id,
