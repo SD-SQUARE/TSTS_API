@@ -40,6 +40,7 @@ export class User extends BaseEntity {
   @Column({ type: "jsonb", nullable: true })
   lastName?: { en?: string; ar?: string };
 
+  @Index("IDX_USER_SSN")
   @Column({ type: "varchar", length: 14, nullable: true })
   ssn?: string;
 
