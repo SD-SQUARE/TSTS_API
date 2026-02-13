@@ -162,6 +162,7 @@ export const logGeneralUpdateActivity = async (
     "Ticket Updated",
     TicketActivityType.INFO,
     `Ticket "${updatedTicket.title}" was updated by ${actorText}: ${activityContent}`,
+    actor.id,
     { actor, changes, updatedFields: Object.keys(changes) }
   );
 };
@@ -181,6 +182,7 @@ export const logSpecificActivities = async (
       "Status Changed",
       activityType,
       `Ticket status changed by ${actorText} from ${changes.status.from} to ${changes.status.to}`,
+      actor.id,
       { actor, statusChange: changes.status }
     );
   }
@@ -191,6 +193,7 @@ export const logSpecificActivities = async (
       "Assignees Updated",
       TicketActivityType.ASSIGNEE,
       `Ticket assignees updated by ${actorText}`,
+      actor.id,
       { actor, assigneeChange: changes.assigneeList }
     );
   }
@@ -203,6 +206,7 @@ export const logSpecificActivities = async (
       `Ticket service status changed by ${actorText} to ${
         changes.isOutOfService.to ? "out of service" : "in service"
       }`,
+      actor.id,
       { actor, serviceStatusChange: changes.isOutOfService }
     );
   }
@@ -229,4 +233,37 @@ export const maybeLogWebSocketIntent = (
 
   // WebSocket implementation would go here
   // Example: socketService.emitTicketUpdate(updatedTicket.id, changes);
+};
+
+export const getUserMetaById = async (userId: string) => {
+  if (!userId) {
+    return { full_name_en: null, full_name_ar: null, image: null, id: null };
+  }
+
+  const user = await userRepo.findOne({ where: { id: userId } });
+
+  if (!user) {
+    return { full_name_en: null, full_name_ar: null, image: null, id: null };
+  }
+
+  // Concatenate names in EN
+  const full_name_en =
+    [user.firstName?.en, user.midName?.en, user.lastName?.en]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || null;
+
+  // Concatenate names in AR
+  const full_name_ar =
+    [user.firstName?.ar, user.midName?.ar, user.lastName?.ar]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || null;
+
+  return {
+    full_name_en,
+    full_name_ar,
+    image: user.image || null,
+    id: user.id,
+  };
 };

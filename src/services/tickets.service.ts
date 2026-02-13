@@ -16,6 +16,8 @@ import { TicketActivity } from "../entities/TicketActivity.js";
 import { TicketActivityType } from "../enums/TicketActivity.enum.js";
 import { ReqUserPayload } from "../types/ReqUserPayload.js";
 import { TicketReview } from "../entities/TicketReview.js";
+import { getRequestContext } from "../utils/requestContext.js";
+import { getUserMetaById } from "./tickets/common.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
@@ -29,15 +31,29 @@ export const logTicketActivity = async (
   title: string,
   type: TicketActivityType,
   content: string,
-  meta = {},
+  userId: string,
+  meta: any = {},
 ) => {
+  const context = getRequestContext();
+
+  const userMeta = userId
+    ? await getUserMetaById(userId)
+    : { full_name_en: null, full_name_ar: null, image: null, id: null };
+
+  const finalMeta = {
+    user: userMeta,
+    ip: context.ip || "unknown",
+    ...meta,
+  };
+
   const activity = ticketActivityRepo.create({
     ticket,
     title,
     content,
     type,
-    meta,
+    meta: finalMeta,
   });
+
   await ticketActivityRepo.save(activity);
 };
 
@@ -92,8 +108,8 @@ export const createTicket = async (dto, files) => {
     "Ticket Created",
     TicketActivityType.FIRST_OPEN,
     `Ticket "${savedTicket.title}" created by ${requesterUser.id}`,
+    requesterUser.id,
     {
-      requesterId: requesterUser.id,
       specializationId: specialization || null,
       assignees: assignedUsers.map((u) => ({ id: u.id })),
     },
@@ -123,6 +139,7 @@ export const createTicket = async (dto, files) => {
         "Ticket Media Uploaded",
         TicketActivityType.INFO,
         `Media file "${file.originalname}" uploaded`,
+        requesterUser.id,
         { fileName: file.originalname, url: key },
       );
     }
@@ -358,7 +375,8 @@ export const getSingleTicketService = async (
     "Ticket Viewed",
     TicketActivityType.VIEW,
     `Ticket "${ticket.title}" was viewed by ${userName}`,
-    { ticketId: ticket.id, userId: userId },
+    userId,
+    { ticketId: ticket.id },
   );
 
   logger.info("[server][tickets] getSingleTicket | completed", {
@@ -509,8 +527,8 @@ export const createTicketReviewService = async (
     "Ticket Reviewed",
     TicketActivityType.INFO,
     `Ticket reviewed with rating ${dto.rating} by user ${user.id}`,
+    user.id,
     {
-      reviewerId: user.id,
       rating: dto.rating,
       closeCycle: closeCycle,
     },
@@ -631,8 +649,8 @@ export const getTicketReviewsService = async (
     "Ticket Reviews Viewed",
     TicketActivityType.INFO,
     `Ticket reviews viewed by user ${user.id}`,
+    user.id,
     {
-      userId: user.id,
       reviewsCount: formatted.length,
     },
   );
@@ -737,8 +755,8 @@ export const changeTicketStatusService = async (
     "Ticket Status Changed",
     TicketActivityType.INFO,
     `Ticket status changed from ${previousStatus} to ${newStatus} by user ${user.id}`,
+    user.id,
     {
-      userId: user.id,
       previousStatus,
       newStatus,
       closeCycle: ticket.closeCount,
