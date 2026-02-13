@@ -13,9 +13,9 @@ import {
   arabicNames,
   englishMenNames,
   englishNames,
-} from ".././personNamesDataSet.js";
-import { downloadAvatarImage } from ".././downloadAvatarImage.js";
+} from "./personNamesDataSet.js";
 import { Faker, en, ar } from "@faker-js/faker";
+import { downloadAvatarImage } from "./downloadAvatarImage.js";
 
 // ---------- Helpers (could be shared with technicians.seed.ts) ----------
 function getRandomItem<T>(arr: T[]): T {
@@ -46,7 +46,7 @@ type DeptTriple = {
 
 export async function seedRequesters(
   dataSource: DataSource,
-  count = 100
+  count = 100,
 ): Promise<void> {
   const faker = new Faker({
     locale: [en, ar],
@@ -85,7 +85,7 @@ export async function seedRequesters(
 
   if (deptTriples.length === 0) {
     console.warn(
-      "⚠️ [RequestersSeed] No departments with valid domains/universities found."
+      "⚠️ [RequestersSeed] No departments with valid domains/universities found.",
     );
     return;
   }
@@ -97,12 +97,12 @@ export async function seedRequesters(
 
   if (specs.length === 0) {
     console.warn(
-      "⚠️ [RequestersSeed] No specializations found. Requesters will have empty allowedSpecializations."
+      "⚠️ [RequestersSeed] No specializations found. Requesters will have empty allowedSpecializations.",
     );
   }
 
   console.log(
-    `ℹ️ [RequestersSeed] Loaded: ${deptTriples.length} dept/domain/uni triples, ${profiles.length} profiles, ${specs.length} specs.`
+    `ℹ️ [RequestersSeed] Loaded: ${deptTriples.length} dept/domain/uni triples, ${profiles.length} profiles, ${specs.length} specs.`,
   );
 
   // 2) create N requesters
@@ -162,7 +162,7 @@ export async function seedRequesters(
     } as CreateRequesterMapped;
 
     console.log(
-      `🚀 [RequestersSeed] Creating requester ${i}: ${email} (uni=${randomDept.uniId}, domain=${randomDept.domainId}, dept=${randomDept.deptId}, profile=${randomProfile.id})`
+      `🚀 [RequestersSeed] Creating requester ${i}: ${email} (uni=${randomDept.uniId}, domain=${randomDept.domainId}, dept=${randomDept.deptId}, profile=${randomProfile.id})`,
     );
 
     const avatarUrl = faker.image.avatar();
@@ -173,7 +173,7 @@ export async function seedRequesters(
     if (!result.is_added) {
       console.error(
         `❌ [RequestersSeed] Failed to create requester ${email}`,
-        result.errors
+        result.errors,
       );
     } else {
       console.log(`✅ [RequestersSeed] Requester created: ${email}`);
