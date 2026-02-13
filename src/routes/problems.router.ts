@@ -1,0 +1,10 @@
+import { createProblem,updateProblem,getProblemById,getProblems,deleteProblem } from "../controllers/problem.controller.js";
+import { Router } from "express";
+import { asyncHandler } from "../utils/asyncHandler.js";
+const router = Router();
+router.post("/", asyncHandler(createProblem));
+router.get("/:id", asyncHandler(getProblemById));
+router.get("/", asyncHandler(getProblems));
+router.put("/:id", asyncHandler(updateProblem));
+router.delete("/:id", asyncHandler(deleteProblem));
+export default router;

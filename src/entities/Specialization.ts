@@ -8,17 +8,29 @@ import {
 import { BaseEntity } from "./BaseEntity.js";
 import { AllowedSpecialization } from "./AllowedSpecialization.js";
 import { GroupSpecialization } from "./GroupSpecialization.js";
-import { mapJsonFields } from "../utils/formatter.js";
 import { Ticket } from "./Ticket.js";
+import { Problem } from "./problem.js";
+
+
+export type SpecializationDto = {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  description_en?: string;
+  description_ar?: string;
+  review_required: boolean;
+};
+
 
 type PaginatedResult<T> = {
   specializations: T[];
-  meta: {
+  meta_data: {
     total: number;
     page_index: number;
     page_size: number;
   };
 };
+
 
 @Entity({ name: "specializations" })
 export class Specialization extends BaseEntity {
@@ -28,6 +40,9 @@ export class Specialization extends BaseEntity {
   @Column({ type: "jsonb", nullable: true })
   description?: { en?: string; ar?: string };
 
+  @Column({ type: "boolean", nullable: false, default: false })
+  review_required!: boolean;
+
   @OneToMany(() => AllowedSpecialization, (as) => as.specialization, { lazy: true })
   allowed!: any[];
 
@@ -35,17 +50,24 @@ export class Specialization extends BaseEntity {
   groupSpecializations!: any[];
 
   @OneToMany(() => Ticket, (ticket) => ticket.specialization)
-  tickets: any[];
+  tickets!: any[];
+  @OneToMany(()=>Problem,(problem)=>problem.specialization)
+  problems!:any[];
 
-  toApi() {
-    return {
-      ...this,
-      ...mapJsonFields(this.name, { fields: { name_en: "en", name_ar: "ar" } }),
-      ...mapJsonFields(this.description ?? {}, {
-        fields: { description_en: "en", description_ar: "ar" },
-      }),
-    };
-  }
+  
+ toApi(): SpecializationDto {
+  return {
+    id: this.id,
+    review_required: this.review_required,
+
+    name_en: this.name?.en ,
+    name_ar: this.name?.ar ,
+
+    description_en: this.description?.en??"",
+    description_ar: this.description?.ar??"",
+  };
+}
+
   static async paginate(
     page = 1,
     limit = 20,
@@ -53,7 +75,7 @@ export class Specialization extends BaseEntity {
     repo?: Repository<Specialization>,
     includeAllowed = false,
     includeGroups = false
-  ): Promise<PaginatedResult<Specialization>> {
+  ): Promise<PaginatedResult<SpecializationDto>> {
     if (!repo) {
       throw new Error(
         "Repository not provided. Pass AppDataSource.getRepository(Specialization)."
@@ -63,11 +85,13 @@ export class Specialization extends BaseEntity {
     page = Math.max(1, Math.floor(page));
     limit = Math.max(1, Math.min(200, Math.floor(limit)));
 
-    const qb: SelectQueryBuilder<Specialization> = repo.createQueryBuilder("s");
+    const qb: SelectQueryBuilder<Specialization> =
+      repo.createQueryBuilder("s");
 
     if (includeAllowed) {
       qb.leftJoinAndSelect("s.allowed", "allowed");
     }
+
     if (includeGroups) {
       qb.leftJoinAndSelect("s.groupSpecializations", "gs");
     }
@@ -83,7 +107,8 @@ export class Specialization extends BaseEntity {
         qb.andWhere(
           `(
             s.name->>'en' ILIKE :q OR s.name->>'ar' ILIKE :q
-            OR (s.description->>'en') ILIKE :q OR (s.description->>'ar') ILIKE :q
+            OR (s.description->>'en') ILIKE :q
+            OR (s.description->>'ar') ILIKE :q
           )`,
           { q: param }
         );
@@ -100,10 +125,12 @@ export class Specialization extends BaseEntity {
 
     const [data, total] = await qb.getManyAndCount();
 
-    const formattedData = data.map((d) => d.toApi());
+    const formattedData: SpecializationDto[] =
+      data.map((d) => d.toApi());
+
     return {
       specializations: formattedData,
-      meta: {
+      meta_data: {
         total,
         page_index: page,
         page_size: limit,
