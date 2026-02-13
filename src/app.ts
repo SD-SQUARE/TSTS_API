@@ -76,6 +76,7 @@ import departmentsRouter from "./routes/departments.router.js";
 import specializationsRouter from "./routes/specializations.router.js";
 import workHourRouter from "./routes/workHour.router.js";
 import knowlegeBaseRouter from "./routes/knowlegeBase.router.js";
+import  ProblemRouter  from "./routes/problems.router.js";
 
 import logger from "./utils/logger.js";
 // routes
@@ -111,6 +112,7 @@ app.use("/api/v1/departments", departmentsRouter);
 app.use("/api/v1/specializations", specializationsRouter);
 app.use("/api/v1/work-hours", workHourRouter);
 app.use("/api/v1/knowledge-base", knowlegeBaseRouter);
+app.use("/api/v1/problems", ProblemRouter);
 
 app.use("/api/v1/universities", universitiesRouter);
 app.use("/api/v1/domains", domainsRouter);

@@ -129,5 +129,7 @@
     "message_send_failed": "Failed to send message",
     "chats_loaded": "Chats loaded",
     "chats_load_failed": "Failed to load chats"
-  }
+  },
+  "review_required":"review is required",
+  "problem_existing":"problem is existing"
 }

@@ -4,6 +4,7 @@ import { Specialization } from "../entities/Specialization.js";
 import { buildDescription ,buildName} from "../utils/handleNamaAndDesc.js";
 import logger from "../utils/logger.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
+import {SpecializationDto} from "../interfaces/response/specializationResponse.js"
 
 export async function getSpecializationById(req: Request, res: Response) {
     const { id } = req.params;
@@ -15,9 +16,9 @@ export async function getSpecializationById(req: Request, res: Response) {
     if (!specialization) {
         return res.status(ResponseStatus.NOT_FOUND).json({ message:req.t?req.t("specialization_not_found"): "Specialization not found" });
     }
-
+    const result:SpecializationDto=specialization.toApi();
     logger.info(`Fetched specialization with ID: ${specialization.id}`);
-    return res.json(specialization);
+    return res.json(result);
 }
 export async function getAllSpecializations(req: Request, res: Response) {
     const { page, limit, specializationName } = req.query;
@@ -35,7 +36,7 @@ export async function getAllSpecializations(req: Request, res: Response) {
         return res.json(result);  
 }
 export async function createSpecialization(req: Request, res: Response) {
-    const { name_en, name_ar, description_en, description_ar } = req.body;
+    const { name_en, name_ar, description_en, description_ar ,review_required} = req.body;
     const specializationRepo = new SpecializationRepo().getRepository();
     const name = { en: name_en, ar: name_ar };
     const nameObj = buildName(name);
@@ -51,9 +52,17 @@ export async function createSpecialization(req: Request, res: Response) {
     if (existing) {
         return res.status(ResponseStatus.CONFLICT).json({ message:req.t?req.t("specialization_exists"): "Specialization with this name already exists" });
     }
+    if(review_required==null){
+        return res.status(ResponseStatus.BAD_REQUEST).json(
+            {
+                message:req.t?req.t("review_required"):"you must provide review_required"
+            }
+        )
+    }
     const specialization = specializationRepo.create({
         name: nameObj,
         description: descObj,
+        review_required
     });
     
     await specializationRepo.save(specialization);
@@ -63,7 +72,7 @@ export async function createSpecialization(req: Request, res: Response) {
 }
 export async function updateSpecialization(req: Request, res: Response) {
     const { id } = req.params;
-    const { name_en, name_ar, description_en, description_ar } = req.body;
+    const { name_en, name_ar, description_en, description_ar,review_required } = req.body;
     const specializationRepo = new SpecializationRepo().getRepository();
     const specialization = await specializationRepo.findOne({ where: { id } });
     if (!specialization) {
@@ -89,6 +98,9 @@ export async function updateSpecialization(req: Request, res: Response) {
         const descObj = buildDescription(description);
         specialization.description = descObj; 
     }
+    if(review_required==null){
+        return res.status(ResponseStatus.BAD_REQUEST).json({  message:req.t?req.t("review_required"):"you must provide review_required"})}
+    specialization.review_required=review_required
     await specializationRepo.save(specialization);
 
     logger.info(`Updated specialization with ID: ${specialization.id}`);
