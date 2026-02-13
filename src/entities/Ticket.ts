@@ -81,7 +81,4 @@ export class Ticket {
   // close count
   @Column({ type: "int", default: 0 }) 
   closeCount: number;
-
-  @Column({ type: "boolean", default: false })
-  reviewRequired: boolean;
 }
