@@ -13,9 +13,9 @@ import {
   arabicNames,
   englishMenNames,
   englishNames,
-} from ".././personNamesDataSet.js";
+} from "./personNamesDataSet.js";
 import { Faker, en, ar } from "@faker-js/faker";
-import { downloadAvatarImage } from ".././downloadAvatarImage.js";
+import { downloadAvatarImage } from "./downloadAvatarImage.js";
 
 // ---------- Helpers ----------
 function getRandomItem<T>(arr: T[]): T {
