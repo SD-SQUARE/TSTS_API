@@ -579,8 +579,7 @@ export const getTicketReviewsService = async (
     (assignee) => assignee.id === user.id,
   );
 
-  const isAllowed =
-    user.role === UserType.ADMIN || isRequester || isAssignee;
+  const isAllowed = user.role === UserType.ADMIN || isRequester || isAssignee;
 
   if (!isAllowed) {
     logger.warn("[server][tickets][review] forbidden access attempt", {
@@ -694,7 +693,6 @@ export const changeTicketStatusService = async (
     (assignee) => assignee.id === user.id,
   );
 
-
   const isAllowed = user.role === UserType.ADMIN || isAssignee;
 
   if (!isAllowed) {
@@ -715,12 +713,9 @@ export const changeTicketStatusService = async (
 
   const previousStatus = ticket.status;
 
-  let newStatus =
-    dto.status === TicketStatus.CLOSED && ticket.reviewRequired
-      ? TicketStatus.PENDING
-      : dto.status;
+  let newStatus = dto.status;
 
-  if (dto.status === TicketStatus.CLOSED && !ticket.reviewRequired) {
+  if (dto.status === TicketStatus.CLOSED) {
     ticket.closeCount += 1;
     logger.info("[server][tickets] incrementing close cycle", {
       ticketId,
