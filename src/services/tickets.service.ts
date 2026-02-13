@@ -18,6 +18,7 @@ import { ReqUserPayload } from "../types/ReqUserPayload.js";
 import { TicketReview } from "../entities/TicketReview.js";
 import { getRequestContext } from "../utils/requestContext.js";
 import { getUserMetaById } from "./tickets/common.js";
+import { In } from "typeorm";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
@@ -73,6 +74,13 @@ export const createTicket = async (dto, files) => {
   if (specialization) {
     const assignedSpecialization = await specializationRepo.findOne({
       where: { id: specialization },
+      relations: [
+        "groupSpecializations",
+        "groupSpecializations.group",
+        "groupSpecializations.group.heads",
+        "groupSpecializations.group.heads.user",
+        "groupSpecializations.group.teamLeader",
+      ],
     });
 
     if (!assignedSpecialization) {
@@ -80,10 +88,27 @@ export const createTicket = async (dto, files) => {
         is_added: false,
         message: t("specialization_not_found"),
         errors: [
-          { key: "specialization", message: "specialization does not exist" },
+          { key: "specialization", message: "Specialization does not exist" },
         ],
       };
     }
+
+    const headIds = assignedSpecialization.groupSpecializations.flatMap(
+      (gs) => gs.group.heads?.map((h: any) => h.user?.id).filter(Boolean) ?? [],
+    );
+
+    const teamLeaderIds = assignedSpecialization.groupSpecializations
+      .map((gs) => gs.group.teamLeader?.id)
+      .filter(Boolean);
+
+    const userIds = Array.from(new Set([...headIds, ...teamLeaderIds]));
+
+    if (userIds.length) {
+      assignedUsers = await userRepo.findBy({
+        id: In(userIds),
+      });
+    }
+
   } else {
     // auto assign admins
     assignedUsers = await userRepo.find({
