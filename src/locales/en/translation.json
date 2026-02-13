@@ -129,5 +129,11 @@
     "message_send_failed": "Failed to send message",
     "chats_loaded": "Chats loaded",
     "chats_load_failed": "Failed to load chats"
-  }
+  },
+
+  "action_not_allowed": "Action not allowed",
+  "review_added": "Review added successfully",
+  "rating_min": "Rating must be at least 1",
+  "rating_max": "Rating must not exceed 5",
+  "note_too_long": "Note is too long (maximum 2000 characters)"
 }
