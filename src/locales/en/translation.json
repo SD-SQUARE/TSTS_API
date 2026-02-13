@@ -18,6 +18,17 @@
   "user_not_found": "User not found",
   "user_not_created": "User not created",
   "user_not_edited": "User not edited",
+  "template_generation_failed": "Failed to generate template",
+  "file_required": "File is required",
+  "files_required": "Files are required",
+  "import_preview_success": "Import preview generated successfully",
+  "import_preview_failed": "Failed to preview import",
+  "all_files_valid": "All files are valid",
+  "bulk_validation_failed": "Bulk validation failed",
+  "bulk_upload_validation_failed": "Validation failed. Some rows contain errors and were not uploaded",
+  "no_valid_data_to_upload": "No valid data to upload",
+  "bulk_upload_complete": "Bulk upload complete",
+  "bulk_upload_failed": "Bulk upload failed",
 
   "domain_not_found": "Domain not found",
 
