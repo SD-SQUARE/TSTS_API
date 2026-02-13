@@ -15,12 +15,14 @@ import { buildLocalizedName } from "../utils/localizeName.js";
 import { TicketActivity } from "../entities/TicketActivity.js";
 import { TicketActivityType } from "../enums/TicketActivity.enum.js";
 import { ReqUserPayload } from "../types/ReqUserPayload.js";
+import { TicketReview } from "../entities/TicketReview.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
 const mediaRepo = PostgresDataSource.getRepository(Media);
 const specializationRepo = PostgresDataSource.getRepository(Specialization);
 const ticketActivityRepo = PostgresDataSource.getRepository(TicketActivity);
+const ticketReviewRepo = PostgresDataSource.getRepository(TicketReview);
 
 export const logTicketActivity = async (
   ticket: Ticket,
@@ -386,4 +388,153 @@ export const getTicketActivitiesService = async (ticketId: string) => {
     logger.error(`Error fetching activities for ticket ${ticketId}: ${error}`);
     throw new Error("Could not fetch ticket activities");
   }
+};
+
+export const createTicketReviewService = async (
+  ticketId: string,
+  dto: { rating: number; note?: string },
+  user: any,
+) => {
+  logger.info("[server][tickets][review] createTicketReview | start", {
+    ticketId,
+    userId: user.id,
+    rating: dto.rating,
+  });  
+
+  const ticket = await ticketRepo.findOne({
+    where: { id: ticketId },
+    relations: ["requester"],
+  });
+
+  if (!ticket) {
+    logger.info("[server][tickets][review] ticket not found", {
+      ticketId,
+    });
+
+    return {
+      status: 404,
+      payload: {
+        message: t("ticket_not_found"),
+        code: "TICKET_NOT_FOUND",
+      },
+    };
+  }
+
+  logger.info("[server][tickets][review] ticket fetched", {
+    ticketId: ticket.id,
+    status: ticket.status,
+    closeCount: ticket.closeCount,
+    requesterId: ticket.requester?.id,
+  });
+
+  if (ticket.requester.id !== user.id) {
+    logger.warn("[server][tickets][review] forbidden review attempt", {
+      ticketId,
+      requesterId: ticket.requester.id,
+      attemptedBy: user.id,
+    });
+
+    return {
+      status: 403,
+      payload: {
+        message: t("action_not_allowed"),
+        code: "FORBIDDEN",
+      },
+    };
+  }
+
+  let closeCycle = ticket.closeCount;
+
+  if (ticket.status !== TicketStatus.CLOSED) {
+    logger.info("[server][tickets][review] closing ticket before review", {
+      ticketId,
+      previousStatus: ticket.status,
+      previousCloseCount: ticket.closeCount,
+    });
+
+    closeCycle += 1;
+    ticket.status = TicketStatus.CLOSED;
+    ticket.closeCount = closeCycle;
+
+    await ticketRepo.save(ticket);
+
+    logger.info("[server][tickets][review] ticket closed successfully", {
+      ticketId,
+      newStatus: ticket.status,
+      newCloseCount: ticket.closeCount,
+    });
+  }
+
+  const existingReview = await ticketReviewRepo.findOne({
+    where: {
+      ticket: { id: ticket.id },
+      closeCycle: closeCycle,
+    },
+  });
+
+  if (existingReview) {
+    logger.warn("[server][tickets][review] duplicate review detected", {
+      ticketId,
+      closeCycle,
+      reviewerId: user.id,
+    });
+
+    return {
+      status: 409,
+      payload: {
+        message: "Review already exists for this close cycle",
+        code: "REVIEW_ALREADY_EXISTS",
+      },
+    };
+  }
+
+  const review = ticketReviewRepo.create({
+    rating: dto.rating,
+    note: dto.note,
+    closeCycle: closeCycle,
+    ticket,
+    reviewer: { id: user.id },
+  });
+
+  await ticketReviewRepo.save(review);
+
+  logger.info("[server][tickets][review] review saved", {
+    ticketId,
+    reviewId: review.id,
+    rating: dto.rating,
+    closeCycle,
+  });
+
+  // Log ticket activity
+  await logTicketActivity(
+    ticket,
+    "Ticket Reviewed",
+    TicketActivityType.INFO,
+    `Ticket reviewed with rating ${dto.rating} by user ${user.id}`,
+    {
+      reviewerId: user.id,
+      rating: dto.rating,
+      closeCycle: closeCycle,
+    },
+  );
+
+  logger.info("[server][tickets][review] activity logged", {
+    ticketId,
+    closeCycle,
+  });
+
+  logger.info("[server][tickets][review] completed successfully", {
+    ticketId,
+    reviewerId: user.id,
+    closeCycle,
+  });
+
+  return {
+    status: 201,
+    payload: {
+      is_added: true,
+      message: "review_created_successfully",
+      errors: [],
+    },
+  };
 };

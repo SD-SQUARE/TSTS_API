@@ -4,6 +4,7 @@ import logger from "../utils/logger.js";
 import { AppError } from "../utils/AppError.js";
 import {
   createTicket,
+  createTicketReviewService,
   getAllTicketsService,
   getSingleTicketService,
   getTicketActivitiesService,
@@ -444,4 +445,22 @@ export const getChatMessagesForTicketController = async (
 
   const result = await getChatMessagesForTicketServices(ticketId, lang);
   return res.status(ResponseStatus.SUCCESS).json(result.data);
+};
+
+export const createTicketReviewController = async (
+  req: any,
+  res: Response
+) => {
+  const ticketId = req.params.id;
+  const user = req.user;
+
+  const { rating, note } = req.body;
+
+  const result = await createTicketReviewService(
+    ticketId,
+    { rating, note },
+    user
+  );
+
+  return res.status(result.status).json(result.payload);
 };

@@ -15,6 +15,7 @@ import {
   uploadTicketChatMediaController,
   sendChatMessageController,
   getChatMessagesForTicketController,
+  createTicketReviewController,
 } from "../controllers/tickets.controller.js";
 import { validate } from "../validation/zod-middleware.js";
 import { getTicketsSchema } from "../validation/ticket.schema.js";
@@ -25,6 +26,7 @@ import { editTicketForAdminAndTechniciansSchema } from "../validation/tickets/ed
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { editTicketForRequesterSchema } from "../validation/tickets/edit-for-requester.js";
 import { createMessageSchema } from "../validation/tickets/chat/send-chat-message.schema.js";
+import { createTicketReviewSchema } from "../validation/tickets/review.schema.js";
 
 const router = Router();
 
@@ -49,7 +51,13 @@ router
     "/:id/chat",
     authMiddleware,
     validate(createMessageSchema),
-    asyncHandler(sendChatMessageController)
+    asyncHandler(sendChatMessageController),
+  )
+  .post(
+    "/:id/reviews",
+    authMiddleware, 
+    validate(createTicketReviewSchema),
+    createTicketReviewController,
   );
 
 router.get(

@@ -106,7 +106,6 @@
   "assignee_not_found": "المكلف غير موجود",
   "ticket_updated": "تم تحديث التذكرة بنجاح",
   "requester_not_found": "مقدم الطلب غير موجود",
-  "specialization_not_found": "التخصص غير موجود",
   "ticket": {
     "invalid_id": "معرف التذكرة غير صالح",
     "not_found": "التذكرة غير موجودة",
@@ -124,5 +123,14 @@
     "message_send_failed": "فشل إرسال الرسالة",
     "chats_loaded": "تم تحميل المحادثات",
     "chats_load_failed": "فشل تحميل المحادثات"
-  }
+  },
+
+  "action_not_allowed": "الإجراء غير مسموح به",
+  "review_added": "تمت أضافة التقييم بنجاح",
+  "rating_required": "حقل التقييم إجباري",
+  "rating_min": "يجب أن يكون التقييم على الأقل 1",
+  "rating_max": "يجب ألا يتجاوز التقييم 5",
+  "note_too_long": "يجب ألا تتجاوز الملاحظة 2000 حرف"
+
+
 }
