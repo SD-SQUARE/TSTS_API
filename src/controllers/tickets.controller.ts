@@ -179,6 +179,7 @@ export const editTicketForRequesterController = async (
 export const deleteTicketController = async (req: Request, res: Response) => {
   const id = req.params.id;
   const isValid = uuidValidationSchema.safeParse(id);
+  const userId = (req as any).user.id;
 
   if (!id || !isValid.success) {
     logger.info(
@@ -189,7 +190,7 @@ export const deleteTicketController = async (req: Request, res: Response) => {
       .json({ is_deleted: false, message: t("ticket.invalid_id") });
   }
 
-  const result = await deleteTicketService(id);
+  const result = await deleteTicketService(id, userId);
   if (!result.is_deleted) {
     return res
       .status(ResponseStatus.BAD_REQUEST)
