@@ -8,6 +8,7 @@ import {
   getAllTicketsService,
   getSingleTicketService,
   getTicketActivitiesService,
+  getTicketReviewsService,
 } from "../services/tickets.service.js";
 import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
@@ -460,6 +461,16 @@ export const createTicketReviewController = async (
     ticketId,
     { rating, note },
     user
+  );
+
+  return res.status(result.status).json(result.payload);
+};
+
+export const getTicketReviewsController = async (req: any, res: any) => {
+  const result = await getTicketReviewsService(
+    req.params.ticketId,
+    req.user,
+    req.t,
   );
 
   return res.status(result.status).json(result.payload);

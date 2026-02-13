@@ -16,6 +16,7 @@ import {
   sendChatMessageController,
   getChatMessagesForTicketController,
   createTicketReviewController,
+  getTicketReviewsController,
 } from "../controllers/tickets.controller.js";
 import { validate } from "../validation/zod-middleware.js";
 import { getTicketsSchema } from "../validation/ticket.schema.js";
@@ -68,6 +69,8 @@ router.get(
 );
 router.get("/:id", authMiddleware, getSingleTicketController);
 router.get("/:id/activities", getTicketActivitiesController);
+router.get("/:id/reviews", authMiddleware, getTicketReviewsController);
+
 
 router
   .get("/:id/media", authMiddleware, asyncHandler(getAllTicketAssetsController))

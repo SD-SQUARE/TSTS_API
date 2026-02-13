@@ -29,7 +29,7 @@ export const logTicketActivity = async (
   title: string,
   type: TicketActivityType,
   content: string,
-  meta = {}
+  meta = {},
 ) => {
   const activity = ticketActivityRepo.create({
     ticket,
@@ -96,7 +96,7 @@ export const createTicket = async (dto, files) => {
       requesterId: requesterUser.id,
       specializationId: specialization || null,
       assignees: assignedUsers.map((u) => ({ id: u.id })),
-    }
+    },
   );
 
   // handle media
@@ -105,7 +105,7 @@ export const createTicket = async (dto, files) => {
       const key = await uploadFilesWithUniqueKey(
         IMAGE_PATHS.TicketMedia,
         ticket.id,
-        file
+        file,
       );
 
       const media = mediaRepo.create({
@@ -123,7 +123,7 @@ export const createTicket = async (dto, files) => {
         "Ticket Media Uploaded",
         TicketActivityType.INFO,
         `Media file "${file.originalname}" uploaded`,
-        { fileName: file.originalname, url: key }
+        { fileName: file.originalname, url: key },
       );
     }
   }
@@ -300,7 +300,7 @@ export const getSingleTicketService = async (
   ticketId: string,
   lang: "ar" | "en",
   userId: string,
-  userName: string
+  userName: string,
 ) => {
   logger.info("[server][tickets] getSingleTicket | start", { ticketId, lang });
 
@@ -358,9 +358,7 @@ export const getSingleTicketService = async (
     "Ticket Viewed",
     TicketActivityType.VIEW,
     `Ticket "${ticket.title}" was viewed by ${userName}`,
-    { ticketId: ticket.id,
-      userId: userId,
-     }
+    { ticketId: ticket.id, userId: userId },
   );
 
   logger.info("[server][tickets] getSingleTicket | completed", {
@@ -380,7 +378,7 @@ export const getTicketActivitiesService = async (ticketId: string) => {
     });
 
     logger.info(
-      `Fetched ${activities.length} activities for ticket ${ticketId}`
+      `Fetched ${activities.length} activities for ticket ${ticketId}`,
     );
 
     return activities;
@@ -399,7 +397,7 @@ export const createTicketReviewService = async (
     ticketId,
     userId: user.id,
     rating: dto.rating,
-  });  
+  });
 
   const ticket = await ticketRepo.findOne({
     where: { id: ticketId },
@@ -535,6 +533,127 @@ export const createTicketReviewService = async (
       is_added: true,
       message: "review_created_successfully",
       errors: [],
+    },
+  };
+};
+
+export const getTicketReviewsService = async (
+  ticketId: string,
+  user: any,
+  t: any,
+) => {
+  logger.info("[server][tickets][review] getTicketReviews | start", {
+    ticketId,
+    userId: user.id,
+  });
+
+  const ticket = await ticketRepo.findOne({
+    where: { id: ticketId },
+    relations: ["requester", "assigneeList"],
+  });
+
+  if (!ticket) {
+    logger.info("[server][tickets][review] ticket not found", {
+      ticketId,
+      requestedBy: user.id,
+    });
+
+    return {
+      status: 404,
+      payload: {
+        message: t("ticket_not_found"),
+        code: "TICKET_NOT_FOUND",
+      },
+    };
+  }
+
+  logger.info("[server][tickets][review] ticket fetched", {
+    ticketId: ticket.id,
+    requesterId: ticket.requester?.id,
+    assigneeCount: ticket.assigneeList?.length || 0,
+  });
+
+  const isRequester = ticket.requester.id === user.id;
+
+  const isAssignee = ticket.assigneeList?.some(
+    (assignee) => assignee.id === user.id,
+  );
+
+  const isAllowed = user.isAdmin || isRequester || isAssignee;
+
+  if (!isAllowed) {
+    logger.warn("[server][tickets][review] forbidden access attempt", {
+      ticketId,
+      requestedBy: user.id,
+      isAdmin: user.isAdmin,
+      isRequester,
+      isAssignee,
+    });
+
+    return {
+      status: 403,
+      payload: {
+        message: t("action_not_allowed"),
+        code: "FORBIDDEN",
+      },
+    };
+  }
+
+  const reviews = await ticketReviewRepo.find({
+    where: { ticket: { id: ticketId } },
+    relations: ["reviewer"],
+    order: { createdAt: "DESC" },
+  });
+
+  logger.info("[server][tickets][review] reviews fetched", {
+    ticketId,
+    requestedBy: user.id,
+    reviewsCount: reviews.length,
+  });
+
+  const formatted = reviews.map((review) => ({
+    id: review.id,
+    ticketId: ticket.id,
+    rating: review.rating,
+    note: review.note,
+    closeCycle: review.closeCycle,
+    createdAt: review.createdAt,
+    reviewer: {
+      id: review.reviewer.id,
+      firstName: review.reviewer.firstName,
+      lastName: review.reviewer.lastName,
+      image: review.reviewer.image,
+    },
+  }));
+
+  await logTicketActivity(
+    ticket,
+    "Ticket Reviews Viewed",
+    TicketActivityType.INFO,
+    `Ticket reviews viewed by user ${user.id}`,
+    {
+      userId: user.id,
+      reviewsCount: formatted.length,
+    },
+  );
+
+  logger.info("[server][tickets][review] activity logged", {
+    ticketId,
+    userId: user.id,
+  });
+
+  logger.info("[server][tickets][review] completed successfully", {
+    ticketId,
+    userId: user.id,
+  });
+
+  return {
+    status: 200,
+    payload: {
+      data: formatted,
+      meta: {
+        total: formatted.length,
+      },
     },
   };
 };
