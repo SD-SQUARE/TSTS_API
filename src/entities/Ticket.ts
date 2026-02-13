@@ -18,7 +18,7 @@ import { Media } from "./Media.js";
 import { TicketListener } from "./TicketListener.js";
 import { TicketActivity } from "./TicketActivity.js";
 import { TicketChat } from "./TicketChat.js";
-import { TicketReview } from "./TicketReview.js"
+import { TicketReview } from "./TicketReview.js";
 
 @Entity({ name: "tickets" })
 export class Ticket {
@@ -81,4 +81,7 @@ export class Ticket {
   // close count
   @Column({ type: "int", default: 0 }) 
   closeCount: number;
+
+  @Column({ type: "boolean", default: false })
+  reviewRequired: boolean;
 }

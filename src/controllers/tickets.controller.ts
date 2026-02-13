@@ -3,6 +3,7 @@ import { createTicketSchema } from "../validation/ticket.schema.js";
 import logger from "../utils/logger.js";
 import { AppError } from "../utils/AppError.js";
 import {
+  changeTicketStatusService,
   createTicket,
   createTicketReviewService,
   getAllTicketsService,
@@ -471,6 +472,25 @@ export const getTicketReviewsController = async (req: any, res: any) => {
     req.params.ticketId,
     req.user,
     req.t,
+  );
+
+  return res.status(result.status).json(result.payload);
+};
+
+export const changeTicketStatusController = async (
+  req: any,
+  res: Response
+) => {
+  const ticketId = req.params.id;
+  const user = req.user;
+
+  const { status } = req.body;
+
+  const result = await changeTicketStatusService(
+    ticketId,
+    {status},
+    user,
+    req.t
   );
 
   return res.status(result.status).json(result.payload);
