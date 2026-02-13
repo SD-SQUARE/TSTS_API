@@ -17,9 +17,13 @@ import {
   getChatMessagesForTicketController,
   createTicketReviewController,
   getTicketReviewsController,
+  changeTicketStatusController,
 } from "../controllers/tickets.controller.js";
 import { validate } from "../validation/zod-middleware.js";
-import { getTicketsSchema } from "../validation/ticket.schema.js";
+import {
+  changeTicketStatusSchema,
+  getTicketsSchema,
+} from "../validation/ticket.schema.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { typeBasedAuthMiddleware } from "../middleware/typeBasedAuthMiddleware.js";
 import { UserType } from "../enums/UserType.enum.js";
@@ -96,7 +100,13 @@ router
       UserType.TECHNICIAN,
     ]),
     validate(editTicketForAdminAndTechniciansSchema),
-    asyncHandler(editTicketForAdminsAndTechniciansController)
+    asyncHandler(editTicketForAdminsAndTechniciansController),
+  )
+  .patch(
+    "/:id/change-status",
+    authMiddleware,
+    validate(changeTicketStatusSchema),
+    asyncHandler(changeTicketStatusController),
   )
   .put(
     "/:id",

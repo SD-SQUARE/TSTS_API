@@ -579,13 +579,14 @@ export const getTicketReviewsService = async (
     (assignee) => assignee.id === user.id,
   );
 
-  const isAllowed = user.isAdmin || isRequester || isAssignee;
+  const isAllowed =
+    user.role === UserType.ADMIN || isRequester || isAssignee;
 
   if (!isAllowed) {
     logger.warn("[server][tickets][review] forbidden access attempt", {
       ticketId,
       requestedBy: user.id,
-      isAdmin: user.isAdmin,
+      isAdmin: user.role === UserType.ADMIN,
       isRequester,
       isAssignee,
     });
@@ -654,6 +655,114 @@ export const getTicketReviewsService = async (
       meta: {
         total: formatted.length,
       },
+    },
+  };
+};
+
+export const changeTicketStatusService = async (
+  ticketId: string,
+  dto: { status: TicketStatus },
+  user: any,
+  t: any,
+) => {
+  logger.info("[server][tickets] changeTicketStatus | start", {
+    ticketId,
+    userId: user.id,
+    requestedStatus: dto.status,
+  });
+
+  const ticket = await ticketRepo.findOne({
+    where: { id: ticketId },
+    relations: ["requester", "assigneeList"],
+  });
+
+  if (!ticket) {
+    logger.warn("[server][tickets] ticket not found", {
+      ticketId,
+      requestedBy: user.id,
+    });
+    return {
+      status: 404,
+      payload: {
+        message: t("ticket_not_found"),
+        code: "TICKET_NOT_FOUND",
+      },
+    };
+  }
+
+  const isAssignee = ticket.assigneeList?.some(
+    (assignee) => assignee.id === user.id,
+  );
+
+
+  const isAllowed = user.role === UserType.ADMIN || isAssignee;
+
+  if (!isAllowed) {
+    logger.warn("[server][tickets] forbidden status change attempt", {
+      ticketId,
+      requestedBy: user.id,
+      isAdmin: user.role === UserType.ADMIN,
+      isAssignee,
+    });
+    return {
+      status: 403,
+      payload: {
+        message: t("action_not_allowed"),
+        code: "FORBIDDEN",
+      },
+    };
+  }
+
+  const previousStatus = ticket.status;
+
+  let newStatus =
+    dto.status === TicketStatus.CLOSED && ticket.reviewRequired
+      ? TicketStatus.PENDING
+      : dto.status;
+
+  if (dto.status === TicketStatus.CLOSED && !ticket.reviewRequired) {
+    ticket.closeCount += 1;
+    logger.info("[server][tickets] incrementing close cycle", {
+      ticketId,
+      newCloseCycle: ticket.closeCount,
+    });
+  }
+
+  logger.info("[server][tickets] updating ticket status", {
+    ticketId,
+    previousStatus,
+    newStatus,
+  });
+
+  ticket.status = newStatus;
+  await ticketRepo.save(ticket);
+
+  await logTicketActivity(
+    ticket,
+    "Ticket Status Changed",
+    TicketActivityType.INFO,
+    `Ticket status changed from ${previousStatus} to ${newStatus} by user ${user.id}`,
+    {
+      userId: user.id,
+      previousStatus,
+      newStatus,
+      closeCycle: ticket.closeCount,
+    },
+  );
+
+  logger.info("[server][tickets] ticket status updated successfully", {
+    ticketId,
+    previousStatus,
+    newStatus,
+    closeCycle: ticket.closeCount,
+  });
+
+  return {
+    status: 200,
+    payload: {
+      is_updated: true,
+      message: "ticket_updated",
+      errors: [],
     },
   };
 };
