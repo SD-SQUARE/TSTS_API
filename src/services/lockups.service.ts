@@ -483,11 +483,15 @@ export const getGroupNonTechniciansLockupService = async (
   }));
 };
 
-export const getUserTicketsLockupService = async (userId: string) => {
+export const getUserTicketsLockupService = async (
+  userId: string,
+  lang: "ar" | "en",
+) => {
   const tickets = await ticketsRepository
     .createQueryBuilder("ticket")
     .leftJoinAndSelect("ticket.requester", "requester")
     .leftJoinAndSelect("ticket.specialization", "specialization")
+    .leftJoinAndSelect("ticket.problem", "problem")
     .leftJoinAndSelect("ticket.assigneeList", "assignee")
     .where("requester.id = :userId", { userId })
     .orWhere("assignee.id = :userId", { userId })
@@ -498,6 +502,18 @@ export const getUserTicketsLockupService = async (userId: string) => {
     id: ticket.id,
     title: ticket.title,
     description: ticket.description,
+    specialization: ticket.specialization
+      ? {
+          id: ticket.specialization.id,
+          name: ticket.specialization.name?.[lang] || "",
+        }
+      : null,
+    problem: ticket.problem
+      ? {
+          id: ticket.problem.id,
+          name: ticket.problem.name?.[lang] || "",
+        }
+      : null,
     status: ticket.status,
   }));
 };

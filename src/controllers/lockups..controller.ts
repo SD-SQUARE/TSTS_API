@@ -137,8 +137,10 @@ export const getUserTicketsLockupController = async (
   res: Response
 ) => {
   const { id } = req.params;
+  const lang = (req.language || "en") as "ar" | "en";
 
-  const tickets = await getUserTicketsLockupService(id);
+
+  const tickets = await getUserTicketsLockupService(id, lang);
 
   return res.status(200).json(tickets);
 };
