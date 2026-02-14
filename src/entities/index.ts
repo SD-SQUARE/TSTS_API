@@ -26,4 +26,4 @@ export * from "./ChatMessage.js";
 export * from "./TicketChatMessage.js";
 export * from "./TrustedDevice.js";
 export * from "./TicketReview.js";
-export * from "./problem.js"
+export * from "./Problem.js"
