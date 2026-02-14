@@ -19,6 +19,7 @@ import { TicketReview } from "../entities/TicketReview.js";
 import { getRequestContext } from "../utils/requestContext.js";
 import { getUserMetaById } from "./tickets/common.js";
 import { In } from "typeorm";
+import { Problem } from "../entities/Problem.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
@@ -26,6 +27,7 @@ const mediaRepo = PostgresDataSource.getRepository(Media);
 const specializationRepo = PostgresDataSource.getRepository(Specialization);
 const ticketActivityRepo = PostgresDataSource.getRepository(TicketActivity);
 const ticketReviewRepo = PostgresDataSource.getRepository(TicketReview);
+const problemRepo = PostgresDataSource.getRepository(Problem);
 
 export const logTicketActivity = async (
   ticket: Ticket,
@@ -60,10 +62,22 @@ export const logTicketActivity = async (
 
 export const createTicket = async (dto, files) => {
   // FIXME: Take Problem From body and update ticket entity 
-  const { title, description, requester, specialization } = dto;
+  const { title, description, requester, specialization, problem } = dto;
+
+  logger.info("[tickets] createTicket | start", {
+    requester,
+    specialization,
+    problem,
+    hasFiles: !!files?.length,
+  });
 
   const requesterUser = await userRepo.findOne({ where: { id: requester } });
+
   if (!requesterUser) {
+    logger.warn("[tickets] createTicket | requester not found", {
+      requester,
+    });
+
     return {
       is_added: false,
       message: t("requester_not_found"),
@@ -71,9 +85,20 @@ export const createTicket = async (dto, files) => {
     };
   }
 
+  logger.info("[tickets] createTicket | requester validated", {
+    requesterId: requesterUser.id,
+  });
+
   let assignedUsers: User[] = [];
+  let assignedSpecialization: any = null;
+  let assignedProblem: any = null;
+
   if (specialization) {
-    const assignedSpecialization = await specializationRepo.findOne({
+    logger.info("[tickets] createTicket | specialization provided", {
+      specialization,
+    });
+
+    assignedSpecialization = await specializationRepo.findOne({
       where: { id: specialization },
       relations: [
         "groupSpecializations",
@@ -85,6 +110,10 @@ export const createTicket = async (dto, files) => {
     });
 
     if (!assignedSpecialization) {
+      logger.warn("[tickets] createTicket | specialization not found", {
+        specialization,
+      });
+
       return {
         is_added: false,
         message: t("specialization_not_found"),
@@ -94,26 +123,67 @@ export const createTicket = async (dto, files) => {
       };
     }
 
-    const headIds = assignedSpecialization.groupSpecializations.flatMap(
-      (gs) => gs.group.heads?.map((h: any) => h.user?.id).filter(Boolean) ?? [],
+    logger.info("[tickets] createTicket | specialization resolved", {
+      specializationId: assignedSpecialization.id,
+    });
+  } else if (problem) {
+    logger.info(
+      "[tickets] createTicket | deriving specialization from problem",
+      {
+        problem,
+      },
     );
 
-    const teamLeaderIds = assignedSpecialization.groupSpecializations
-      .map((gs) => gs.group.teamLeader?.id)
-      .filter(Boolean);
+    assignedProblem = await problemRepo.findOne({
+      where: { id: problem },
+      relations: [
+        "specialization",
+        "specialization.groupSpecializations",
+        "specialization.groupSpecializations.group",
+        "specialization.groupSpecializations.group.heads",
+        "specialization.groupSpecializations.group.heads.user",
+        "specialization.groupSpecializations.group.teamLeader",
+      ],
+    });
 
-    const userIds = Array.from(new Set([...headIds, ...teamLeaderIds]));
-
-    if (userIds.length) {
-      assignedUsers = await userRepo.findBy({
-        id: In(userIds),
+    if (!assignedProblem) {
+      logger.warn("[tickets] createTicket | problem not found", {
+        problem,
       });
+
+      return {
+        is_added: false,
+        message: t("problem_not_found"),
+        errors: [{ key: "problem", message: "Problem does not exist" }],
+      };
     }
 
-  } else {
-    // auto assign admins
+    assignedSpecialization = assignedProblem.specialization;
+
+    logger.info("[tickets] createTicket | specialization derived", {
+      problemId: assignedProblem.id,
+      specializationId: assignedSpecialization?.id,
+    });
+  }
+
+  if (assignedSpecialization) {
+    assignedUsers = await assignUsersFromSpecialization(assignedSpecialization);
+
+    logger.info("[tickets] createTicket | users assigned from specialization", {
+      specializationId: assignedSpecialization.id,
+      assignedCount: assignedUsers.length,
+    });
+  }
+
+  if (!assignedUsers.length) {
+    logger.info("[tickets] createTicket | fallback to admin assignment");
+
     assignedUsers = await userRepo.find({
       where: { user_type: UserType.ADMIN },
+    });
+
+    logger.info("[tickets] createTicket | admins assigned", {
+      adminCount: assignedUsers.length,
     });
   }
 
@@ -121,12 +191,26 @@ export const createTicket = async (dto, files) => {
     title,
     description,
     requester: requesterUser,
-    specialization: specialization ? { id: specialization } : null,
+    specialization: assignedSpecialization
+      ? { id: assignedSpecialization.id }
+      : null,
+    problem: assignedProblem ? { id: assignedProblem.id } : null,
     status: TicketStatus.OPEN,
     assigneeList: assignedUsers,
   });
 
+  logger.info("[tickets] createTicket | saving ticket", {
+    requesterId: requesterUser.id,
+    specializationId: assignedSpecialization?.id || null,
+    problemId: assignedProblem?.id || null,
+    assigneeCount: assignedUsers.length,
+  });
+
   const savedTicket = await ticketRepo.save(ticket);
+
+  logger.info("[tickets] createTicket | ticket saved", {
+    ticketId: savedTicket.id,
+  });
 
   // log ticket creation
   await logTicketActivity(
@@ -136,17 +220,27 @@ export const createTicket = async (dto, files) => {
     `Ticket "${savedTicket.title}" created by ${requesterUser.id}`,
     requesterUser.id,
     {
-      specializationId: specialization || null,
+      specializationId: assignedSpecialization?.id || null,
+      problemId: assignedProblem?.id || null,
       assignees: assignedUsers.map((u) => ({ id: u.id })),
     },
   );
 
+  logger.info("[tickets] createTicket | activity logged", {
+    ticketId: savedTicket.id,
+  });
+
   // handle media
   if (files?.length) {
+    logger.info("[tickets] createTicket | uploading media", {
+      ticketId: savedTicket.id,
+      fileCount: files.length,
+    });
+
     for (const file of files) {
       const key = await uploadFilesWithUniqueKey(
         IMAGE_PATHS.TicketMedia,
-        ticket.id,
+        savedTicket.id,
         file,
       );
 
@@ -158,6 +252,11 @@ export const createTicket = async (dto, files) => {
       });
 
       await mediaRepo.save(media);
+
+      logger.info("[tickets] createTicket | media saved", {
+        ticketId: savedTicket.id,
+        fileName: file.originalname,
+      });
 
       // log media upload
       await logTicketActivity(
@@ -171,11 +270,32 @@ export const createTicket = async (dto, files) => {
     }
   }
 
+  logger.info("[tickets] createTicket | completed successfully", {
+    ticketId: savedTicket.id,
+  });
+
   return {
     is_added: true,
     message: "ticket_created",
     errors: [],
   };
+};
+
+const assignUsersFromSpecialization = async (spec: any) => {
+  const headIds = spec.groupSpecializations.flatMap(
+    (gs: any) =>
+      gs.group.heads?.map((h: any) => h.user?.id).filter(Boolean) ?? [],
+  );
+
+  const teamLeaderIds = spec.groupSpecializations
+    .map((gs: any) => gs.group.teamLeader?.id)
+    .filter(Boolean);
+
+  const userIds = Array.from(new Set([...headIds, ...teamLeaderIds]));
+
+  if (!userIds.length) return [];
+
+  return await userRepo.findBy({ id: In(userIds) });
 };
 
 export const getAllTicketsService = async (

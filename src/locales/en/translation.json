@@ -147,5 +147,6 @@
   "review_added": "Review added successfully",
   "rating_min": "Rating must be at least 1",
   "rating_max": "Rating must not exceed 5",
-  "note_too_long": "Note is too long (maximum 2000 characters)"
+  "note_too_long": "Note is too long (maximum 2000 characters)",
+  "invalid_problem": "Invalid Problem!"
 }
