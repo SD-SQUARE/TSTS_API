@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  editGroupController,
   addGroup,
   bulkAssignUsersController,
   deleteGroupController,
@@ -12,6 +13,7 @@ const router = Router();
 
 router.post("/", addGroup);
 router.post("/:id/assign", bulkAssignUsersController);
+router.put("/:id", editGroupController); // ✅ Edit group
 router.get("/:id", getGroupController);
 router.delete("/:id", deleteGroupController);
 router.get("/", getAllGroupsController);

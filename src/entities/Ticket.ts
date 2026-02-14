@@ -18,6 +18,7 @@ import { Media } from "./Media.js";
 import { TicketListener } from "./TicketListener.js";
 import { TicketActivity } from "./TicketActivity.js";
 import { TicketChat } from "./TicketChat.js";
+import { TicketReview } from "./TicketReview.js"
 
 @Entity({ name: "tickets" })
 export class Ticket {
@@ -73,4 +74,11 @@ export class Ticket {
 
   @OneToMany(() => TicketChat, (chat) => chat.ticket)
   chats: any[];
+
+  @OneToMany(() => TicketReview, (review) => review.ticket)
+  reviews: any[];
+
+  // close count
+  @Column({ type: "int", default: 0 }) 
+  closeCount: number;
 }

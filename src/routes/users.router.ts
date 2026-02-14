@@ -31,6 +31,7 @@ import {
 } from "../controllers/admins.controller.js";
 import { createAdminSchema } from "../validation/admin/createAdmin.schema.js";
 import {
+  resetUserPassword,
   getMyProfileById,
   getUserGroups,
   getUserProfileById,
@@ -53,15 +54,16 @@ router
   .get("/admins/:id", asyncHandler(getAdminById))
   .get("/profile/:id/view", asyncHandler(getUserProfileById))
   .get("/profile/:id", asyncHandler(getMyProfileById))
+  .post("/profile/:id/reset-password", asyncHandler(resetUserPassword))
   .get("/profile/:id/view/groups", asyncHandler(getUserGroups))
   .get(
     "/profile/:id/view/specializations",
-    asyncHandler(getUserSpecializations),
+    asyncHandler(getUserSpecializations)
   )
   .get("/:id/groups", asyncHandler(getGroupsForUserPagedController))
   .get(
     "/:id/specializations",
-    asyncHandler(getSpecializationsForUserPagedController),
+    asyncHandler(getSpecializationsForUserPagedController)
   );
 
 router

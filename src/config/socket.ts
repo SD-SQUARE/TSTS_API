@@ -14,7 +14,12 @@ export function initSocket(server: any) {
     },
   });
   logger.info("[Socket]: initialized");
-  logger.info(`[Socket]: listening on wss://${server.address().address}:${server.address().port}`);
+  logger.info(
+    `[Socket]: listening on wss://${server.address().address}:${
+      server.address().port
+    }`,
+    server.address()
+  );
 
   io.use(socketAuth);
   io.use(listening);
