@@ -11,6 +11,8 @@ import {
   getUserProfileByType,
 } from "../services/users/profile/profileQueryService.js";
 import { IPagination } from "../interfaces/shared/IPagination.js";
+import { AppError } from "../utils/AppError.js";
+import { resetProfilePassword } from "../services/auth.service.js";
 
 export const getUserProfileById = async (req: Request, res: Response) => {
   const id = req.params.id;
@@ -34,6 +36,34 @@ export const getUserProfileById = async (req: Request, res: Response) => {
 
   return res.status(ResponseStatus.SUCCESS).json(profile);
 };
+
+export const resetUserPassword = async (req: Request, res: Response) => {
+  const id = req.params.id;
+  const lang = req.language as "en" | "ar";
+
+  const isValid = uuidValidationSchema.safeParse(id);
+
+  if (!id || !isValid.success) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_deleted: false, message: t("invalid_uuid") });
+  }
+  
+  try {
+    const { password } = req.body;
+
+    const result = await resetProfilePassword(password,id);
+
+    return res.status(200).json(result);
+  } catch (err: any) {
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).json({ message: err.message });
+    }
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
 
 export const getMyProfileById = async (req: Request, res: Response) => {
   const id = req.params.id;

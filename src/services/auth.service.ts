@@ -410,3 +410,22 @@ export const resetPassword = async (
 
   return { is_updated: true, message: t("password_updated") };
 };
+
+export const resetProfilePassword = async (newPassword: string, userId:string): Promise<{ is_updated: boolean; message?: string; error?: string }> => {
+  if (!newPassword) throw new AppError(t("invalid_input"), 400);
+
+  if (!PASSWORD_REGEX.test(newPassword)) {
+    return { is_updated: false, error: t("invalid_password") };
+  }
+
+  // Retrieve userId directly from reset token
+  if (!userId) return { is_updated: false, error: t("user_not_found") };
+
+  const hashedPassword = await hashPassword(newPassword);
+  await userRepo.update(userId, { password: hashedPassword });
+
+
+  logger.info(`[server][auth] Password reset successfully for user ${userId}`);
+
+  return { is_updated: true, message: t("password_updated") };
+};
