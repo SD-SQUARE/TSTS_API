@@ -36,6 +36,8 @@ export const getTicketsSchema = (t: Request["t"]) =>
 
     specialization: z.string().uuid(t("invalid_specialization_id")).optional(),
 
+    problem: z.string().uuid(t("invalid_problem")).optional(),
+
     status: z.string().optional(),
 
     priority: z.string().optional(),

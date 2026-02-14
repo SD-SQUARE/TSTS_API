@@ -61,7 +61,7 @@ export const logTicketActivity = async (
 };
 
 export const createTicket = async (dto, files) => {
-  // FIXME: Take Problem From body and update ticket entity 
+  // FIXME: Take Problem From body and update ticket entity
   const { title, description, requester, specialization, problem } = dto;
 
   logger.info("[tickets] createTicket | start", {
@@ -324,6 +324,7 @@ export const getAllTicketsService = async (
     .createQueryBuilder("ticket")
     .leftJoinAndSelect("ticket.requester", "requester")
     .leftJoinAndSelect("ticket.specialization", "specialization")
+    .leftJoinAndSelect("ticket.problem", "problem")
     .leftJoinAndSelect("ticket.assigneeList", "assignee");
 
   if (user.role === UserType.REQUESTER) {
@@ -363,6 +364,17 @@ export const getAllTicketsService = async (
     logger.info("[server][tickets] getAllTickets | filter applied", {
       filter: "specialization",
       specializationId: query.specialization,
+    });
+  }
+
+  if (query.problem) {
+    qb.andWhere("problem.id = :problem", {
+      problem: query.problem,
+    });
+
+    logger.info("[server][tickets] getAllTickets | filter applied", {
+      filter: "problem",
+      problemId: query.problem,
     });
   }
 
@@ -430,6 +442,13 @@ export const getAllTicketsService = async (
         }
       : null,
 
+    problem: ticket.problem
+      ? {
+          id: ticket.problem.id,
+          name: ticket.problem.name?.[lang],
+        }
+      : null,
+
     status: ticket.status,
     priority: ticket.priority,
     isOutOfService: ticket.isOutOfService,
@@ -471,6 +490,7 @@ export const getSingleTicketService = async (
     .createQueryBuilder("ticket")
     .leftJoinAndSelect("ticket.requester", "requester")
     .leftJoinAndSelect("ticket.specialization", "specialization")
+    .leftJoinAndSelect("ticket.problem", "problem")
     .leftJoinAndSelect("ticket.assigneeList", "assignee")
     .where("ticket.id = :id", { id: ticketId })
     .getOne();
@@ -484,6 +504,7 @@ export const getSingleTicketService = async (
     ticketId: ticket.id,
     requesterId: ticket.requester?.id ?? null,
     specializationId: ticket.specialization?.id ?? null,
+    problemId: ticket.problem?.id ?? null,
     assigneeCount: ticket.assigneeList?.length ?? 0,
   });
 
@@ -502,6 +523,14 @@ export const getSingleTicketService = async (
       ? {
           id: ticket.specialization.id,
           name: ticket.specialization.name?.[lang] || "",
+          review_required: ticket.specialization.review_required,
+        }
+      : null,
+    problem: ticket.problem
+      ? {
+          id: ticket.problem.id,
+          name: ticket.problem.name?.[lang] || "",
+          review_required: ticket.problem.review_required,
         }
       : null,
     status: ticket.status,
