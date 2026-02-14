@@ -9,7 +9,7 @@ import { BaseEntity } from "./BaseEntity.js";
 import { AllowedSpecialization } from "./AllowedSpecialization.js";
 import { GroupSpecialization } from "./GroupSpecialization.js";
 import { Ticket } from "./Ticket.js";
-import { Problem } from "./problem.js";
+import { Problem } from "./Problem.js";
 
 
 export type SpecializationDto = {

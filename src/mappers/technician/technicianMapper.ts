@@ -14,7 +14,7 @@ export type RequestWithFileAndBody = Request<
 };
 
 export function mapCreateTechnician(
-  req: RequestWithFileAndBody
+  req: RequestWithFileAndBody,
 ): CreateTechnicianMapped {
   let {
     email,
@@ -29,7 +29,6 @@ export function mapCreateTechnician(
     ssn,
     university,
     domain,
-    departments,
     contacts,
     allowed_specializations,
     permission_profile,
@@ -38,12 +37,6 @@ export function mapCreateTechnician(
     job_en,
     job_ar,
   } = req.body;
-
-  departments =
-    (Array.isArray(departments)
-      ? departments
-      : parseIfJson<string[]>(departments) ||
-        (typeof departments === "string" ? [departments] : [])) ?? [];
 
   contacts = (typeof contacts === "object"
     ? contacts
@@ -71,8 +64,6 @@ export function mapCreateTechnician(
 
     university,
     domain,
-
-    departments: parseArray(departments),
 
     phones: parseArray(contacts?.phones),
     mobiles: parseArray(contacts?.mobiles),

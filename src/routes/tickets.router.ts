@@ -15,9 +15,15 @@ import {
   uploadTicketChatMediaController,
   sendChatMessageController,
   getChatMessagesForTicketController,
+  createTicketReviewController,
+  getTicketReviewsController,
+  changeTicketStatusController,
 } from "../controllers/tickets.controller.js";
 import { validate } from "../validation/zod-middleware.js";
-import { getTicketsSchema } from "../validation/ticket.schema.js";
+import {
+  changeTicketStatusSchema,
+  getTicketsSchema,
+} from "../validation/ticket.schema.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { typeBasedAuthMiddleware } from "../middleware/typeBasedAuthMiddleware.js";
 import { UserType } from "../enums/UserType.enum.js";
@@ -25,6 +31,7 @@ import { editTicketForAdminAndTechniciansSchema } from "../validation/tickets/ed
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { editTicketForRequesterSchema } from "../validation/tickets/edit-for-requester.js";
 import { createMessageSchema } from "../validation/tickets/chat/send-chat-message.schema.js";
+import { createTicketReviewSchema } from "../validation/tickets/review.schema.js";
 
 const router = Router();
 
@@ -49,7 +56,13 @@ router
     "/:id/chat",
     authMiddleware,
     validate(createMessageSchema),
-    asyncHandler(sendChatMessageController)
+    asyncHandler(sendChatMessageController),
+  )
+  .post(
+    "/:id/reviews",
+    authMiddleware, 
+    validate(createTicketReviewSchema),
+    createTicketReviewController,
   );
 
 router.get(
@@ -60,6 +73,8 @@ router.get(
 );
 router.get("/:id", authMiddleware, getSingleTicketController);
 router.get("/:id/activities", getTicketActivitiesController);
+router.get("/:id/reviews", authMiddleware, getTicketReviewsController);
+
 
 router
   .get("/:id/media", authMiddleware, asyncHandler(getAllTicketAssetsController))
@@ -85,7 +100,13 @@ router
       UserType.TECHNICIAN,
     ]),
     validate(editTicketForAdminAndTechniciansSchema),
-    asyncHandler(editTicketForAdminsAndTechniciansController)
+    asyncHandler(editTicketForAdminsAndTechniciansController),
+  )
+  .patch(
+    "/:id/change-status",
+    authMiddleware,
+    validate(changeTicketStatusSchema),
+    asyncHandler(changeTicketStatusController),
   )
   .put(
     "/:id",

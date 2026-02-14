@@ -21,7 +21,7 @@ import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 
 export const createTechnician = async (
   req: RequestWithFileAndBody,
-  res: Response
+  res: Response,
 ) => {
   const technicianDto = mapCreateTechnician(req);
 

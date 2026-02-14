@@ -4,9 +4,11 @@ import {
   ManyToOne,
   Repository,
   SelectQueryBuilder,
+  OneToMany,
 } from "typeorm";
 import { BaseEntity } from "./BaseEntity.js";
 import { Specialization } from "./Specialization.js";
+import { Ticket } from "./Ticket.js";
 
 export type ProblemDto = {
   id: string;
@@ -48,7 +50,10 @@ export class Problem extends BaseEntity {
   review_required!: boolean;
 
   @ManyToOne(() => Specialization, (sp) => sp.problems, { nullable: false })
-  specialization!: Specialization;
+  specialization!: any;
+
+  @OneToMany(() => Ticket, (t) => t.problem, { nullable: false })
+  ticket!: any;
 
   toApi(): ProblemDto {
     return {
