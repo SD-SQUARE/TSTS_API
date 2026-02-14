@@ -14,7 +14,16 @@ export type ProblemDto = {
   name_ar: string;
   description_en?: string;
   description_ar?: string;
-  specialization: string;
+
+  specialization: {
+    id: string;
+    name_en: string;
+    name_ar: string;
+    description_en?: string;
+    description_ar?: string;
+    review_required: boolean;
+  };
+
   review_required: boolean;
 };
 
@@ -38,7 +47,6 @@ export class Problem extends BaseEntity {
   @Column({ type: "boolean", nullable: false, default: false })
   review_required!: boolean;
 
-  // ✅ Removed lazy:true
   @ManyToOne(() => Specialization, (sp) => sp.problems, { nullable: false })
   specialization!: Specialization;
 
@@ -49,7 +57,14 @@ export class Problem extends BaseEntity {
       name_ar: this.name?.ar,
       description_en: this.description?.en ?? "",
       description_ar: this.description?.ar ?? "",
-      specialization: this.specialization?.id,
+      specialization: {
+        id: this.specialization.id,
+        name_en: this.specialization.name.en,
+        name_ar: this.specialization.name.ar,
+        description_en: this.specialization.description?.en??"",
+        description_ar: this.specialization.description?.en??"",
+        review_required: this.specialization.review_required
+      },
       review_required: this.review_required,
     };
   }

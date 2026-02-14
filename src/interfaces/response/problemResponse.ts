@@ -1,9 +1,18 @@
-export interface ProblemDto {
-    id: string;
+export interface ProblemDto  {
+  id: string;
   name_en: string;
   name_ar: string;
   description_en?: string;
   description_ar?: string;
-  specialization: string; 
-  review_required:boolean;
-} 
+
+  specialization: {
+    id: string;
+    name_en: string;
+    name_ar: string;
+    description_en?: string;
+    description_ar?: string;
+    review_required: boolean;
+  };
+
+  review_required: boolean;
+}
