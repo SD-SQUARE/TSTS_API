@@ -22,6 +22,12 @@ export const createTicketSchema = (t: Request["t"]) =>
       .uuid({ message: t("invalid_specialization") })
       .nullable()
       .optional(),
+
+    problem: z
+      .string()
+      .uuid({ message: t("invalid_problem") })
+      .nullable()
+      .optional(),
   });
 
 export const getTicketsSchema = (t: Request["t"]) =>
