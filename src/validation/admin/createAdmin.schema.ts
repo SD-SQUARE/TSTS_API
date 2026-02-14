@@ -24,14 +24,14 @@ export const createAdminSchema = (t: Request["t"]) =>
             /\.(jpg|jpeg|png|gif|webp)$/i.test(file.originalname)
           );
         },
-        { message: t("invalid_image_extension") }
+        { message: t("invalid_image_extension") },
       )
       .refine(
         (file) => {
           if (!file) return true; // ⬅️ skip validation if no file
           return file.size <= 1 * 1024 * 1024; // 1 MB
         },
-        { message: t("image_must_be_under_1mb") }
+        { message: t("image_must_be_under_1mb") },
       ),
 
     email: z.string().email({ message: t("invalid_mail") }),
@@ -49,9 +49,6 @@ export const createAdminSchema = (t: Request["t"]) =>
       .regex(PASSWORD_SPECIAL_CHAR_REGEX, {
         message: t("password_must_contain_special_char"),
       }),
-
-      // TODO: rm user type
-    // user_type: z.nativeEnum(UserType),
 
     // English names
     first_name_en: z
@@ -96,23 +93,6 @@ export const createAdminSchema = (t: Request["t"]) =>
     university: z.string().uuid({ message: t("university_required") }),
     domain: z.string().uuid({ message: t("domain_required") }),
 
-    // arrays of strings (accepts CSV / JSON / array → always string[])
-    departments: z.preprocess((val) => {
-      // val comes from form-data -> usually string
-      if (typeof val === "string") {
-        // Case 1: JSON string like '["uuid1","uuid2"]'
-        try {
-          const parsed = JSON.parse(val);
-          if (Array.isArray(parsed)) return parsed;
-        } catch {
-          // Case 2: plain comma-separated: "id1,id2,id3"
-          return val.split(",").map((s) => s.trim());
-        }
-      }
-
-      return val; // if already array for any reason
-    }, z.array(z.string().uuid({ message: t("department_id_invalid") })).default([])),
-
     contacts: z.preprocess(
       (value) => {
         // If contacts comes as JSON string from form-data, parse it
@@ -133,64 +113,79 @@ export const createAdminSchema = (t: Request["t"]) =>
         .default({
           phones: [],
           mobiles: [],
-        })
+        }),
     ),
 
-    allowed_specializations: z.preprocess((val) => {
-      // form-data: could be string, JSON string, or already array
-      if (typeof val === "string") {
-        // Try JSON first: '["uuid1","uuid2"]'
-        try {
-          const parsed = JSON.parse(val);
-          if (Array.isArray(parsed)) return parsed;
-        } catch {
-          // Fallback: comma-separated "id1,id2"
-          return val
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
+    allowed_specializations: z.preprocess(
+      (val) => {
+        // form-data: could be string, JSON string, or already array
+        if (typeof val === "string") {
+          // Try JSON first: '["uuid1","uuid2"]'
+          try {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed)) return parsed;
+          } catch {
+            // Fallback: comma-separated "id1,id2"
+            return val
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+          }
         }
-      }
 
-      if (Array.isArray(val)) return val;
+        if (Array.isArray(val)) return val;
 
-      return [];
-    }, z.array(z.string().uuid({ message: t("specialization_id_invalid") })).default([])),
+        return [];
+      },
+      z
+        .array(z.string().uuid({ message: t("specialization_id_invalid") }))
+        .default([]),
+    ),
 
     // TODO: add permission profile
     // permission_profile: z
     //   .string()
     //   .uuid({ message: t("permission_profile_required") }),
 
-    extra_permissions: z.preprocess((val) => {
-      if (typeof val === "string") {
-        // Case 1: JSON string
-        try {
-          const parsed = JSON.parse(val);
-          if (Array.isArray(parsed)) return parsed;
-        } catch {
-          // Case 2: multiple form-data rows
-          // Postman sends this as an ARRAY in backend automatically
+    extra_permissions: z.preprocess(
+      (val) => {
+        if (typeof val === "string") {
+          // Case 1: JSON string
+          try {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed)) return parsed;
+          } catch {
+            // Case 2: multiple form-data rows
+            // Postman sends this as an ARRAY in backend automatically
+          }
         }
-      }
 
-      if (Array.isArray(val)) return val;
+        if (Array.isArray(val)) return val;
 
-      return [];
-    }, z.array(z.string().uuid({ message: t("permission_id_invalid") })).default([])),
+        return [];
+      },
+      z
+        .array(z.string().uuid({ message: t("permission_id_invalid") }))
+        .default([]),
+    ),
 
-    revoked_permissions: z.preprocess((val) => {
-      if (typeof val === "string") {
-        try {
-          const parsed = JSON.parse(val);
-          if (Array.isArray(parsed)) return parsed;
-        } catch {}
-      }
+    revoked_permissions: z.preprocess(
+      (val) => {
+        if (typeof val === "string") {
+          try {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed)) return parsed;
+          } catch {}
+        }
 
-      if (Array.isArray(val)) return val;
+        if (Array.isArray(val)) return val;
 
-      return [];
-    }, z.array(z.string().uuid({ message: t("permission_id_invalid") })).default([])),
+        return [];
+      },
+      z
+        .array(z.string().uuid({ message: t("permission_id_invalid") }))
+        .default([]),
+    ),
 
     job_en: z
       .string()

@@ -20,7 +20,7 @@ import { requestContextMiddleware } from "./middleware/requestContextMiddleware.
 const app = express();
 
 
-
+app.set("trust proxy", true);
 // basic security
 app.use(helmet({ contentSecurityPolicy: false })); // CSP setup later if needed
 app.use(hpp());

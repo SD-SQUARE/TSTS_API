@@ -4,27 +4,27 @@ import {
   PermissionProfile,
   Specialization,
   User,
-} from "../../entities/index.js";
-import { UserType } from "../../enums/UserType.enum.js";
-import { CreateRequesterMapped } from "../../interfaces/requester/ICreateRequester.js";
-import { createRequesterService } from "../../services/users/requester/requesterCommandService.js";
+} from "../../../entities/index.js";
+import { UserType } from "../../../enums/UserType.enum.js";
+import { CreateTechnicianMapped } from "../../../interfaces/technician/ICreateTechnician.js";
+import { createTechnicianService } from "../../../services/users/technician/technicianCommandService.js";
 import {
   arabicMenNames,
   arabicNames,
   englishMenNames,
   englishNames,
 } from "./personNamesDataSet.js";
-import { downloadAvatarImage } from "./downloadAvatarImage.js";
 import { Faker, en, ar } from "@faker-js/faker";
+import { downloadAvatarImage } from "./downloadAvatarImage.js";
 
-// ---------- Helpers (could be shared with technicians.seed.ts) ----------
+// ---------- Helpers ----------
 function getRandomItem<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
 function getRandomSubset<T>(arr: T[], maxCount: number): T[] {
   if (arr.length === 0) return [];
-  const count = Math.floor(Math.random() * Math.min(maxCount, arr.length)) + 1;
+  const count = Math.floor(Math.random() * Math.min(maxCount, arr.length)) + 1; // 1..maxCount
   const copy = [...arr];
   const result: T[] = [];
 
@@ -44,13 +44,14 @@ type DeptTriple = {
   uniId: string;
 };
 
-export async function seedRequesters(
+export async function seedTechnicians(
   dataSource: DataSource,
-  count = 100
+  count = 100,
 ): Promise<void> {
   const faker = new Faker({
     locale: [en, ar],
   });
+
   const deptRepo = dataSource.getRepository(Department);
   const profileRepo = dataSource.getRepository(PermissionProfile);
   const specRepo = dataSource.getRepository(Specialization);
@@ -85,29 +86,29 @@ export async function seedRequesters(
 
   if (deptTriples.length === 0) {
     console.warn(
-      "⚠️ [RequestersSeed] No departments with valid domains/universities found."
+      "⚠️ [TechniciansSeed] No departments with valid domains/universities found.",
     );
     return;
   }
 
   if (profiles.length === 0) {
-    console.warn("⚠️ [RequestersSeed] No permission profiles found.");
+    console.warn("⚠️ [TechniciansSeed] No permission profiles found.");
     return;
   }
 
   if (specs.length === 0) {
     console.warn(
-      "⚠️ [RequestersSeed] No specializations found. Requesters will have empty allowedSpecializations."
+      "⚠️ [TechniciansSeed] No specializations found. Technicians will have empty allowedSpecializations.",
     );
   }
 
   console.log(
-    `ℹ️ [RequestersSeed] Loaded: ${deptTriples.length} dept/domain/uni triples, ${profiles.length} profiles, ${specs.length} specs.`
+    `ℹ️ [TechniciansSeed] Loaded: ${deptTriples.length} dept/domain/uni triples, ${profiles.length} profiles, ${specs.length} specs.`,
   );
 
-  // 2) create N requesters
+  // 2) create N technicians
   for (let i = 1; i <= count; i++) {
-    const email = `requester${i}@example.com`;
+    const email = `technician${i}@example.com`;
 
     const existing = await userRepo
       .createQueryBuilder("u")
@@ -116,21 +117,21 @@ export async function seedRequesters(
       .getOne();
 
     if (existing) {
-      console.log(`ℹ️ [RequestersSeed] Requester already exists: ${email}`);
+      console.log(`ℹ️ [TechniciansSeed] Technician already exists: ${email}`);
       continue;
     }
 
     const randomDept = getRandomItem(deptTriples);
     const randomProfile = getRandomItem(profiles);
-    const randomSpecs = getRandomSubset(specs, 2); // maybe fewer specs for requester
+    const randomSpecs = getRandomSubset(specs, 3);
     const allowedSpecializations = randomSpecs.map((s) => s.id);
 
-    const ssn = (30000000000000 + i).toString();
-    const mobile = `012${String(3000000 + i).slice(-7)}`;
+    const ssn = (20000000000000 + i).toString();
+    const mobile = `011${String(2000000 + i).slice(-7)}`;
 
-    const dto: CreateRequesterMapped = {
+    const dto: CreateTechnicianMapped = {
       email,
-      password: "Req@123456",
+      password: "Tech@123456",
 
       firstNameAr: arabicNames[i % arabicNames.length], // English name
       firstNameEn: englishNames[i % englishNames.length], // Arabic name
@@ -145,12 +146,11 @@ export async function seedRequesters(
       mobiles: [mobile, mobile],
       phones: [mobile],
 
-      jobEn: "Staff",
-      jobAr: "موظف",
+      jobEn: "Support Technician",
+      jobAr: "فني دعم",
 
       university: randomDept.uniId,
       domain: randomDept.domainId,
-      departments: [randomDept.deptId],
 
       permissionProfile: randomProfile.id,
       extraPermissions: [],
@@ -158,25 +158,24 @@ export async function seedRequesters(
 
       allowedSpecializations,
 
-      userType: UserType.REQUESTER, // adapt to your enum values
-    } as CreateRequesterMapped;
+      userType: UserType.TECHNICIAN, // adapt to your enum if name differs
+    } as CreateTechnicianMapped;
 
     console.log(
-      `🚀 [RequestersSeed] Creating requester ${i}: ${email} (uni=${randomDept.uniId}, domain=${randomDept.domainId}, dept=${randomDept.deptId}, profile=${randomProfile.id})`
+      `🚀 [TechniciansSeed] Creating technician ${i}: ${email} (uni=${randomDept.uniId}, domain=${randomDept.domainId}, dept=${randomDept.deptId}, profile=${randomProfile.id})`,
     );
 
     const avatarUrl = faker.image.avatar();
     const avatarFile = await downloadAvatarImage(avatarUrl);
-
-    const result = await createRequesterService(dto, avatarFile);
+    const result = await createTechnicianService(dto, avatarFile);
 
     if (!result.is_added) {
       console.error(
-        `❌ [RequestersSeed] Failed to create requester ${email}`,
-        result.errors
+        `❌ [TechniciansSeed] Failed to create technician ${email}`,
+        result.errors,
       );
     } else {
-      console.log(`✅ [RequestersSeed] Requester created: ${email}`);
+      console.log(`✅ [TechniciansSeed] Technician created: ${email}`);
     }
   }
 }

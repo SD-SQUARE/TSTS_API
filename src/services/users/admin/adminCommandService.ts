@@ -2,13 +2,12 @@ import { t } from "i18next";
 import { userRepository } from "../../../repositories/UserRepository.js";
 import { UserType } from "../../../enums/UserType.enum.js";
 import { IMAGE_PATHS } from "../../../constants/imagePathes.js";
-import { deleteFile, uploadFile } from "../../../utils/storage.js";
+import { deleteFile } from "../../../utils/storage.js";
 import logger from "../../../utils/logger.js";
 import { validateEntities } from "../../../helpers/EntitiesValidatorHelper.js";
 import { validateExistingPermission } from "../../../helpers/ProfileAndPermissionValidatorHelper.js";
 import { validateExistingSpecializations } from "../../../helpers/specializationValidatorHelper.js";
 import { PostgresDataSource } from "../../../database/postgres-data-source.js";
-import { UserDepartment } from "../../../entities/UserDepartment.js";
 import { UsersPermissions } from "../../../entities/UsersPermissions.js";
 import { AllowedSpecialization } from "../../../entities/AllowedSpecialization.js";
 import { User } from "../../../entities/index.js";
@@ -21,13 +20,12 @@ import { mapAdminToUserEntity } from "../../../mappers/admin/adminToUserEntity.j
 
 export const createAdminService = async (
   AdminDto: CreateAdminMapped,
-  imageFile?: Express.Multer.File
+  imageFile?: Express.Multer.File,
 ): Promise<ICreateResponse> => {
   // 2) university + domain + departments in ONE helper
   const entitiesResult = await validateEntities(
     AdminDto.university,
     AdminDto.domain,
-    AdminDto.departments
   );
 
   if (!entitiesResult.is_valid) {
@@ -38,17 +36,13 @@ export const createAdminService = async (
     };
   }
 
-  const {
-    university,
-    domain,
-    departments: existingDepartments = [],
-  } = entitiesResult;
+  const { university, domain } = entitiesResult;
 
   // 3) validate permission profile + extra/revoked permissions
   const permResult = await validateExistingPermission(
     AdminDto.permissionProfile,
     AdminDto.extraPermissions,
-    AdminDto.revokedPermissions
+    AdminDto.revokedPermissions,
   );
 
   if (!permResult.is_valid) {
@@ -60,7 +54,7 @@ export const createAdminService = async (
   }
 
   const specsResult = await validateExistingSpecializations(
-    AdminDto.allowedSpecializations
+    AdminDto.allowedSpecializations,
   );
 
   if (!specsResult.is_valid) {
@@ -84,7 +78,7 @@ export const createAdminService = async (
     const safeKey = await uploadFilesWithUniqueKey(
       IMAGE_PATHS.UsersImages,
       AdminDto.ssn,
-      imageFile
+      imageFile,
     );
     userData.image = safeKey;
   }
@@ -92,45 +86,33 @@ export const createAdminService = async (
   // 10) Save user
   const user = await userRepository.createAndSave(userData);
   logger.info(`[server] [user] Creating user ${userData.email}`);
-  const userDepartmentsRepo = PostgresDataSource.getRepository(UserDepartment);
   const usersPermissionsRepo =
     PostgresDataSource.getRepository(UsersPermissions);
   const allowedSpecializationsRepo = PostgresDataSource.getRepository(
-    AllowedSpecialization
+    AllowedSpecialization,
   );
-
-  // 11) Save departments
-  if (existingDepartments.length > 0) {
-    const userDepartments = existingDepartments.map((dept) =>
-      userDepartmentsRepo.create({
-        user,
-        department: dept,
-      })
-    );
-    await userDepartmentsRepo.save(userDepartments);
-  }
 
   const profile = permResult.profile!;
 
-  // 12) Save usersPermissions
+  // 11) Save usersPermissions
   await usersPermissionsRepo.save(
     usersPermissionsRepo.create({
       user,
       permissionProfile: profile,
       extraPermissions: AdminDto.extraPermissions,
       revokedPermissions: AdminDto.revokedPermissions,
-    })
+    }),
   );
 
-  // 13) Save allowedSpecializations
+  // 12) Save allowedSpecializations
   if (AdminDto.allowedSpecializations?.length > 0) {
     await allowedSpecializationsRepo.save(
       AdminDto.allowedSpecializations.map((specId) =>
         allowedSpecializationsRepo.create({
           user,
           specialization: { id: specId } as any,
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -140,24 +122,19 @@ export const createAdminService = async (
 export const editAdminService = async (
   id: string,
   AdminDto: CreateAdminMapped,
-  imageFile?: Express.Multer.File
+  imageFile?: Express.Multer.File,
 ): Promise<IEditResponse> => {
   const userRepo = PostgresDataSource.getRepository(User);
-  const userDepartmentsRepo = PostgresDataSource.getRepository(UserDepartment);
   const usersPermissionsRepo =
     PostgresDataSource.getRepository(UsersPermissions);
   const allowedSpecializationsRepo = PostgresDataSource.getRepository(
-    AllowedSpecialization
+    AllowedSpecialization,
   );
 
   // 0) Load existing user
   const userEntity = await userRepo.findOne({
     where: { id },
-    relations: [
-      "userDepartments",
-      "usersPermissions",
-      "allowedSpecializations",
-    ],
+    relations: ["usersPermissions", "allowedSpecializations"],
   });
 
   if (!userEntity) {
@@ -168,7 +145,6 @@ export const editAdminService = async (
   const entitiesResult = await validateEntities(
     AdminDto.university,
     AdminDto.domain,
-    AdminDto.departments
   );
 
   if (!entitiesResult.is_valid) {
@@ -179,17 +155,13 @@ export const editAdminService = async (
     };
   }
 
-  const {
-    university,
-    domain,
-    departments: existingDepartments = [],
-  } = entitiesResult;
+  const { university, domain } = entitiesResult;
 
   // 3) Validate permission profile + extra/revoked permissions
   const permResult = await validateExistingPermission(
     AdminDto.permissionProfile,
     AdminDto.extraPermissions,
-    AdminDto.revokedPermissions
+    AdminDto.revokedPermissions,
   );
 
   if (!permResult.is_valid) {
@@ -202,7 +174,7 @@ export const editAdminService = async (
 
   // 4) Validate allowed specializations
   const specsResult = await validateExistingSpecializations(
-    AdminDto.allowedSpecializations
+    AdminDto.allowedSpecializations,
   );
 
   if (!specsResult.is_valid) {
@@ -232,7 +204,7 @@ export const editAdminService = async (
     const safeKey = await uploadFilesWithUniqueKey(
       IMAGE_PATHS.UsersImages,
       AdminDto.ssn,
-      imageFile
+      imageFile,
     );
     userEntity.image = safeKey;
   }
@@ -244,20 +216,7 @@ export const editAdminService = async (
 
   // 9) Clear old relations and re-create them
 
-  // 9.1) UserDepartments
-  await userDepartmentsRepo.delete({ user: { id: user.id } as any });
-
-  if (existingDepartments.length > 0) {
-    const userDepartments = existingDepartments.map((dept) =>
-      userDepartmentsRepo.create({
-        user,
-        department: dept,
-      })
-    );
-    await userDepartmentsRepo.save(userDepartments);
-  }
-
-  // 9.2) UsersPermissions – assume one row per user, so delete & recreate
+  // 9.1) UsersPermissions – assume one row per user, so delete & recreate
   await usersPermissionsRepo.delete({ user: { id: user.id } as any });
 
   const profile = permResult.profile!;
@@ -267,7 +226,7 @@ export const editAdminService = async (
       permissionProfile: profile,
       extraPermissions: AdminDto.extraPermissions,
       revokedPermissions: AdminDto.revokedPermissions,
-    })
+    }),
   );
 
   // 9.3) AllowedSpecializations – clear then add
@@ -279,8 +238,8 @@ export const editAdminService = async (
         allowedSpecializationsRepo.create({
           user,
           specialization: { id: specId } as any,
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -288,7 +247,7 @@ export const editAdminService = async (
 };
 
 export const deleteAdminService = async (
-  id: string
+  id: string,
 ): Promise<IDeleteResponse> => {
   const userRepo = PostgresDataSource.getRepository(User);
 
