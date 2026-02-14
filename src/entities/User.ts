@@ -16,6 +16,7 @@ import { TicketChat } from "./TicketChat.js";
 import { TicketListener } from "./TicketListener.js";
 import { NotificationRead } from "./NotificationRead.js";
 import { ChatMessage } from "./ChatMessage.js";
+import { TrustedDevice } from "./TrustedDevice.js";
 
 @Entity({ name: "users" })
 @Unique(["email"])
@@ -39,6 +40,7 @@ export class User extends BaseEntity {
   @Column({ type: "jsonb", nullable: true })
   lastName?: { en?: string; ar?: string };
 
+  @Index("IDX_USER_SSN")
   @Column({ type: "varchar", length: 14, nullable: true })
   ssn?: string;
 
@@ -64,13 +66,13 @@ export class User extends BaseEntity {
   @Column({ type: "jsonb", nullable: true })
   job?: { en?: string; ar?: string };
 
-  @OneToMany(() => TechnicianGroup, (tg) => tg.user, )
+  @OneToMany(() => TechnicianGroup, (tg) => tg.user)
   technicianGroups!: any[];
 
   @OneToMany(() => AllowedSpecialization, (as) => as.user, { lazy: true })
   allowedSpecializations!: any[];
 
-  @OneToMany(() => GroupHead, (gh) => gh.user, )
+  @OneToMany(() => GroupHead, (gh) => gh.user)
   groupHeads!: any[];
 
   @OneToMany(() => UsersPermissions, (up) => up.user, { lazy: true })
@@ -96,4 +98,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => ChatMessage, (msg) => msg.sender)
   messages: any[];
+
+  @OneToMany(() => TrustedDevice, (device) => device.user)
+  trustedDevices: any[];
 }

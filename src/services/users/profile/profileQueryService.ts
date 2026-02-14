@@ -61,8 +61,10 @@ export const fetchUserGroupsByTypeService = async (
   } else {
     return null;
   }
+  const dtoList = (
+    await Promise.all(groups.map((g) => toGroupDto(g, lang)))
+  ).filter(Boolean);
 
-  const dtoList = await Promise.all(groups.map((g) => toGroupDto(g, lang)));
 
   return {
     groups: dtoList,
@@ -114,5 +116,9 @@ export const fetchAllAdminsGroupsAsHeadsService = async (
 ) => {
   const groups = await userRepository.getAllAdminsGroupsAsHeads(userId);
 
-  return await Promise.all(groups.map((g) => toGroupDto(g, lang)));
+  return Promise.all(
+    groups
+      .filter((g): g is Group => g !== null) // 👈 REQUIRED
+      .map((g) => toGroupDto(g, lang))
+  );
 };

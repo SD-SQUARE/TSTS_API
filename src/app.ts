@@ -19,7 +19,7 @@ import { notificationMessage, notificationUser, ticket } from "./services/socket
 const app = express();
 
 
-
+app.set("trust proxy", true);
 // basic security
 app.use(helmet({ contentSecurityPolicy: false })); // CSP setup later if needed
 app.use(hpp());
@@ -30,6 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cookieParser());
+
 
 // CORS
 app.use(
@@ -66,6 +67,8 @@ import {
   ticketsRouter,
   chatRouter,
   notificationRouter,
+  trustedDevicesRouter,
+  authV2Router
 } from "./routes/index.js";
 import universitiesRouter from "./routes/universities.router.js";
 import domainsRouter from "./routes/domains.router.js";
@@ -97,6 +100,8 @@ app.post("/debug/send-events", (_req, res) => {
 });
 
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v2/auth", authV2Router);
+app.use("/api/v1/trusted-devices", trustedDevicesRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/groups", groupsRouter);
 app.use("/api/v1/lockups", lockupsRouter);
