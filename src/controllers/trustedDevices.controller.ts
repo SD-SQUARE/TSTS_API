@@ -46,6 +46,7 @@ export const getRegisterOptions = async (req: any, res: any) => {
 export const verifyAndCreateDevice = async (req: any, res: any) => {
   const user = req.user;
   const { name, deviceType, browser, os, credential } = req.body;
+  const ipAddress = req.ip;
 
   const expectedChallenge = req.session.webauthnChallenge;
   if (!expectedChallenge) {
@@ -87,7 +88,7 @@ if (exists) {
     deviceType,
     browser,
     os,
-
+    ipAddress   ,
     // 🔐 required for future authentication
     credentialId: credentialIdEncoded,
     publicKey: Buffer.from(credentialPublicKeyCose),
