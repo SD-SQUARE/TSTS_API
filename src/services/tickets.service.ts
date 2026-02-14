@@ -59,6 +59,7 @@ export const logTicketActivity = async (
 };
 
 export const createTicket = async (dto, files) => {
+  // FIXME: Take Problem From body and update ticket entity 
   const { title, description, requester, specialization } = dto;
 
   const requesterUser = await userRepo.findOne({ where: { id: requester } });
