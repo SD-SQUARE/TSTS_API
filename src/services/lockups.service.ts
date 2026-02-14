@@ -12,6 +12,7 @@ import { Department } from "../entities/Department.js";
 import { Specialization } from "../entities/Specialization.js";
 import { Group } from "../entities/Group.js";
 import { Ticket } from "../entities/Ticket.js";
+import { ProblemRepo } from "../repositories/ProblemRepo.js";
 
 interface UsersLockupQuery {
   first_name?: string;
@@ -69,6 +70,7 @@ const specializationsRepository =
   PostgresDataSource.getRepository(Specialization);
 const groupsRepository = PostgresDataSource.getRepository(Group);
 const ticketsRepository = PostgresDataSource.getRepository(Ticket);
+const problemRepo = new ProblemRepo().getRepository();
 
 export const getUsersLockupService = async (query: UsersLockupQuery) => {
   const { skip, take } = buildPagination({
@@ -498,4 +500,86 @@ export const getUserTicketsLockupService = async (userId: string) => {
     description: ticket.description,
     status: ticket.status,
   }));
+};
+export const getProblemsLockUpService = async (
+  name: string | undefined,
+  lang: "en" | "ar",
+  specializationId: string
+) => {
+  const qb = problemRepo
+    .createQueryBuilder("problem")
+    .innerJoin("problem.specialization", "specialization")
+    .where("specialization.id = :specializationId", { specializationId });
+
+  const searchTerm = name?.trim();
+  if (searchTerm) {
+    qb.andWhere(
+      `problem.name->>:lang ILIKE :name`,
+      {
+        lang,
+        name: `%${searchTerm}%`,
+      }
+    );
+  }
+
+  const problems = await qb
+    .select([
+      "problem.id AS problem_id",
+      `problem.name->>:lang AS name`,
+    ])
+    .setParameter("lang", lang)
+    .getRawMany();
+
+  return {
+    problems: problems.map(({ problem_id: id, name }) => ({
+      id,
+      name,
+    })),
+  };
+};
+export const getTicketProblemsService = async (
+  specializationId: string | undefined,
+  specializationName: string | undefined,
+  lang: "en" | "ar"
+) => {
+  if (!["en", "ar"].includes(lang)) throw new Error("Invalid language");
+
+  const key = lang;
+  const qb = specializationsRepository
+    .createQueryBuilder("specialization")
+    .leftJoin("specialization.problems", "problem")  
+    .where("specialization.deletedAt IS NULL");     
+
+  if (specializationId) {
+    qb.andWhere("specialization.id = :id", { id: specializationId });
+  }
+  if (specializationName?.trim()) {
+    qb.andWhere(`specialization.name->>'${key}' ILIKE :name`, {
+      name: `%${specializationName.trim()}%`,
+    });
+  }
+
+  const rows = await qb
+    .select([
+      "specialization.id AS specialization_id",
+      `specialization.name->>'${key}' AS specialization_name`,
+      "problem.id AS problem_id",
+      `problem.name->>'${key}' AS problem_name`,
+    ])
+    .getRawMany();
+
+  return {
+    specializations: Object.values(
+      rows.reduce((map: any, row: any) => {
+        const specId = row.specialization_id;
+        if (!map[specId]) {
+          map[specId] = { id: specId, name: row.specialization_name || 'No name', problems: [] };
+        }
+        if (row.problem_id) {
+          map[specId].problems.push({ id: row.problem_id, name: row.problem_name || 'No name' });
+        }
+        return map;
+      }, {})
+    ),
+  };
 };
