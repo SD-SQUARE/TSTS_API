@@ -533,6 +533,7 @@ export const getSingleTicketService = async (
           review_required: ticket.problem.review_required,
         }
       : null,
+    // FIXME: status mapping should be result in remove `_` ex: `in_progress` => `in Progress`
     status: ticket.status,
     priority: ticket.priority,
     isOutOfService: ticket.isOutOfService,
@@ -887,7 +888,8 @@ export const changeTicketStatusService = async (
   );
 
   const isAllowed = user.role === UserType.ADMIN || isAssignee;
-
+  // FIXME: Requester should be able to change status to re_open and 
+  // also if specialization or problem has review_required set to true  let requester change status to closed
   if (!isAllowed) {
     logger.warn("[server][tickets] forbidden status change attempt", {
       ticketId,
