@@ -6,6 +6,7 @@ import {
   ChangeMap,
   fetchExistingTicket,
   handleAssigneeListUpdate,
+  handleProblemUpdate,
   handleSpecializationUpdate,
   logGeneralUpdateActivity,
   logSpecificActivities,
@@ -64,6 +65,14 @@ export const editTicketForRequesterService = async (
     changes
   );
   if (specializationError) return specializationError;
+
+  const problemError = await handleProblemUpdate(
+    updateData,
+    existingTicket,
+    updates,
+    changes
+  );
+  if (problemError) return problemError;
 
   const updatedTicket = await saveTicketUpdates(existingTicket, updates);
 
