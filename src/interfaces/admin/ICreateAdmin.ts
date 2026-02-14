@@ -54,7 +54,6 @@ export interface CreateAdminMapped {
 
   university: string;
   domain: string;
-  departments: string[];
 
   phones: string[];
   mobiles: string[];

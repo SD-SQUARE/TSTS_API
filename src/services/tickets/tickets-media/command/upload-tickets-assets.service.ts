@@ -126,6 +126,7 @@ export const uploadTicketAssetsService = async (
       "Media Uploaded",
       TicketActivityType.INFO,
       `Ticket "${existingTicket.title}" media uploaded by ${actorText}: ${activityContent}`,
+      actor.id,
       {
         actor,
         changes,

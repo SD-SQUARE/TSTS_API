@@ -1,5 +1,5 @@
 export const downloadAvatarImage = async (
-  imageUrl: string
+  imageUrl: string,
 ): Promise<Express.Multer.File> => {
   const response = await fetch(imageUrl); // Fetch the image from the URL
   const blob = await response.blob(); // Convert the response to a blob

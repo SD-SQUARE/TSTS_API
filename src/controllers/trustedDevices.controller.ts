@@ -46,6 +46,7 @@ export const getRegisterOptions = async (req: any, res: any) => {
 export const verifyAndCreateDevice = async (req: any, res: any) => {
   const user = req.user;
   const { name, deviceType, browser, os, credential } = req.body;
+  const ipAddress = req.ip;
 
   const expectedChallenge = req.session.webauthnChallenge;
   if (!expectedChallenge) {
@@ -87,7 +88,7 @@ if (exists) {
     deviceType,
     browser,
     os,
-
+    ipAddress   ,
     // 🔐 required for future authentication
     credentialId: credentialIdEncoded,
     publicKey: Buffer.from(credentialPublicKeyCose),
@@ -111,6 +112,46 @@ export const removeTrustedDevice = async (req: any, res: any) => {
   await deviceRepo.delete(
     { id: deviceId, user: { id: userId } },
   );
+
+  res.status(204).send();
+};
+
+export const adminListTrustedDevices = async (req: any, res: any) => {
+  const { search = "", page = 1, pageSize = 10 } = req.query;
+
+  const qb = PostgresDataSource.getRepository(TrustedDevice)
+    .createQueryBuilder("device")
+    .leftJoinAndSelect("device.user", "user")
+    .where("device.isActive = true");
+
+  if (search) {
+    qb.andWhere(
+      `(user.email ILIKE :search OR user.ssn ILIKE :search)`,
+      { search: `%${search}%` }
+    );
+  }
+
+  qb
+    .orderBy("device.activatedSince", "DESC")
+    .skip((+page - 1) * +pageSize)
+    .take(+pageSize);
+
+  const [data, total] = await qb.getManyAndCount();
+
+  res.json({
+    data,
+    meta: {
+      total,
+      page: +page,
+      pageSize: +pageSize,
+    },
+  });
+};
+
+export const deleteTrustedDevice = async (req: any, res: any) => {
+  const { id } = req.params;
+
+  await PostgresDataSource.getRepository(TrustedDevice).delete(id);
 
   res.status(204).send();
 };

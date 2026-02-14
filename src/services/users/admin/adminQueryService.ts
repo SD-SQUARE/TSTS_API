@@ -3,14 +3,12 @@ import { User } from "../../../entities/index.js";
 import { GetUsersQuery } from "../../../interfaces/users/IGetUsersQuery.js";
 import { toAdmin } from "../../../mappers/admin/entityToAdminMapper.js";
 import { userRepository } from "../../../repositories/UserRepository.js";
+import { Lang } from "../../../types/lang.types.js";
 
-export const getAllAdminsService = async (
-  query: GetUsersQuery,
-  lang: "en" | "ar"
-) => {
+export const getAllAdminsService = async (query: GetUsersQuery, lang: Lang) => {
   const [users, total] = await userRepository.getAllAdminsWithFilter(
     query,
-    lang
+    lang,
   );
 
   const admins = await Promise.all(

@@ -1,7 +1,7 @@
 // src/seeds/permission-profiles.seed.ts
 import { DataSource } from "typeorm";
-import { PermissionProfile } from "../../entities/PermissionProfile.js";
-import { Permission } from "../../entities/index.js";
+import { PermissionProfile } from "../../../entities/PermissionProfile.js";
+import { Permission } from "../../../entities/index.js";
 
 type PermissionProfileSeed = {
   name: { en: string; ar: string };
@@ -65,13 +65,13 @@ export async function seedPermissionProfiles(dataSource: DataSource) {
 
     const foundCodes = new Set(permissions.map((p) => p.code));
     const missingCodes = profile.permissionCodes.filter(
-      (code) => !foundCodes.has(code)
+      (code) => !foundCodes.has(code),
     );
 
     if (missingCodes.length > 0) {
       console.warn(
         `⚠️ [PermissionProfile] Missing permissions for profile "${profile.name.en}":`,
-        missingCodes
+        missingCodes,
       );
     }
 

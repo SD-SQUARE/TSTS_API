@@ -133,6 +133,7 @@ export const uploadTicketChatMediaService = async (
       "chat Media Uploaded",
       TicketActivityType.INFO,
       `Ticket "${existingTicket.title}" chat media uploaded by ${actorText}: ${activityContent}`,
+      actor.id,
       {
         actor,
         changes,
