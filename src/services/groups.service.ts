@@ -465,8 +465,8 @@ export const getGroupUsersService = async (groupId: string, query: any) => {
     where: {
       id: In(technicianIds),
     },
-    skip: (pageIndex - 1) * pageSize,
-    take: pageSize,
+    // skip: (pageIndex - 1) * pageSize,
+    // take: pageSize,
   });
 
   const teamLeader = teamLeaderId
