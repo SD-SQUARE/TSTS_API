@@ -27,7 +27,7 @@ type CreateGroupInput = {
   description_en: string;
   description_ar: string;
   color: string;
-  team_leader: string;
+  team_leader_id: string;
   heads: string[];
   specializations: string[];
 };
@@ -41,12 +41,12 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
 
   // Validate team leader exists
   const leader = await usersRepository.findOne({
-    where: { id: data.team_leader, deletedAt: null },
+    where: { id: data.team_leader_id, deletedAt: null },
   });
 
   if (!leader) {
     logger.info("[server][groups][service] team leader not found", {
-      team_leader: data.team_leader,
+      team_leader: data.team_leader_id,
     });
     throw new AppError(t("team_leader_not_found"), 404);
   }
@@ -149,62 +149,62 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
   }
 };
 
-export const bulkAssignUsersToGroup = async (
-  groupId: string,
-  userIds: string[],
-  t: any
-) => {
-  logger.info("[server][groups][service] bulkAssignUsersToGroup start", {
-    groupId,
-    userIds,
-  });
+// export const bulkAssignUsersToGroup = async (
+//   groupId: string,
+//   userIds: string[],
+//   t: any
+// ) => {
+//   logger.info("[server][groups][service] bulkAssignUsersToGroup start", {
+//     groupId,
+//     userIds,
+//   });
 
-  const group = await groupsRepository.findOne({
-    where: { id: groupId, deletedAt: null },
-  });
-  if (!group) {
-    logger.info("[server][groups][service] Group not found", { groupId });
-    throw new AppError(t("group_not_found"), 404);
-  }
+//   const group = await groupsRepository.findOne({
+//     where: { id: groupId, deletedAt: null },
+//   });
+//   if (!group) {
+//     logger.info("[server][groups][service] Group not found", { groupId });
+//     throw new AppError(t("group_not_found"), 404);
+//   }
 
-  // Fetch all users in one query
-  const users = await usersRepository.findBy({
-    id: In(userIds),
-    deletedAt: null,
-  });
+//   // Fetch all users in one query
+//   const users = await usersRepository.findBy({
+//     id: In(userIds),
+//     deletedAt: null,
+//   });
 
-  if (users.length !== userIds.length) {
-    const foundIds = users.map((u) => u.id);
-    const missing = userIds.filter((id) => !foundIds.includes(id));
-    logger.info("[server][groups][service] Some users not found", { missing });
-    throw new AppError(
-      t("some_users_not_found", { ids: missing.join(", ") }),
-      404
-    );
-  }
+//   if (users.length !== userIds.length) {
+//     const foundIds = users.map((u) => u.id);
+//     const missing = userIds.filter((id) => !foundIds.includes(id));
+//     logger.info("[server][groups][service] Some users not found", { missing });
+//     throw new AppError(
+//       t("some_users_not_found", { ids: missing.join(", ") }),
+//       404
+//     );
+//   }
 
-  // Create relations
-  const relations = users.map((user) =>
-    technicianGroupRepository.create({
-      group,
-      user,
-    })
-  );
+//   // Create relations
+//   const relations = users.map((user) =>
+//     technicianGroupRepository.create({
+//       group,
+//       user,
+//     })
+//   );
 
-  try {
-    await technicianGroupRepository.save(relations);
-    logger.info(
-      "[server][groups][service] Users assigned to group successfully",
-      { groupId }
-    );
-    return true;
-  } catch (err: any) {
-    logger.error("[server][groups][service] Failed to assign users", {
-      error: err,
-    });
-    throw new AppError(t("internal_server_error"), 500);
-  }
-};
+//   try {
+//     await technicianGroupRepository.save(relations);
+//     logger.info(
+//       "[server][groups][service] Users assigned to group successfully",
+//       { groupId }
+//     );
+//     return true;
+//   } catch (err: any) {
+//     logger.error("[server][groups][service] Failed to assign users", {
+//       error: err,
+//     });
+//     throw new AppError(t("internal_server_error"), 500);
+//   }
+// };
 
 export const getGroupById = async (
   groupId: string,
@@ -288,63 +288,63 @@ export const softDeleteGroup = async (groupId: string, t: any) => {
   };
 };
 
-export const editGroup = async (groupId: string, data: any, t: any) => {
-  logger.info("[server][groups][service] editGroup request received", {
-    groupId,
-    data,
-  });
+// export const editGroup = async (groupId: string, data: any, t: any) => {
+//   logger.info("[server][groups][service] editGroup request received", {
+//     groupId,
+//     data,
+//   });
 
-  const group = await groupsRepository.findOne({ where: { id: groupId } });
-  if (!group) {
-    logger.info("[server][groups][service] Group not found", { groupId });
-    throw new AppError(t("group_not_found"), 404);
-  }
+//   const group = await groupsRepository.findOne({ where: { id: groupId } });
+//   if (!group) {
+//     logger.info("[server][groups][service] Group not found", { groupId });
+//     throw new AppError(t("group_not_found"), 404);
+//   }
 
-  group.name.en = data.name_en ?? group.name.en;
-  group.name.ar = data.name_ar ?? group.name.ar;
-  group.descriptions.en = data.description_en ?? group.descriptions.en;
-  group.descriptions.ar = data.description_ar ?? group.descriptions.ar;
-  group.color = data.color ?? group.color;
+//   group.name.en = data.name_en ?? group.name.en;
+//   group.name.ar = data.name_ar ?? group.name.ar;
+//   group.descriptions.en = data.description_en ?? group.descriptions.en;
+//   group.descriptions.ar = data.description_ar ?? group.descriptions.ar;
+//   group.color = data.color ?? group.color;
 
-  if (data.team_leader) {
-    const leader = await usersRepository.findOne({
-      where: { id: data.team_leader, deletedAt: null },
-    });
+//   if (data.team_leader) {
+//     const leader = await usersRepository.findOne({
+//       where: { id: data.team_leader, deletedAt: null },
+//     });
 
-    if (!leader) {
-      logger.info("[server][groups][service] Team leader not found", {
-        team_leader: data.team_leader,
-      });
-      throw new AppError(t("team_leader_not_found"), 404);
-    }
+//     if (!leader) {
+//       logger.info("[server][groups][service] Team leader not found", {
+//         team_leader: data.team_leader,
+//       });
+//       throw new AppError(t("team_leader_not_found"), 404);
+//     }
 
-    group.teamLeader = leader;
-    logger.info("[server][groups][service] Team leader updated", {
-      groupId,
-      newLeaderId: leader.id,
-    });
-  }
+//     group.teamLeader = leader;
+//     logger.info("[server][groups][service] Team leader updated", {
+//       groupId,
+//       newLeaderId: leader.id,
+//     });
+//   }
 
-  if (Array.isArray(data.heads) && data.heads.length > 0) {
-    group.heads = data.heads.map((h: any) => h.id);
-  }
+//   if (Array.isArray(data.heads) && data.heads.length > 0) {
+//     group.heads = data.heads.map((h: any) => h.id);
+//   }
 
-  if (Array.isArray(data.specializations) && data.specializations.length > 0) {
-    group.specializations = data.specializations.map((s: any) => s.id);
-  }
+//   if (Array.isArray(data.specializations) && data.specializations.length > 0) {
+//     group.specializations = data.specializations.map((s: any) => s.id);
+//   }
 
-  await groupsRepository.save(group);
+//   await groupsRepository.save(group);
 
-  logger.info("[server][groups][service] Group updated successfully", {
-    groupId,
-  });
+//   logger.info("[server][groups][service] Group updated successfully", {
+//     groupId,
+//   });
 
-  return {
-    is_updated: true,
-    message: t("group_updated_successfully"),
-    errors: [],
-  };
-};
+//   return {
+//     is_updated: true,
+//     message: t("group_updated_successfully"),
+//     errors: [],
+//   };
+// };
 
 const getUserFullName = (user: User, locale: string): string => {
   const lang = locale === "ar" ? "ar" : "en";
@@ -382,7 +382,7 @@ export const getAllGroups = async (
   // Apply name filter if provided
   if (filters.name && filters.name.trim()) {
     queryBuilder.andWhere(
-      "(group.name->>'en' ILIKE :name OR group.name->>'ar' ILIKE :name)",
+      `("group"."name"->>'en' ILIKE :name OR "group"."name"->>'ar' ILIKE :name)`,
       { name: `%${filters.name.trim()}%` }
     );
   }
@@ -502,4 +502,186 @@ const mapUserToResponse = (user: any) => {
     user_type: user.user_type,
     status: user.status,
   };
+};
+
+
+export const editGroup = async (groupId: string, data: any, t: any) => {
+  logger.info("[server][groups][service] editGroup request received", {
+    groupId,
+    data,
+  });
+
+  const group = await groupsRepository.findOne({ where: { id: groupId } });
+  if (!group) {
+    logger.info("[server][groups][service] Group not found", { groupId });
+    throw new AppError(t("group_not_found"), 404);
+  }
+
+  // --- Update basic info ---
+  group.name.en = data.name_en ?? group.name.en;
+  group.name.ar = data.name_ar ?? group.name.ar;
+  group.descriptions.en = data.description_en ?? group.descriptions.en;
+  group.descriptions.ar = data.description_ar ?? group.descriptions.ar;
+  group.color = data.color ?? group.color;
+
+  // --- Update team leader ---
+  if (data.team_leader) {
+    const leader = await usersRepository.findOne({
+      where: { id: data.team_leader, deletedAt: null },
+    });
+    if (!leader) {
+      logger.info("[server][groups][service] Team leader not found", {
+        team_leader: data.team_leader,
+      });
+      throw new AppError(t("team_leader_not_found"), 404);
+    }
+    group.teamLeader = leader;
+    logger.info("[server][groups][service] Team leader updated", {
+      groupId,
+      newLeaderId: leader.id,
+    });
+  }
+
+  // --- Update heads ---
+  if (Array.isArray(data.heads)) {
+    // Remove old heads
+    const oldHeads = await groupHeadRepository.find({
+      where: { group: { id: group.id } },
+    });
+    if (oldHeads.length) await groupHeadRepository.remove(oldHeads);
+
+    // Add new heads
+    if (data.heads.length > 0) {
+      const foundHeads = await usersRepository.findBy({
+        id: In(data.heads),
+        deletedAt: null,
+      });
+
+      const newHeads = foundHeads.map((user) =>
+        groupHeadRepository.create({ group, user })
+      );
+      await groupHeadRepository.save(newHeads);
+    }
+  }
+
+  // --- Update specializations ---
+  if (Array.isArray(data.specializations)) {
+    // Remove old specs
+    const oldSpecs = await groupSpecializationRepository.find({
+      where: { group: { id: group.id } },
+    });
+    if (oldSpecs.length) await groupSpecializationRepository.remove(oldSpecs);
+
+    // Add new specs
+    if (data.specializations.length > 0) {
+      const foundSpecs = await specializationsRepository.findBy({
+        id: In(data.specializations),
+        deletedAt: null,
+      });
+
+      const newSpecs = foundSpecs.map((spec) =>
+        groupSpecializationRepository.create({ group, specialization: spec })
+      );
+      await groupSpecializationRepository.save(newSpecs);
+    }
+  }
+
+  // --- Save group ---
+  await groupsRepository.save(group);
+
+  // ✅ Reload group with relations to return correct heads & specializations
+  const updatedGroup = await groupsRepository.findOne({
+    where: { id: group.id },
+    relations: [
+      "heads",
+      "heads.user",
+      "specializations",
+      "specializations.specialization",
+      "teamLeader",
+    ],
+  });
+
+  logger.info("[server][groups][service] Group updated successfully", {
+    groupId,
+    updatedGroup,
+  });
+
+  return {
+    is_updated: true,
+    message: t("group_updated_successfully"),
+    group: updatedGroup,
+  };
+};
+
+
+export const bulkAssignUsersToGroup = async (
+  groupId: string,
+  userIds: string[],
+  t: any
+) => {
+  logger.info("[server][groups][service] bulkAssignUsersToGroup start", {
+    groupId,
+    userIds,
+  });
+
+  const group = await groupsRepository.findOne({
+    where: { id: groupId, deletedAt: null },
+    relations: ["technicians", "technicians.user"], // include current assignments
+  });
+  if (!group) throw new AppError(t("group_not_found"), 404);
+
+  const users = await usersRepository.findBy({
+    id: In(userIds),
+    deletedAt: null,
+  });
+
+  if (users.length !== userIds.length) {
+    const foundIds = users.map((u) => u.id);
+    const missing = userIds.filter((id) => !foundIds.includes(id));
+    throw new AppError(
+      t("some_users_not_found", { ids: missing.join(", ") }),
+      404
+    );
+  }
+
+  // Current assigned user IDs
+  const currentIds = group.technicians.map((t: any) => t.user.id);
+
+  // Users to remove
+  const toRemove = group.technicians.filter(
+    (t: any) => !userIds.includes(t.user.id)
+  );
+
+  // Users to add
+  const toAdd = users.filter((u) => !currentIds.includes(u.id));
+
+  try {
+    // Remove unassigned users
+    if (toRemove.length > 0) {
+      await technicianGroupRepository.remove(toRemove);
+    }
+
+    // Add new assignments
+    const newRelations = toAdd.map((user) =>
+      technicianGroupRepository.create({ group, user })
+    );
+    if (newRelations.length > 0) {
+      await technicianGroupRepository.save(newRelations);
+    }
+
+    logger.info(
+      "[server][groups][service] Users assigned/removed successfully",
+      {
+        groupId,
+        added: toAdd.map((u) => u.id),
+        removed: toRemove.map((r) => r.user.id),
+      }
+    );
+    return true;
+  } catch (err: any) {
+    logger.error("[server][groups][service] Failed to assign/remove users", {
+      error: err,
+    });
+    throw new AppError(t("internal_server_error"), 500);
+  }
 };
