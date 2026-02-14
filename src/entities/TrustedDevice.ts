@@ -52,4 +52,7 @@ export class TrustedDevice {
   @CreateDateColumn({ type: "timestamptz" })
   activatedSince: Date;
     credentialPublicKeyCose: any;
+
+  @Column({ type: "varchar" })
+  ipAddress: string;
 }

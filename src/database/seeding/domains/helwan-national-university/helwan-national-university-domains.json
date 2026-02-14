@@ -1,0 +1,42 @@
+[
+  {
+    "name_ar": "المبانى الإدارية",
+    "name_en": "Administrative Buildings"
+  },
+  {
+    "name_ar": "سكن للطلاب والطالبات",
+    "name_en": "Student Housing (Male and Female)"
+  },
+  {
+    "name_ar": "كلية طب الأسنان",
+    "name_en": "Faculty of Dentistry"
+  },
+  {
+    "name_ar": "كلية العلاج الطبيعي",
+    "name_en": "Faculty of Physical Therapy"
+  },
+  {
+    "name_ar": "كلية الهندسة",
+    "name_en": "Faculty of Engineering"
+  },
+  {
+    "name_ar": "كلية العلوم",
+    "name_en": "Faculty of Science"
+  },
+  {
+    "name_ar": "كلية علوم الحاسب وتكنولوجيا المعلومات",
+    "name_en": "Faculty of Computer Science and Information Technology"
+  },
+  {
+    "name_ar": "كلية تكنولوجيا العلوم الصحية التطبيقية",
+    "name_en": "Faculty of Applied Health Sciences Technology"
+  },
+  {
+    "name_ar": "كلية العلوم الإنسانية والتجارة وإدارة الأعمال",
+    "name_en": "Faculty of Humanities, Commerce, and Business Administration"
+  },
+  {
+    "name_ar": "كلية الفنون والفنون التطبيقية",
+    "name_en": "Faculty of Arts and Applied Arts"
+  }
+]

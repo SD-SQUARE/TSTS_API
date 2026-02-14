@@ -40,7 +40,6 @@ export function mapCreateAdmin(req: RequestWithFileAndBody): CreateAdminMapped {
     ssn,
     university,
     domain,
-    departments,
     contacts,
     allowed_specializations,
     permission_profile,
@@ -49,12 +48,6 @@ export function mapCreateAdmin(req: RequestWithFileAndBody): CreateAdminMapped {
     job_en,
     job_ar,
   } = req.body;
-
-  departments =
-    (Array.isArray(departments)
-      ? departments
-      : parseIfJson<string[]>(departments) ||
-        (typeof departments === "string" ? [departments] : [])) ?? [];
 
   contacts = (typeof contacts === "object"
     ? contacts
@@ -82,8 +75,6 @@ export function mapCreateAdmin(req: RequestWithFileAndBody): CreateAdminMapped {
 
     university,
     domain,
-
-    departments: parseArray(departments),
 
     phones: parseArray(contacts?.phones),
     mobiles: parseArray(contacts?.mobiles),
