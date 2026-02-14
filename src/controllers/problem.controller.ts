@@ -34,7 +34,6 @@ export async function getProblems(req: Request, res: Response) {
     const pageNum = page ? parseInt(page as string, 10) : 1;
     const limitNum = limit ? parseInt(limit as string, 10) : 20;
 
-    // Use Problem.paginate helper
     const result = await Problem.paginate(
         pageNum,
         limitNum,
