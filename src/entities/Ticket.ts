@@ -18,7 +18,7 @@ import { Media } from "./Media.js";
 import { TicketListener } from "./TicketListener.js";
 import { TicketActivity } from "./TicketActivity.js";
 import { TicketChat } from "./TicketChat.js";
-import { TicketReview } from "./TicketReview.js"
+import { TicketReview } from "./TicketReview.js";
 
 @Entity({ name: "tickets" })
 export class Ticket {

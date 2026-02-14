@@ -8,7 +8,8 @@ import { TicketActivityType } from "../../enums/TicketActivity.enum.js";
 
 // todo  Emit WebSocket event `ticket:update` type `deleted`.
 export const deleteTicketService = async (
-  id: string
+  id: string,
+  userId: string,
 ): Promise<IDeleteResponse> => {
   const ticketRepo = PostgresDataSource.getRepository(Ticket);
 
@@ -28,6 +29,7 @@ export const deleteTicketService = async (
     "Ticket deleted",
     TicketActivityType.Deleted,
     `Ticket "${ticketEntity.title}" deleted by ${ticketEntity.id}`,
+    userId,
     {
       requesterId: ticketEntity.id,
       specializationId: ticketEntity.specialization || null,

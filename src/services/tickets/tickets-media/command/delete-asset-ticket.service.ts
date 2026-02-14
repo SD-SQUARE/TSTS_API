@@ -68,6 +68,7 @@ export const deleteSingleTicketAssetService = async (
     "Asset Deleted",
     TicketActivityType.INFO,
     `Asset "${asset.name}" was deleted by ${actorText}.`,
+    actor.id,
     { actor, assetId: asset.id, assetName: asset.name }
   );
 

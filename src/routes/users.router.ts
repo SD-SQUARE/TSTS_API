@@ -1,15 +1,16 @@
 import { Router } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
-
 import { upload } from "../middleware/upload.js";
 import { createRequesterSchema } from "../validation/requester/createRequester.schema.js";
 import { validate } from "../validation/zod-middleware.js";
 import {
   createRequester,
   deleteRequester,
+  downloadRequesterTemplate,
   EditRequester,
   getRequesterById,
   getRequestersPaged,
+  bulkUploadRequesters,
 } from "../controllers/requesters.controller.js";
 import { validateEmailAndSsnMiddleware } from "../middleware/users/conflictForAdd.js";
 import { validateEmailEditSsnMiddleware } from "../middleware/users/conflictForEdit.js";
@@ -45,6 +46,7 @@ const router = Router();
 
 router
   .get("/requesters", asyncHandler(getRequestersPaged))
+  .get("/requesters/bulk-sample", asyncHandler(downloadRequesterTemplate))
   .get("/requesters/:id", asyncHandler(getRequesterById))
   .get("/technicians", asyncHandler(getTechniciansPaged))
   .get("/technicians/:id", asyncHandler(getTechnicianById))
@@ -71,6 +73,11 @@ router
     validate(createRequesterSchema),
     validateEmailAndSsnMiddleware,
     asyncHandler(createRequester),
+  )
+  .post(
+    "/requesters/bulk-sample",
+    upload.array("file"),
+    asyncHandler(bulkUploadRequesters),
   )
   .post(
     "/technicians",

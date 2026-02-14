@@ -14,12 +14,13 @@ import { csrfMiddleware } from "./config/csrf.js";
 import { socketIoMiddleware } from "./middleware/socketIo.js";
 import { io as socketIoInstance } from "./config/socket.js";
 import { notificationMessage, notificationUser, ticket } from "./services/socket.service.js";
+import { requestContextMiddleware } from "./middleware/requestContextMiddleware.js";
 
 
 const app = express();
 
 
-
+app.set("trust proxy", true);
 // basic security
 app.use(helmet({ contentSecurityPolicy: false })); // CSP setup later if needed
 app.use(hpp());
@@ -52,6 +53,7 @@ app.use(i18nextMiddleware.handle(i18n));
 
 app.use(socketIoMiddleware(socketIoInstance));
 
+app.use(requestContextMiddleware);
 
 // CSRF (set up if using cookies and forms; for API token flows consider disabling)
 // @AhmedElsenaty

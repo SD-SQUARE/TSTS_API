@@ -1,5 +1,6 @@
 import { User } from "../../entities/index.js";
 import { fetchAllTechniciansGroupsService } from "../../services/users/profile/profileQueryService.js";
+import { Lang } from "../../types/lang.types.js";
 import { getPresignedUrl } from "../../utils/storage.js";
 import { GroupDto, toGroupDto } from "../groups/toGroupDto.js";
 
@@ -21,7 +22,6 @@ type TechnicianDto = {
   ssn: string | null;
   university: { id: string; name: string } | null;
   domain: { id: string; name: string } | null;
-  departments: { id: string; name: string }[];
   specializations: { id: string; name: string }[];
   contacts: {
     phones: string[];
@@ -37,32 +37,13 @@ type TechnicianDto = {
 
 export const toTechnician = async (
   entity: User,
-  lang: "en" | "ar",
+  lang: Lang,
 ): Promise<TechnicianDto> => {
   const university = entity.university ? await entity.university : null;
   const domain = entity.domain ? await entity.domain : null;
-  const userDepartments = entity.userDepartments
-    ? await entity.userDepartments
-    : [];
   const userspecializations = entity.allowedSpecializations
     ? await entity.allowedSpecializations
     : [];
-
-  // 2) for each userDepartment, load department (lazy) and map it
-  const departments = await Promise.all(
-    userDepartments.map(async (ud) => {
-      const dept = ud.department ? await ud.department : null;
-
-      if (!dept) {
-        return null;
-      }
-
-      return {
-        id: dept.id,
-        name: dept.name?.[lang], // dept.name is { en, ar }
-      };
-    }),
-  );
 
   const specializations = await Promise.all(
     userspecializations.map(async (us) => {
@@ -112,10 +93,6 @@ export const toTechnician = async (
           name: domain.name?.[lang],
         }
       : null,
-
-    departments: departments.filter(
-      (d): d is { id: string; name: string } => d !== null,
-    ),
 
     specializations: specializations,
 
