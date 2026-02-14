@@ -1,6 +1,5 @@
-// src/seeds/permissions.seed.ts
 import { DataSource } from "typeorm";
-import { Permission } from "../../entities/index.js";
+import { Permission } from "../../../entities/index.js";
 
 type PermissionSeed = {
   code: string;

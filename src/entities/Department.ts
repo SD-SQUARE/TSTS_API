@@ -46,14 +46,14 @@ export class Department extends BaseEntity {
   userDepartments!: any[];
 
   toApi() {
-      return {
-        ...this,
-        ...mapJsonFields(this.name, { fields: { name_en: "en", name_ar: "ar" } }),
-        ...mapJsonFields(this.description ?? {}, {
-          fields: { description_en: "en", description_ar: "ar" },
-        }),
-      };
-    }
+    return {
+      ...this,
+      ...mapJsonFields(this.name, { fields: { name_en: "en", name_ar: "ar" } }),
+      ...mapJsonFields(this.description ?? {}, {
+        fields: { description_en: "en", description_ar: "ar" },
+      }),
+    };
+  }
   static async paginate(
     filters: DepartmentFilter = {},
     repo?: Repository<Department>,
@@ -73,21 +73,21 @@ export class Department extends BaseEntity {
 
     if (filters.departmentName) {
       conditions.push(
-        `dep.name->>'en' ILIKE :departmentName OR dep.name->>'ar' ILIKE :departmentName`
+        `dep.name->>'en' ILIKE :departmentName OR dep.name->>'ar' ILIKE :departmentName`,
       );
       params.departmentName = `%${filters.departmentName}%`;
     }
 
     if (filters.domainName) {
       conditions.push(
-        `dom.name->>'en' ILIKE :domainName OR dom.name->>'ar' ILIKE :domainName`
+        `dom.name->>'en' ILIKE :domainName OR dom.name->>'ar' ILIKE :domainName`,
       );
       params.domainName = `%${filters.domainName}%`;
     }
 
     if (filters.universityName) {
       conditions.push(
-        `u.name->>'en' ILIKE :universityName OR u.name->>'ar' ILIKE :universityName`
+        `u.name->>'en' ILIKE :universityName OR u.name->>'ar' ILIKE :universityName`,
       );
       params.universityName = `%${filters.universityName}%`;
     }
@@ -107,11 +107,11 @@ export class Department extends BaseEntity {
     const [data, total] = await qb.getManyAndCount();
 
     const formattedData = data.map((d) => d.toApi());
-    const plain=JSON.parse(JSON.stringify(formattedData));
+    const plain = JSON.parse(JSON.stringify(formattedData));
     const normalizedData = normalizeRelations(plain);
 
     return {
-      departments:normalizedData,
+      departments: normalizedData,
       meta: {
         total,
         page_index: page,

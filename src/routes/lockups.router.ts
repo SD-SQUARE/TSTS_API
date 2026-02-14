@@ -35,8 +35,8 @@ router.get("/universities/:id/domains", getUniversityDomainsLockupController);
 router.get("/domains/:id/departments", getDomainDepartmentsLockupController);
 router.get("/groups/:groupId/technicians", getGroupTechnicians);
 router.get("/groups/:groupId/non-members-technicians", getGroupNonTechnicians);
-router.get("/ticket/:id", getUserTicketsLockupController);
 router.get("/specializations/:id/problems/", getProblemsLockupController);
 router.get("/ticket/problems/",getTicketProblemsLockupController);
+router.get("/ticket/:id", getUserTicketsLockupController);
 
 export default router;

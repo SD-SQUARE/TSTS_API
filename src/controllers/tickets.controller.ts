@@ -3,10 +3,13 @@ import { createTicketSchema } from "../validation/ticket.schema.js";
 import logger from "../utils/logger.js";
 import { AppError } from "../utils/AppError.js";
 import {
+  changeTicketStatusService,
   createTicket,
+  createTicketReviewService,
   getAllTicketsService,
   getSingleTicketService,
   getTicketActivitiesService,
+  getTicketReviewsService,
 } from "../services/tickets.service.js";
 import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
@@ -176,6 +179,7 @@ export const editTicketForRequesterController = async (
 export const deleteTicketController = async (req: Request, res: Response) => {
   const id = req.params.id;
   const isValid = uuidValidationSchema.safeParse(id);
+  const userId = (req as any).user.id;
 
   if (!id || !isValid.success) {
     logger.info(
@@ -186,7 +190,7 @@ export const deleteTicketController = async (req: Request, res: Response) => {
       .json({ is_deleted: false, message: t("ticket.invalid_id") });
   }
 
-  const result = await deleteTicketService(id);
+  const result = await deleteTicketService(id, userId);
   if (!result.is_deleted) {
     return res
       .status(ResponseStatus.BAD_REQUEST)
@@ -444,4 +448,51 @@ export const getChatMessagesForTicketController = async (
 
   const result = await getChatMessagesForTicketServices(ticketId, lang);
   return res.status(ResponseStatus.SUCCESS).json(result.data);
+};
+
+export const createTicketReviewController = async (
+  req: any,
+  res: Response
+) => {
+  const ticketId = req.params.id;
+  const user = req.user;
+
+  const { rating, note } = req.body;
+
+  const result = await createTicketReviewService(
+    ticketId,
+    { rating, note },
+    user
+  );
+
+  return res.status(result.status).json(result.payload);
+};
+
+export const getTicketReviewsController = async (req: any, res: any) => {
+  const result = await getTicketReviewsService(
+    req.params.ticketId,
+    req.user,
+    req.t,
+  );
+
+  return res.status(result.status).json(result.payload);
+};
+
+export const changeTicketStatusController = async (
+  req: any,
+  res: Response
+) => {
+  const ticketId = req.params.id;
+  const user = req.user;
+
+  const { status } = req.body;
+
+  const result = await changeTicketStatusService(
+    ticketId,
+    {status},
+    user,
+    req.t
+  );
+
+  return res.status(result.status).json(result.payload);
 };

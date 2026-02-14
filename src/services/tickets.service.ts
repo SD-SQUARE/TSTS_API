@@ -15,31 +15,51 @@ import { buildLocalizedName } from "../utils/localizeName.js";
 import { TicketActivity } from "../entities/TicketActivity.js";
 import { TicketActivityType } from "../enums/TicketActivity.enum.js";
 import { ReqUserPayload } from "../types/ReqUserPayload.js";
+import { TicketReview } from "../entities/TicketReview.js";
+import { getRequestContext } from "../utils/requestContext.js";
+import { getUserMetaById } from "./tickets/common.js";
+import { In } from "typeorm";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
 const mediaRepo = PostgresDataSource.getRepository(Media);
 const specializationRepo = PostgresDataSource.getRepository(Specialization);
 const ticketActivityRepo = PostgresDataSource.getRepository(TicketActivity);
+const ticketReviewRepo = PostgresDataSource.getRepository(TicketReview);
 
 export const logTicketActivity = async (
   ticket: Ticket,
   title: string,
   type: TicketActivityType,
   content: string,
-  meta = {}
+  userId: string,
+  meta: any = {},
 ) => {
+  const context = getRequestContext();
+
+  const userMeta = userId
+    ? await getUserMetaById(userId)
+    : { full_name_en: null, full_name_ar: null, image: null, id: null };
+
+  const finalMeta = {
+    user: userMeta,
+    ip: context.ip || "unknown",
+    ...meta,
+  };
+
   const activity = ticketActivityRepo.create({
     ticket,
     title,
     content,
     type,
-    meta,
+    meta: finalMeta,
   });
+
   await ticketActivityRepo.save(activity);
 };
 
 export const createTicket = async (dto, files) => {
+  // FIXME: Take Problem From body and update ticket entity 
   const { title, description, requester, specialization } = dto;
 
   const requesterUser = await userRepo.findOne({ where: { id: requester } });
@@ -55,6 +75,13 @@ export const createTicket = async (dto, files) => {
   if (specialization) {
     const assignedSpecialization = await specializationRepo.findOne({
       where: { id: specialization },
+      relations: [
+        "groupSpecializations",
+        "groupSpecializations.group",
+        "groupSpecializations.group.heads",
+        "groupSpecializations.group.heads.user",
+        "groupSpecializations.group.teamLeader",
+      ],
     });
 
     if (!assignedSpecialization) {
@@ -62,10 +89,27 @@ export const createTicket = async (dto, files) => {
         is_added: false,
         message: t("specialization_not_found"),
         errors: [
-          { key: "specialization", message: "specialization does not exist" },
+          { key: "specialization", message: "Specialization does not exist" },
         ],
       };
     }
+
+    const headIds = assignedSpecialization.groupSpecializations.flatMap(
+      (gs) => gs.group.heads?.map((h: any) => h.user?.id).filter(Boolean) ?? [],
+    );
+
+    const teamLeaderIds = assignedSpecialization.groupSpecializations
+      .map((gs) => gs.group.teamLeader?.id)
+      .filter(Boolean);
+
+    const userIds = Array.from(new Set([...headIds, ...teamLeaderIds]));
+
+    if (userIds.length) {
+      assignedUsers = await userRepo.findBy({
+        id: In(userIds),
+      });
+    }
+
   } else {
     // auto assign admins
     assignedUsers = await userRepo.find({
@@ -90,11 +134,11 @@ export const createTicket = async (dto, files) => {
     "Ticket Created",
     TicketActivityType.FIRST_OPEN,
     `Ticket "${savedTicket.title}" created by ${requesterUser.id}`,
+    requesterUser.id,
     {
-      requesterId: requesterUser.id,
       specializationId: specialization || null,
       assignees: assignedUsers.map((u) => ({ id: u.id })),
-    }
+    },
   );
 
   // handle media
@@ -103,7 +147,7 @@ export const createTicket = async (dto, files) => {
       const key = await uploadFilesWithUniqueKey(
         IMAGE_PATHS.TicketMedia,
         ticket.id,
-        file
+        file,
       );
 
       const media = mediaRepo.create({
@@ -121,7 +165,8 @@ export const createTicket = async (dto, files) => {
         "Ticket Media Uploaded",
         TicketActivityType.INFO,
         `Media file "${file.originalname}" uploaded`,
-        { fileName: file.originalname, url: key }
+        requesterUser.id,
+        { fileName: file.originalname, url: key },
       );
     }
   }
@@ -298,7 +343,7 @@ export const getSingleTicketService = async (
   ticketId: string,
   lang: "ar" | "en",
   userId: string,
-  userName: string
+  userName: string,
 ) => {
   logger.info("[server][tickets] getSingleTicket | start", { ticketId, lang });
 
@@ -356,9 +401,8 @@ export const getSingleTicketService = async (
     "Ticket Viewed",
     TicketActivityType.VIEW,
     `Ticket "${ticket.title}" was viewed by ${userName}`,
-    { ticketId: ticket.id,
-      userId: userId,
-     }
+    userId,
+    { ticketId: ticket.id },
   );
 
   logger.info("[server][tickets] getSingleTicket | completed", {
@@ -378,7 +422,7 @@ export const getTicketActivitiesService = async (ticketId: string) => {
     });
 
     logger.info(
-      `Fetched ${activities.length} activities for ticket ${ticketId}`
+      `Fetched ${activities.length} activities for ticket ${ticketId}`,
     );
 
     return activities;
@@ -386,4 +430,378 @@ export const getTicketActivitiesService = async (ticketId: string) => {
     logger.error(`Error fetching activities for ticket ${ticketId}: ${error}`);
     throw new Error("Could not fetch ticket activities");
   }
+};
+
+export const createTicketReviewService = async (
+  ticketId: string,
+  dto: { rating: number; note?: string },
+  user: any,
+) => {
+  logger.info("[server][tickets][review] createTicketReview | start", {
+    ticketId,
+    userId: user.id,
+    rating: dto.rating,
+  });
+
+  const ticket = await ticketRepo.findOne({
+    where: { id: ticketId },
+    relations: ["requester"],
+  });
+
+  if (!ticket) {
+    logger.info("[server][tickets][review] ticket not found", {
+      ticketId,
+    });
+
+    return {
+      status: 404,
+      payload: {
+        message: t("ticket_not_found"),
+        code: "TICKET_NOT_FOUND",
+      },
+    };
+  }
+
+  logger.info("[server][tickets][review] ticket fetched", {
+    ticketId: ticket.id,
+    status: ticket.status,
+    closeCount: ticket.closeCount,
+    requesterId: ticket.requester?.id,
+  });
+
+  if (ticket.requester.id !== user.id) {
+    logger.warn("[server][tickets][review] forbidden review attempt", {
+      ticketId,
+      requesterId: ticket.requester.id,
+      attemptedBy: user.id,
+    });
+
+    return {
+      status: 403,
+      payload: {
+        message: t("action_not_allowed"),
+        code: "FORBIDDEN",
+      },
+    };
+  }
+
+  let closeCycle = ticket.closeCount;
+
+  if (ticket.status !== TicketStatus.CLOSED) {
+    logger.info("[server][tickets][review] closing ticket before review", {
+      ticketId,
+      previousStatus: ticket.status,
+      previousCloseCount: ticket.closeCount,
+    });
+
+    closeCycle += 1;
+    ticket.status = TicketStatus.CLOSED;
+    ticket.closeCount = closeCycle;
+
+    await ticketRepo.save(ticket);
+
+    logger.info("[server][tickets][review] ticket closed successfully", {
+      ticketId,
+      newStatus: ticket.status,
+      newCloseCount: ticket.closeCount,
+    });
+  }
+
+  const existingReview = await ticketReviewRepo.findOne({
+    where: {
+      ticket: { id: ticket.id },
+      closeCycle: closeCycle,
+    },
+  });
+
+  if (existingReview) {
+    logger.warn("[server][tickets][review] duplicate review detected", {
+      ticketId,
+      closeCycle,
+      reviewerId: user.id,
+    });
+
+    return {
+      status: 409,
+      payload: {
+        message: "Review already exists for this close cycle",
+        code: "REVIEW_ALREADY_EXISTS",
+      },
+    };
+  }
+
+  const review = ticketReviewRepo.create({
+    rating: dto.rating,
+    note: dto.note,
+    closeCycle: closeCycle,
+    ticket,
+    reviewer: { id: user.id },
+  });
+
+  await ticketReviewRepo.save(review);
+
+  logger.info("[server][tickets][review] review saved", {
+    ticketId,
+    reviewId: review.id,
+    rating: dto.rating,
+    closeCycle,
+  });
+
+  // Log ticket activity
+  await logTicketActivity(
+    ticket,
+    "Ticket Reviewed",
+    TicketActivityType.INFO,
+    `Ticket reviewed with rating ${dto.rating} by user ${user.id}`,
+    user.id,
+    {
+      rating: dto.rating,
+      closeCycle: closeCycle,
+    },
+  );
+
+  logger.info("[server][tickets][review] activity logged", {
+    ticketId,
+    closeCycle,
+  });
+
+  logger.info("[server][tickets][review] completed successfully", {
+    ticketId,
+    reviewerId: user.id,
+    closeCycle,
+  });
+
+  return {
+    status: 201,
+    payload: {
+      is_added: true,
+      message: "review_created_successfully",
+      errors: [],
+    },
+  };
+};
+
+export const getTicketReviewsService = async (
+  ticketId: string,
+  user: any,
+  t: any,
+) => {
+  logger.info("[server][tickets][review] getTicketReviews | start", {
+    ticketId,
+    userId: user.id,
+  });
+
+  const ticket = await ticketRepo.findOne({
+    where: { id: ticketId },
+    relations: ["requester", "assigneeList"],
+  });
+
+  if (!ticket) {
+    logger.info("[server][tickets][review] ticket not found", {
+      ticketId,
+      requestedBy: user.id,
+    });
+
+    return {
+      status: 404,
+      payload: {
+        message: t("ticket_not_found"),
+        code: "TICKET_NOT_FOUND",
+      },
+    };
+  }
+
+  logger.info("[server][tickets][review] ticket fetched", {
+    ticketId: ticket.id,
+    requesterId: ticket.requester?.id,
+    assigneeCount: ticket.assigneeList?.length || 0,
+  });
+
+  const isRequester = ticket.requester.id === user.id;
+
+  const isAssignee = ticket.assigneeList?.some(
+    (assignee) => assignee.id === user.id,
+  );
+
+  const isAllowed = user.role === UserType.ADMIN || isRequester || isAssignee;
+
+  if (!isAllowed) {
+    logger.warn("[server][tickets][review] forbidden access attempt", {
+      ticketId,
+      requestedBy: user.id,
+      isAdmin: user.role === UserType.ADMIN,
+      isRequester,
+      isAssignee,
+    });
+
+    return {
+      status: 403,
+      payload: {
+        message: t("action_not_allowed"),
+        code: "FORBIDDEN",
+      },
+    };
+  }
+
+  const reviews = await ticketReviewRepo.find({
+    where: { ticket: { id: ticketId } },
+    relations: ["reviewer"],
+    order: { createdAt: "DESC" },
+  });
+
+  logger.info("[server][tickets][review] reviews fetched", {
+    ticketId,
+    requestedBy: user.id,
+    reviewsCount: reviews.length,
+  });
+
+  const formatted = reviews.map((review) => ({
+    id: review.id,
+    ticketId: ticket.id,
+    rating: review.rating,
+    note: review.note,
+    closeCycle: review.closeCycle,
+    createdAt: review.createdAt,
+    reviewer: {
+      id: review.reviewer.id,
+      firstName: review.reviewer.firstName,
+      lastName: review.reviewer.lastName,
+      image: review.reviewer.image,
+    },
+  }));
+
+  await logTicketActivity(
+    ticket,
+    "Ticket Reviews Viewed",
+    TicketActivityType.INFO,
+    `Ticket reviews viewed by user ${user.id}`,
+    user.id,
+    {
+      reviewsCount: formatted.length,
+    },
+  );
+
+  logger.info("[server][tickets][review] activity logged", {
+    ticketId,
+    userId: user.id,
+  });
+
+  logger.info("[server][tickets][review] completed successfully", {
+    ticketId,
+    userId: user.id,
+  });
+
+  return {
+    status: 200,
+    payload: {
+      data: formatted,
+      meta: {
+        total: formatted.length,
+      },
+    },
+  };
+};
+
+export const changeTicketStatusService = async (
+  ticketId: string,
+  dto: { status: TicketStatus },
+  user: any,
+  t: any,
+) => {
+  logger.info("[server][tickets] changeTicketStatus | start", {
+    ticketId,
+    userId: user.id,
+    requestedStatus: dto.status,
+  });
+
+  const ticket = await ticketRepo.findOne({
+    where: { id: ticketId },
+    relations: ["requester", "assigneeList"],
+  });
+
+  if (!ticket) {
+    logger.warn("[server][tickets] ticket not found", {
+      ticketId,
+      requestedBy: user.id,
+    });
+    return {
+      status: 404,
+      payload: {
+        message: t("ticket_not_found"),
+        code: "TICKET_NOT_FOUND",
+      },
+    };
+  }
+
+  const isAssignee = ticket.assigneeList?.some(
+    (assignee) => assignee.id === user.id,
+  );
+
+  const isAllowed = user.role === UserType.ADMIN || isAssignee;
+
+  if (!isAllowed) {
+    logger.warn("[server][tickets] forbidden status change attempt", {
+      ticketId,
+      requestedBy: user.id,
+      isAdmin: user.role === UserType.ADMIN,
+      isAssignee,
+    });
+    return {
+      status: 403,
+      payload: {
+        message: t("action_not_allowed"),
+        code: "FORBIDDEN",
+      },
+    };
+  }
+
+  const previousStatus = ticket.status;
+
+  let newStatus = dto.status;
+
+  if (dto.status === TicketStatus.CLOSED) {
+    ticket.closeCount += 1;
+    logger.info("[server][tickets] incrementing close cycle", {
+      ticketId,
+      newCloseCycle: ticket.closeCount,
+    });
+  }
+
+  logger.info("[server][tickets] updating ticket status", {
+    ticketId,
+    previousStatus,
+    newStatus,
+  });
+
+  ticket.status = newStatus;
+  await ticketRepo.save(ticket);
+
+  await logTicketActivity(
+    ticket,
+    "Ticket Status Changed",
+    TicketActivityType.INFO,
+    `Ticket status changed from ${previousStatus} to ${newStatus} by user ${user.id}`,
+    user.id,
+    {
+      previousStatus,
+      newStatus,
+      closeCycle: ticket.closeCount,
+    },
+  );
+
+  logger.info("[server][tickets] ticket status updated successfully", {
+    ticketId,
+    previousStatus,
+    newStatus,
+    closeCycle: ticket.closeCount,
+  });
+
+  return {
+    status: 200,
+    payload: {
+      is_updated: true,
+      message: "ticket_updated",
+      errors: [],
+    },
+  };
 };

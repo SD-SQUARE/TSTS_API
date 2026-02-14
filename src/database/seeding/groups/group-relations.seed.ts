@@ -1,5 +1,4 @@
-// src/database/seeding/group-relations.seed.ts
-import { DataSource, In } from "typeorm";
+import { DataSource } from "typeorm";
 import {
   Group,
   GroupSpecialization,
@@ -7,8 +6,8 @@ import {
   Specialization,
   User,
   TechnicianGroup,
-} from "../../entities/index.js";
-import { UserType } from "../../enums/UserType.enum.js";
+} from "../../../entities/index.js";
+import { UserType } from "../../../enums/UserType.enum.js";
 
 // ---------- Helpers ----------
 function getRandomItem<T>(arr: T[]): T {
@@ -78,17 +77,17 @@ export async function seedGroupRelations(dataSource: DataSource) {
   }
   if (candidateHeads.length === 0) {
     console.warn(
-      "⚠️ [GroupRelationsSeed] No candidate heads (Admin/SUPER_ADMIN) found."
+      "⚠️ [GroupRelationsSeed] No candidate heads (Admin/SUPER_ADMIN) found.",
     );
   }
   if (technicians.length === 0) {
     console.warn(
-      "⚠️ [GroupRelationsSeed] No technicians found for TechnicianGroup."
+      "⚠️ [GroupRelationsSeed] No technicians found for TechnicianGroup.",
     );
   }
 
   console.log(
-    `ℹ️ [GroupRelationsSeed] Loaded: ${groups.length} groups, ${specs.length} specs, ${candidateHeads.length} candidate heads.`
+    `ℹ️ [GroupRelationsSeed] Loaded: ${groups.length} groups, ${specs.length} specs, ${candidateHeads.length} candidate heads.`,
   );
 
   // 3) For each group, assign random specializations
@@ -113,12 +112,12 @@ export async function seedGroupRelations(dataSource: DataSource) {
           gsRepo.create({
             group,
             specialization: { id: specId } as Specialization,
-          })
+          }),
         );
 
         await gsRepo.save(newRelations);
         console.log(
-          `✅ [GroupRelationsSeed] Group ${group.id} assigned ${randomSpecIds.length} specs.`
+          `✅ [GroupRelationsSeed] Group ${group.id} assigned ${randomSpecIds.length} specs.`,
         );
       }
     }
@@ -143,7 +142,7 @@ export async function seedGroupRelations(dataSource: DataSource) {
 
       await ghRepo.save(gh);
       console.log(
-        `✅ [GroupRelationsSeed] Group ${group.id} head set to ADMIN ${chosenHead.email}`
+        `✅ [GroupRelationsSeed] Group ${group.id} head set to ADMIN ${chosenHead.email}`,
       );
     }
 
@@ -166,7 +165,7 @@ export async function seedGroupRelations(dataSource: DataSource) {
 
       await ghRepo.save(gh);
       console.log(
-        `✅ [GroupRelationsSeed] Group ${group.id} head set to user ${chosenHead.email}`
+        `✅ [GroupRelationsSeed] Group ${group.id} head set to user ${chosenHead.email}`,
       );
     }
 
@@ -188,13 +187,13 @@ export async function seedGroupRelations(dataSource: DataSource) {
           tgRepo.create({
             group,
             user: tech,
-          })
+          }),
         );
 
         await tgRepo.save(newTechGroups);
 
         console.log(
-          `✅ [GroupRelationsSeed] Group ${group.id} assigned ${techsForGroup.length} technicians.`
+          `✅ [GroupRelationsSeed] Group ${group.id} assigned ${techsForGroup.length} technicians.`,
         );
       }
     }

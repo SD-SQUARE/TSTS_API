@@ -18,7 +18,8 @@ import { Media } from "./Media.js";
 import { TicketListener } from "./TicketListener.js";
 import { TicketActivity } from "./TicketActivity.js";
 import { TicketChat } from "./TicketChat.js";
-import { TicketReview } from "./TicketReview.js"
+import { TicketReview } from "./TicketReview.js";
+import { Problem } from "./Problem.js";
 
 @Entity({ name: "tickets" })
 export class Ticket {
@@ -36,6 +37,9 @@ export class Ticket {
 
   @ManyToOne(() => Specialization, (spec) => spec.tickets, { nullable: true })
   specialization: any | null;
+
+  @ManyToOne(() => Problem, (prop) => prop.ticket, { nullable: true })
+  problem: any | null;
 
   @Column({ type: "enum", enum: TicketStatus, default: TicketStatus.OPEN })
   status: TicketStatus;
@@ -81,4 +85,5 @@ export class Ticket {
   // close count
   @Column({ type: "int", default: 0 }) 
   closeCount: number;
+
 }

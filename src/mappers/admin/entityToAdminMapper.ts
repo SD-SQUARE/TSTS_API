@@ -1,5 +1,6 @@
 import { User } from "../../entities/index.js";
 import { fetchAllAdminsGroupsAsHeadsService } from "../../services/users/profile/profileQueryService.js";
+import { Lang } from "../../types/lang.types.js";
 import { getPresignedUrl } from "../../utils/storage.js";
 import { GroupDto } from "../groups/toGroupDto.js";
 
@@ -21,7 +22,6 @@ type AdminDto = {
   ssn: string | null;
   university: { id: string; name: string } | null;
   domain: { id: string; name: string } | null;
-  departments: { id: string; name: string }[];
   specializations: { id: string; name: string }[];
 
   contacts: {
@@ -36,48 +36,27 @@ type AdminDto = {
   groups: GroupDto[];
 };
 
-export const toAdmin = async (
-  entity: User,
-  lang: "en" | "ar",
-): Promise<AdminDto> => {
+export const toAdmin = async (entity: User, lang: Lang): Promise<AdminDto> => {
   const university = entity.university ? await entity.university : null;
   const domain = entity.domain ? await entity.domain : null;
-  const userDepartments = entity.userDepartments
-    ? await entity.userDepartments
-    : [];
   const userspecializations = entity.allowedSpecializations
     ? await entity.allowedSpecializations
     : [];
 
-  // 2) for each userDepartment, load department (lazy) and map it
-  const departments = await Promise.all(
-    userDepartments.map(async (ud) => {
-      const dept = ud.department ? await ud.department : null;
+  const specializations = await Promise.all(
+    userspecializations.map(async (us) => {
+      const spec = us.specialization ? await us.specialization : null;
 
-      if (!dept) {
+      if (!spec) {
         return null;
       }
 
       return {
-        id: dept.id,
-        name: dept.name?.[lang], // dept.name is { en, ar }
+        id: spec.id,
+        name: spec.name?.[lang],
       };
     }),
   );
-
-  const specializations = (
-    await Promise.all(
-      userspecializations.map(async (us) => {
-        const spec = us.specialization ? await us.specialization : null;
-        if (!spec) return null;
-        return {
-          id: spec.id,
-          name: spec.name?.[lang],
-        };
-      })
-    )
-  ).filter(Boolean);
-
 
   return {
     id: entity.id,
@@ -112,10 +91,6 @@ export const toAdmin = async (
           name: domain.name?.[lang],
         }
       : null,
-
-    departments: departments.filter(
-      (d): d is { id: string; name: string } => d !== null,
-    ),
 
     specializations: specializations,
 
