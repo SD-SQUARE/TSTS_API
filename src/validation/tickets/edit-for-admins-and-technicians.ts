@@ -42,6 +42,12 @@ export const editTicketForAdminAndTechniciansSchema = (t: Request["t"]) =>
       .uuid({ message: t("invalid_specialization") })
       .nullable()
       .optional(),
+
+    problem: z
+      .string()
+      .uuid({ message: t("invalid_problem") })
+      .nullable()
+      .optional(),
   });
 export type EditTicketData = z.infer<
   ReturnType<typeof editTicketForAdminAndTechniciansSchema>

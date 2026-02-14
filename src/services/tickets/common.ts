@@ -1,5 +1,5 @@
 import { PostgresDataSource } from "../../database/postgres-data-source.js";
-import { Specialization } from "../../entities/index.js";
+import { Problem, Specialization } from "../../entities/index.js";
 import { Ticket } from "../../entities/Ticket.js";
 import { User } from "../../entities/User.js";
 import { TicketActivityType } from "../../enums/TicketActivity.enum.js";
@@ -7,6 +7,7 @@ import { formatActor } from "../../helpers/formatActor.js";
 import { mapStatusToActivityType } from "../../helpers/ticketsHelper.js";
 import { IEditResponse } from "../../interfaces/response/IEditResponse.js";
 import { assigneeNotFound } from "../../responses/assignees.js";
+import { problemNotFound } from "../../responses/problem.js";
 import { specializationNotFound } from "../../responses/specializations.js";
 import { UserData } from "../../types/UserData.js";
 import logger from "../../utils/logger.js";
@@ -17,6 +18,8 @@ export type ChangeMap = Record<string, { from: any; to: any }>;
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
 const specializationRepo = PostgresDataSource.getRepository(Specialization);
+const problemRepo = PostgresDataSource.getRepository(Problem);
+
 
 export const applyPrimitiveUpdate = (
   field: string,
@@ -58,7 +61,7 @@ export const isStringArrayEqualAsSet = (a: string[], b: string[]) => {
 export const fetchExistingTicket = async (ticketId: string) => {
   return ticketRepo.findOne({
     where: { id: ticketId },
-    relations: ["requester", "specialization", "assigneeList"],
+    relations: ["requester", "specialization", "assigneeList", "problem"],
   });
 };
 
@@ -90,6 +93,38 @@ export const handleSpecializationUpdate = async (
   }
 
   changes.specialization = { from: oldId, to: newId };
+
+  return null;
+};
+
+export const handleProblemUpdate = async (
+  updateData: any,
+  existingTicket: Ticket,
+  updates: any,
+  changes: ChangeMap
+): Promise<IEditResponse | null> => {
+  if (updateData.problem === undefined) return null;
+
+  const oldId = existingTicket.problem?.id || null;
+  const newId = updateData.problem || null;
+
+  // If no change, do nothing (no updates, no changes)
+  if (oldId === newId) return null;
+
+  if (updateData.problem) {
+    const problem = await problemRepo.findOne({
+      where: { id: updateData.problem },
+    });
+
+    if (!problem)
+      return problemNotFound("is_edited") as IEditResponse;
+
+    updates.problem = problem;
+  } else {
+    updates.problem = null;
+  }
+
+  changes.problem = { from: oldId, to: newId };
 
   return null;
 };
