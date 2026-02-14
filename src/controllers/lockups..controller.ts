@@ -12,6 +12,8 @@ import {
   getUniversityDomainsLockupService,
   getUsersLockupService,
   getUserTicketsLockupService,
+  getProblemsLockUpService,
+  getTicketProblemsService
 } from "../services/lockups.service.js";
 import { UserType } from "../enums/UserType.enum.js";
 
@@ -140,3 +142,25 @@ export const getUserTicketsLockupController = async (
 
   return res.status(200).json(tickets);
 };
+export const getProblemsLockupController = async (
+  req: Request,
+  res: Response
+) => {
+  const { id } = req.params;
+  const { name } = req.query;
+  const lang = req.language as "en" | "ar";
+  const problems = await getProblemsLockUpService(name as string | undefined,lang,id);
+
+  return res.status(200).json(problems);
+};
+export const getTicketProblemsLockupController = async (
+  req: Request,
+  res: Response
+) => {
+  const { name ,specialization} = req.query ;
+  const lang = req.language as "en" | "ar";
+  const specializations = await getTicketProblemsService(specialization as string | undefined,name as string | undefined ,lang);
+
+  return res.status(200).json(specializations);
+};
+

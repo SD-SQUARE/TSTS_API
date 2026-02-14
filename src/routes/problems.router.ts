@@ -1,10 +1,12 @@
 import { createProblem,updateProblem,getProblemById,getProblems,deleteProblem } from "../controllers/problem.controller.js";
 import { Router } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import{validate} from "../validation/zod-middleware.js";
+import { ProblemSchema,UpdateProblemSchema } from "../validation/problem.schema.js";
 const router = Router();
-router.post("/", asyncHandler(createProblem));
+router.post("/", validate(ProblemSchema),asyncHandler(createProblem));
 router.get("/:id", asyncHandler(getProblemById));
 router.get("/", asyncHandler(getProblems));
-router.put("/:id", asyncHandler(updateProblem));
+router.put("/:id",validate(UpdateProblemSchema), asyncHandler(updateProblem));
 router.delete("/:id", asyncHandler(deleteProblem));
 export default router;
