@@ -77,6 +77,7 @@ export async function seedCapitalUniversityDomains(ds: DataSource) {
     if (!domain) {
       domain = domainRepo.create({
         name: { en, ar },
+        description: { en, ar },
         university, // relation object ok
       });
 
@@ -102,7 +103,8 @@ export async function seedCapitalUniversityDomains(ds: DataSource) {
     }
 
     const department = depRepo.create({
-      name: { en, ar }, // Department.name allows {en, ar?}; passing ar is fine
+      name: { en, ar },
+      description: { en, ar },
       domain, // relation object ok
     });
 
