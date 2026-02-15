@@ -93,6 +93,7 @@ export const createTicket = async (dto, files) => {
   let assignedSpecialization: any = null;
   let assignedProblem: any = null;
 
+  // FIXME: ticket should be created with problem and specialization
   if (specialization) {
     logger.info("[tickets] createTicket | specialization provided", {
       specialization,
