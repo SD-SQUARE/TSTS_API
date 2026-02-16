@@ -7,12 +7,21 @@ const universitiesSeedData: Array<{
 }> = [
   {
     name: { en: "Capital University", ar: "جامعة العاصمة" },
+    description: { en: "Capital University", ar: "جامعة العاصمة" },
   },
   {
     name: { en: "Helwan National University", ar: "جامعة حلوان الاهلية" },
+    description: {
+      en: "Helwan National University",
+      ar: "جامعة حلوان الاهلية",
+    },
   },
   {
     name: {
+      en: "Helwan Technological University",
+      ar: "جامعة حلوان التكنولوجية",
+    },
+    description: {
       en: "Helwan Technological University",
       ar: "جامعة حلوان التكنولوجية",
     },
