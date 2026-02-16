@@ -824,20 +824,28 @@ export const getTicketReviewsService = async (
     reviewsCount: reviews.length,
   });
 
-  const formatted = reviews.map((review) => ({
-    id: review.id,
-    ticketId: ticket.id,
-    rating: review.rating,
-    note: review.note,
-    closeCycle: review.closeCycle,
-    createdAt: review.createdAt,
-    reviewer: {
-      id: review.reviewer.id,
-      firstName: review.reviewer.firstName,
-      lastName: review.reviewer.lastName,
-      image: review.reviewer.image,
-    },
-  }));
+  const formatted = await Promise.all(
+    reviews.map(async (review) => ({
+      id: review.id,
+      ticketId: ticket.id,
+      rating: review.rating,
+      note: review.note,
+      closeCycle: review.closeCycle,
+      createdAt: review.createdAt,
+      reviewer: {
+        id: review.reviewer.id,
+        firstName: review.reviewer.firstName,
+        lastName: review.reviewer.lastName,
+        image: review.reviewer.image
+          ? await getPresignedUrl(
+              process.env.MINIO_BUCKET!,
+              review.reviewer.image,
+              600,
+            )
+          : null,
+      },
+    })),
+  );
 
   await logTicketActivity(
     ticket,
