@@ -20,6 +20,8 @@ import { getRequestContext } from "../utils/requestContext.js";
 import { getUserMetaById } from "./tickets/common.js";
 import { In } from "typeorm";
 import { Problem } from "../entities/Problem.js";
+import { getPresignedUrl } from "../utils/storage.js";
+import { formatTicketStatus } from "../helpers/ticketsHelper.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
@@ -39,12 +41,8 @@ export const logTicketActivity = async (
 ) => {
   const context = getRequestContext();
 
-  const userMeta = userId
-    ? await getUserMetaById(userId)
-    : { full_name_en: null, full_name_ar: null, image: null, id: null };
-
   const finalMeta = {
-    user: userMeta,
+    userId: userId || null,
     ip: context.ip || "unknown",
     ...meta,
   };
@@ -127,24 +125,14 @@ export const createTicket = async (dto, files) => {
     logger.info("[tickets] createTicket | specialization resolved", {
       specializationId: assignedSpecialization.id,
     });
-  } else if (problem) {
-    logger.info(
-      "[tickets] createTicket | deriving specialization from problem",
-      {
-        problem,
-      },
-    );
+  }
+  if (problem) {
+    logger.info("[tickets] createTicket | problem provided", {
+      problem,
+    });
 
     assignedProblem = await problemRepo.findOne({
       where: { id: problem },
-      relations: [
-        "specialization",
-        "specialization.groupSpecializations",
-        "specialization.groupSpecializations.group",
-        "specialization.groupSpecializations.group.heads",
-        "specialization.groupSpecializations.group.heads.user",
-        "specialization.groupSpecializations.group.teamLeader",
-      ],
     });
 
     if (!assignedProblem) {
@@ -159,11 +147,8 @@ export const createTicket = async (dto, files) => {
       };
     }
 
-    assignedSpecialization = assignedProblem.specialization;
-
-    logger.info("[tickets] createTicket | specialization derived", {
+    logger.info("[tickets] createTicket | problem resolved", {
       problemId: assignedProblem.id,
-      specializationId: assignedSpecialization?.id,
     });
   }
 
@@ -450,7 +435,7 @@ export const getAllTicketsService = async (
         }
       : null,
 
-    status: ticket.status,
+    status: formatTicketStatus(ticket.status),
     priority: ticket.priority,
     isOutOfService: ticket.isOutOfService,
 
@@ -535,7 +520,7 @@ export const getSingleTicketService = async (
         }
       : null,
     // FIXME: status mapping should be result in remove `_` ex: `in_progress` => `in Progress`
-    status: ticket.status,
+    status: formatTicketStatus(ticket.status),
     priority: ticket.priority,
     isOutOfService: ticket.isOutOfService,
     assignee:
@@ -576,7 +561,40 @@ export const getTicketActivitiesService = async (ticketId: string) => {
       `Fetched ${activities.length} activities for ticket ${ticketId}`,
     );
 
-    return activities;
+    return await Promise.all(
+      activities.map(async (activity) => {
+        const userId = activity.meta?.userId;
+
+        let userMeta = {
+          full_name_en: null,
+          full_name_ar: null,
+          image: null,
+          id: null,
+        };
+
+        if (userId) {
+          userMeta = await getUserMetaById(userId);
+
+          if (userMeta?.image) {
+            const imageUrl = await getPresignedUrl(
+              process.env.MINIO_BUCKET!,
+              userMeta.image,
+              600,
+            );
+
+            userMeta.image = imageUrl;
+          }
+        }
+
+        return {
+          ...activity,
+          meta: {
+            ...activity.meta,
+            user: userMeta,
+          },
+        };
+      }),
+    );
   } catch (error) {
     logger.error(`Error fetching activities for ticket ${ticketId}: ${error}`);
     throw new Error("Could not fetch ticket activities");
@@ -867,7 +885,7 @@ export const changeTicketStatusService = async (
 
   const ticket = await ticketRepo.findOne({
     where: { id: ticketId },
-    relations: ["requester", "assigneeList"],
+    relations: ["requester", "assigneeList", "specialization", "problem"],
   });
 
   if (!ticket) {
@@ -884,13 +902,29 @@ export const changeTicketStatusService = async (
     };
   }
 
+  const isRequester = ticket.requester?.id === user.id;
+
   const isAssignee = ticket.assigneeList?.some(
     (assignee) => assignee.id === user.id,
   );
 
-  const isAllowed = user.role === UserType.ADMIN || isAssignee;
+  const isAdmin = user.role === UserType.ADMIN;
   // FIXME: Requester should be able to change status to re_open and 
   // also if specialization or problem has review_required set to true  let requester change status to closed
+
+  let isAllowed = false;
+
+  if (isAdmin || isAssignee) {
+    isAllowed = true;
+  } else if (isRequester) {
+    if (
+      dto.status === TicketStatus.REOPEN ||
+      dto.status === TicketStatus.RESOLVED
+    ) {
+      isAllowed = true;
+    }
+  }
+
   if (!isAllowed) {
     logger.warn("[server][tickets] forbidden status change attempt", {
       ticketId,
@@ -912,11 +946,30 @@ export const changeTicketStatusService = async (
   let newStatus = dto.status;
 
   if (dto.status === TicketStatus.CLOSED) {
-    ticket.closeCount += 1;
-    logger.info("[server][tickets] incrementing close cycle", {
-      ticketId,
-      newCloseCycle: ticket.closeCount,
-    });
+    const reviewRequired =
+      ticket.specialization?.review_required || ticket.problem?.review_required;
+
+    if (reviewRequired) {
+      const existingReview = await ticketReviewRepo.findOne({
+        where: {
+          ticket: { id: ticket.id },
+          closeCycle: ticket.closeCount + 1,
+        },
+      });
+
+      if (!existingReview) {
+        logger.info(
+          "[tickets] review required but not found → switching to PENDING",
+          { ticketId: ticket.id },
+        );
+
+        newStatus = TicketStatus.PENDING;
+      } else {
+        ticket.closeCount += 1;
+      }
+    } else {
+      ticket.closeCount += 1;
+    }
   }
 
   logger.info("[server][tickets] updating ticket status", {
@@ -952,7 +1005,7 @@ export const changeTicketStatusService = async (
     status: 200,
     payload: {
       is_updated: true,
-      message: "ticket_updated",
+      message: t("ticket_updated"),
       errors: [],
     },
   };
