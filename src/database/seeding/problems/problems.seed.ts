@@ -368,6 +368,7 @@ export async function seedProblems(dataSource: DataSource) {
               specialization: specialization,
             });
             await problemRepo.save(newProblem);
+            await dataSource.manager.clear(Problem);
             console.log(`✅ [Problem] Inserted: ${problemData.name.en}`);
           }
 
