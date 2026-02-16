@@ -85,6 +85,7 @@ export async function seedHelwanNationalUniversityDomains(
     if (!domain) {
       domain = domainRepository.create({
         name: { en, ar },
+        description: { en, ar },
         university,
       });
 
@@ -111,6 +112,7 @@ export async function seedHelwanNationalUniversityDomains(
 
     const department = departmentRepository.create({
       name: { en, ar },
+      description: { en, ar },
       domain,
     });
 
