@@ -469,11 +469,7 @@ export const createTicketReviewController = async (
 };
 
 export const getTicketReviewsController = async (req: any, res: any) => {
-  const result = await getTicketReviewsService(
-    req.params.ticketId,
-    req.user,
-    req.t,
-  );
+  const result = await getTicketReviewsService(req.params.id, req.user, req.t);
 
   return res.status(result.status).json(result.payload);
 };
