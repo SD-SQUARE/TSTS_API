@@ -24,3 +24,12 @@ export const mapStatusToActivityType = (toStatus: any): TicketActivityType => {
 
   return activityType;
 };
+
+export const formatTicketStatus = (status: string): string => {
+  if (!status) return status;
+
+  return status
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
