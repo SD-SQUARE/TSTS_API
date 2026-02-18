@@ -4,17 +4,18 @@ services:
   api:
     container_name: express_api
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: ./docker/DOCKERFILE
     restart: unless-stopped
     env_file:
-      - .env
+      - ../.env
+      
     ports:
-      - "5000:5000"
-    depends_on:
-      - postgres
-    volumes:
-      - .:/app
-      - /app/node_modules
-    command: sh -c "npm run dev"
+      - "5050:5050"
+    networks:
+      - tsts-network
+
+networks:
+  tsts-network:
+    external: true
 

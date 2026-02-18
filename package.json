@@ -29,7 +29,13 @@
     "secret:publish:example": "node ./scripts/publish-env.js",
     "seed": "tsx src/database/seeding/index.ts",
     "seed:users": "tsx src/database/seeding/users/userSeeder.ts",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "db:ProdBuild": "docker-compose -f ./docker/compose.db.yml up --build -d",
+    "db:ProdDown": "docker-compose -f ./docker/compose.db.yml down",
+    "api:ProdBuild": "docker-compose -f ./docker/compose.api.yml up --build -d",
+    "api:ProdDown": "docker-compose -f ./docker/compose.api.yml down",
+    "prod:start": "run-s db:ProdBuild api:ProdBuild seed",
+    "prod:stop": "run-s db:ProdDown api:ProdDown"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.936.0",
@@ -99,7 +105,7 @@
     "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "tsx": "^4.20.6",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }
