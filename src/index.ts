@@ -2,7 +2,7 @@ import "reflect-metadata";
 
 import dotenv from "dotenv";
 import path from "path";
-dotenv.config({ path: path.join(process.cwd(), "src/.env") });
+dotenv.config();
 
 import { initDataSource } from "./database/postgres-data-source.js";
 import app from "./app.js";

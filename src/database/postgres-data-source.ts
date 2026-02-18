@@ -5,7 +5,7 @@ import logger from "../utils/logger.js";
 import { __dirname } from "../utils/paths.js";
 import * as entities from "../entities/index.js";
 
-dotenv.config({ path: path.join(__dirname, "src/.env") });
+dotenv.config();
 
 const HOST = process.env.DB_HOST ?? "localhost";
 const PORT = process.env.DB_PORT ?? 5432;
