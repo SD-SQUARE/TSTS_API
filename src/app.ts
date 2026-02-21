@@ -20,7 +20,7 @@ import { requestContextMiddleware } from "./middleware/requestContextMiddleware.
 const app = express();
 
 
-app.set("trust proxy", process.env.NODE_ENV === "production");
+app.set("trust proxy", process.env.NODE_ENV === "production"? 1 : 0);
 // basic security
 app.use(helmet({ contentSecurityPolicy: false })); // CSP setup later if needed
 app.use(hpp());
@@ -55,11 +55,6 @@ app.use(socketIoMiddleware(socketIoInstance));
 
 app.use(requestContextMiddleware);
 
-// CSRF (set up if using cookies and forms; for API token flows consider disabling)
-// @AhmedElsenaty
-// TODO: enable in prod
-if (process.env.NODE_ENV === "production")
-  app.use(csrfMiddleware);
 
 import {
   authRouter,
@@ -102,8 +97,15 @@ app.post("/debug/send-events", (_req, res) => {
   res.sendStatus(204);
 });
 
-app.use("/api/v1/auth", authRouter);
 app.use("/api/v2/auth", authV2Router);
+
+// CSRF (set up if using cookies and forms; for API token flows consider disabling)
+// @AhmedElsenaty
+// TODO: enable in prod
+if (process.env.NODE_ENV === "production")
+  app.use(csrfMiddleware);
+
+app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/trusted-devices", trustedDevicesRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/groups", groupsRouter);
