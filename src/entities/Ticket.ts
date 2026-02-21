@@ -19,7 +19,7 @@ import { TicketListener } from "./TicketListener.js";
 import { TicketActivity } from "./TicketActivity.js";
 import { TicketChat } from "./TicketChat.js";
 import { TicketReview } from "./TicketReview.js";
-import { Problem } from "./Problem.js";
+import { Problem } from "./problem.js";
 
 @Entity({ name: "tickets" })
 export class Ticket {

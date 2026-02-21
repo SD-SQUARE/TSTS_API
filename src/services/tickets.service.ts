@@ -19,7 +19,7 @@ import { TicketReview } from "../entities/TicketReview.js";
 import { getRequestContext } from "../utils/requestContext.js";
 import { getUserMetaById } from "./tickets/common.js";
 import { In } from "typeorm";
-import { Problem } from "../entities/Problem.js";
+import { Problem } from "../entities/problem.js";
 import { getPresignedUrl } from "../utils/storage.js";
 import { formatTicketStatus } from "../helpers/ticketsHelper.js";
 

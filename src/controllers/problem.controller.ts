@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ProblemRepo } from "../repositories/ProblemRepo.js";
 import { SpecializationRepo } from "../repositories/SpecializationRepo.js";
-import { Problem } from "../entities/Problem.js";
+import { Problem } from "../entities/problem.js";
 import { buildName, buildDescription } from "../utils/handleNamaAndDesc.js";
 import logger from "../utils/logger.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
