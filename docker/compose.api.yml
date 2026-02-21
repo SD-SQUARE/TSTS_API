@@ -11,7 +11,7 @@ services:
       - ../.env
       
     ports:
-      - "5050:5050"
+      - "${PORT}:${PORT}"
     networks:
       - tsts-network
 

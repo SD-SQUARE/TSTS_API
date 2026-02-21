@@ -54,19 +54,24 @@ export const logout = async (req: Request, res: Response) => {
   return res.status(200).json({ message: "Logged out successfully" });
 };
 
-export const getCsrfToken = async (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
-    throw new AppError(t("not_token"), 401);
-  }
+// export const getCsrfToken = async (req: Request, res: Response) => {
+//   const authHeader = req.headers.authorization;
+//   if (!authHeader?.startsWith("Bearer ")) {
+//     throw new AppError(t("not_token"), 401);
+//   }
 
-  const accessToken = authHeader.split(" ")[1];
-  const csrfToken = await generateCsrfForUser(accessToken);
+//   const accessToken = authHeader.split(" ")[1];
+//   const csrfToken = await generateCsrfForUser(accessToken);
 
-  // Set CSRF token in secure cookie
-  res.header("XSRF-TOKEN", csrfToken);
+//   // Set CSRF token in secure cookie
+//   res.header("XSRF-TOKEN", csrfToken);
 
-  return res.status(200).send();
+//   return res.status(200).send();
+// };
+export const getCsrfToken = (req: any, res: any) => {
+  res.json({
+    csrfToken: req.csrfToken(),
+  });
 };
 
 export const refreshToken = async (req: Request, res: Response) => {
