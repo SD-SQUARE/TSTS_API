@@ -21,7 +21,7 @@ export const PostgresDataSource = new DataSource({
   username: USER ?? "postgres",
   password: PASSWORD ?? "postgres",
   database: DATABASE ?? "mydb",
-  synchronize: isSync, // true in dev only; use migrations in prod
+  synchronize: true, // true in dev only; use migrations in prod
   logging: true,
   logger: "file",
   migrationsTableName: "migration",
