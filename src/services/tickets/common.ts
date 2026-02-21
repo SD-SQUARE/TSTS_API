@@ -7,7 +7,7 @@ import { formatActor } from "../../helpers/formatActor.js";
 import { mapStatusToActivityType } from "../../helpers/ticketsHelper.js";
 import { IEditResponse } from "../../interfaces/response/IEditResponse.js";
 import { assigneeNotFound } from "../../responses/assignees.js";
-import { problemNotFound } from "../../responses/Problem.js";
+import { problemNotFound } from "../../responses/problem.js";
 import { specializationNotFound } from "../../responses/specializations.js";
 import { UserData } from "../../types/UserData.js";
 import logger from "../../utils/logger.js";
