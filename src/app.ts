@@ -40,8 +40,15 @@ app.use(
       process.env.CORS_ORIGIN1 &&
       process.env.CORS_ORIGIN2 &&
       process.env.CORS_ORIGIN3 &&
-      process.env.CORS_ORIGIN4
-        ? [process.env.CORS_ORIGIN1, process.env.CORS_ORIGIN2, process.env.CORS_ORIGIN3, process.env.CORS_ORIGIN4]
+      process.env.CORS_ORIGIN4 &&
+      process.env.CORS_ORIGIN5
+        ? [
+            process.env.CORS_ORIGIN1, 
+            process.env.CORS_ORIGIN2, 
+            process.env.CORS_ORIGIN3, 
+            process.env.CORS_ORIGIN4,
+            process.env.CORS_ORIGIN5
+          ]
         : true,
     credentials: true,
   })
@@ -82,6 +89,7 @@ import knowlegeBaseRouter from "./routes/knowlegeBase.router.js";
 import  ProblemRouter  from "./routes/problems.router.js";
 
 import logger from "./utils/logger.js";
+import { en } from '@faker-js/faker';
 // routes
 app.get("/api/v1/health", (req, res) => {
   logger.info("[HealthCheck]: OK");
