@@ -36,9 +36,15 @@ app.use(cookieParser());
 // CORS
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || true,
+    origin:
+      process.env.CORS_ORIGIN1 &&
+      process.env.CORS_ORIGIN2 &&
+      process.env.CORS_ORIGIN3 &&
+      process.env.CORS_ORIGIN4
+        ? [process.env.CORS_ORIGIN1, process.env.CORS_ORIGIN2, process.env.CORS_ORIGIN3, process.env.CORS_ORIGIN4]
+        : true,
     credentials: true,
-  }),
+  })
 );
 
 // Rate limiter
