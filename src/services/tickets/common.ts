@@ -218,7 +218,10 @@ export const logSpecificActivities = async (
       activityType,
       `Ticket status changed by ${actorText} from ${changes.status.from} to ${changes.status.to}`,
       actor.id,
-      { actor, statusChange: changes.status }
+      { actor, statusChange: changes.status,
+        new: changes.status.to,
+        old: changes.status.from
+       }
     );
   }
 
@@ -242,7 +245,10 @@ export const logSpecificActivities = async (
         changes.isOutOfService.to ? "out of service" : "in service"
       }`,
       actor.id,
-      { actor, serviceStatusChange: changes.isOutOfService }
+      { actor, serviceStatusChange: changes.isOutOfService,
+        new: changes.isOutOfService.to,
+        old: changes.isOutOfService.from
+       }
     );
   }
 };

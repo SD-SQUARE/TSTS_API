@@ -22,6 +22,7 @@ import { In } from "typeorm";
 import { Problem } from "../entities/problem.js";
 import { getPresignedUrl } from "../utils/storage.js";
 import { formatTicketStatus } from "../helpers/ticketsHelper.js";
+import { Group } from "../entities/Group.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
@@ -30,6 +31,7 @@ const specializationRepo = PostgresDataSource.getRepository(Specialization);
 const ticketActivityRepo = PostgresDataSource.getRepository(TicketActivity);
 const ticketReviewRepo = PostgresDataSource.getRepository(TicketReview);
 const problemRepo = PostgresDataSource.getRepository(Problem);
+const groupRepo = PostgresDataSource.getRepository(Group);
 
 export const logTicketActivity = async (
   ticket: Ticket,
@@ -155,23 +157,37 @@ export const createTicket = async (dto, files) => {
   if (assignedSpecialization) {
     assignedUsers = await assignUsersFromSpecialization(assignedSpecialization);
 
-    logger.info("[tickets] createTicket | users assigned from specialization", {
+    logger.info("[tickets] assigned from specialization", {
       specializationId: assignedSpecialization.id,
       assignedCount: assignedUsers.length,
     });
-  }
+  } else {
+    assignedUsers = await assignAllGroupHeadsAndLeaders();
 
-  if (!assignedUsers.length) {
-    logger.info("[tickets] createTicket | fallback to admin assignment");
-
-    assignedUsers = await userRepo.find({
-      where: { user_type: UserType.ADMIN },
-    });
-
-    logger.info("[tickets] createTicket | admins assigned", {
-      adminCount: assignedUsers.length,
+    logger.info("[tickets] assigned from all groups", {
+      assignedCount: assignedUsers.length,
     });
   }
+  // if (assignedSpecialization) {
+  //   assignedUsers = await assignUsersFromSpecialization(assignedSpecialization);
+
+  //   logger.info("[tickets] createTicket | users assigned from specialization", {
+  //     specializationId: assignedSpecialization.id,
+  //     assignedCount: assignedUsers.length,
+  //   });
+  // }
+
+  // if (!assignedUsers.length) {
+  //   logger.info("[tickets] createTicket | fallback to admin assignment");
+
+  //   assignedUsers = await userRepo.find({
+  //     where: { user_type: UserType.ADMIN },
+  //   });
+
+  //   logger.info("[tickets] createTicket | admins assigned", {
+  //     adminCount: assignedUsers.length,
+  //   });
+  // }
 
   const ticket = ticketRepo.create({
     title,
@@ -284,6 +300,23 @@ const assignUsersFromSpecialization = async (spec: any) => {
   return await userRepo.findBy({ id: In(userIds) });
 };
 
+const assignAllGroupHeadsAndLeaders = async (): Promise<User[]> => {
+  const groups = await groupRepo.find({
+    relations: ["heads", "heads.user", "teamLeader"],
+  });
+
+  const headIds = groups.flatMap(
+    (g) => g.heads?.map((h) => h.user?.id).filter(Boolean) ?? []
+  );
+
+  const teamLeaderIds = groups.map((g) => g.teamLeader?.id).filter(Boolean);
+
+  const userIds = Array.from(new Set([...headIds, ...teamLeaderIds]));
+
+  if (!userIds.length) return [];
+
+  return userRepo.findBy({ id: In(userIds) });
+};
 export const getAllTicketsService = async (
   query: GetTicketsQuery,
   lang: "ar" | "en",
@@ -321,7 +354,7 @@ export const getAllTicketsService = async (
     logger.info("[tickets] requester access applied", { userId: user.id });
   }
 
-  if (user.role === UserType.TECHNICIAN) {
+  if (user.role === UserType.TECHNICIAN || user.role === UserType.ADMIN) {
     qb.andWhere("assignee.id = :userId", {
       userId: user.id,
     });
@@ -1010,6 +1043,8 @@ export const changeTicketStatusService = async (
       previousStatus,
       newStatus,
       closeCycle: ticket.closeCount,
+      old: previousStatus,
+      new : newStatus
     },
   );
 
