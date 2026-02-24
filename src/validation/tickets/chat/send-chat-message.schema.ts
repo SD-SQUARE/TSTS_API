@@ -8,7 +8,7 @@ export const createMessageSchema = (t: Request["t"]) =>
     // string OR null, and if string => <= 2000
     message: z
       .string()
-      .max(2000, { message: t("ticket.message_too_long") })
+      // .max(2000, { message: t("ticket.message_too_long") })
       .nullable()
       .optional(),
 

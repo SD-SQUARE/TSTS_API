@@ -24,7 +24,7 @@ export class UserRepository {
 
   async checkEmailOrSsnConflictForAdd(
     email: string,
-    ssn?: string,
+    ssn?: string
   ): Promise<EmailSsnConflictResult> {
     const emailExists = await this.repo.exists({ where: { email } });
     const ssnExists = ssn ? await this.repo.exists({ where: { ssn } }) : false;
@@ -47,7 +47,7 @@ export class UserRepository {
   async checkEmailOrSsnConflictForEdit(
     id: string,
     email: string,
-    ssn?: string,
+    ssn?: string
   ): Promise<EmailSsnConflictResult> {
     const emailExists = await this.repo.exists({
       where: { email, id: Not(id) },
@@ -78,7 +78,7 @@ export class UserRepository {
 
   async getAllRequestersWithFilter(
     query: GetUsersQuery,
-    lang: "en" | "ar",
+    lang: "en" | "ar"
   ): Promise<[User[], number]> {
     const repo = PostgresDataSource.getRepository(User);
 
@@ -145,7 +145,7 @@ export class UserRepository {
 
   async getAllTechniciansWithFilter(
     query: GetUsersQuery,
-    lang: Lang,
+    lang: Lang
   ): Promise<[User[], number]> {
     const repo = PostgresDataSource.getRepository(User);
 
@@ -208,7 +208,7 @@ export class UserRepository {
 
   async getAllAdminsWithFilter(
     query: GetUsersQuery,
-    lang: Lang,
+    lang: Lang
   ): Promise<[User[], number]> {
     const repo = PostgresDataSource.getRepository(User);
 
@@ -227,19 +227,36 @@ export class UserRepository {
     const fn = `"user"."firstName"->>'${lang}'`;
     const mn = `"user"."midName"->>'${lang}'`;
     const ln = `"user"."lastName"->>'${lang}'`;
-
-    // Text search filters
+    const fullNameExpr = `
+    CONCAT_WS(
+      ' ',
+      "user"."firstName"->>'${lang}',
+      "user"."midName"->>'${lang}',
+      "user"."lastName"->>'${lang}'
+      )
+      `;
+      
+      // Text search filters
     if (query.first_name) {
-      qb.andWhere(`${fn} ILIKE :fn`, { fn: `%${query.first_name}%` });
-    }
+      const fullNameValue = query.first_name;
 
-    if (query.mid_name) {
-      qb.andWhere(`${mn} ILIKE :mn`, { mn: `%${query.mid_name}%` });
+      if (fullNameValue) {
+        qb.andWhere(`${fullNameExpr} ILIKE :fullName`, {
+          fullName: `%${fullNameValue}%`,
+        });
+      }
     }
+    // if (query.first_name) {
+    //   qb.andWhere(`${fn} ILIKE :fn`, { fn: `%${query.first_name}%` });
+    // }
 
-    if (query.last_name) {
-      qb.andWhere(`${ln} ILIKE :ln`, { ln: `%${query.last_name}%` });
-    }
+    // if (query.mid_name) {
+    //   qb.andWhere(`${mn} ILIKE :mn`, { mn: `%${query.mid_name}%` });
+    // }
+
+    // if (query.last_name) {
+    //   qb.andWhere(`${ln} ILIKE :ln`, { ln: `%${query.last_name}%` });
+    // }
 
     if (query.ssn) {
       qb.andWhere("user.ssn = :ssn", { ssn: query.ssn });
@@ -279,7 +296,7 @@ export class UserRepository {
 
   async getTechniciansGroupsPaged(
     userId: string,
-    query?: IPagination,
+    query?: IPagination
   ): Promise<[Group[], number]> {
     const tgRepo = PostgresDataSource.getRepository(TechnicianGroup);
     const qb = tgRepo
@@ -306,7 +323,7 @@ export class UserRepository {
 
   async getAdminsGroupsHeadsPaged(
     userId: string,
-    query?: IPagination,
+    query?: IPagination
   ): Promise<[Group[], number]> {
     const ghRepo = PostgresDataSource.getRepository(GroupHead);
 
@@ -330,7 +347,7 @@ export class UserRepository {
   }
   async getUserSpecializations(
     userId: string,
-    query?: IPagination,
+    query?: IPagination
   ): Promise<[Specialization[], number]> {
     const allowedRepo = PostgresDataSource.getRepository(AllowedSpecialization);
 
@@ -353,7 +370,7 @@ export class UserRepository {
 
     // if specialization is lazy, it may be Promise<Specialization>
     const specializations = await Promise.all(
-      allowedList.map((a) => a.specialization),
+      allowedList.map((a) => a.specialization)
     );
 
     return [specializations, total];
