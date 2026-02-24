@@ -32,6 +32,8 @@ export const createTicketSchema = (t: Request["t"]) =>
 
 export const getTicketsSchema = (t: Request["t"]) =>
   z.object({
+    id: z.string().uuid(t("invalid_ticket_id")).optional(),
+
     title: z.string().optional(),
 
     specialization: z.string().uuid(t("invalid_specialization_id")).optional(),
