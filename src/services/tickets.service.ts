@@ -270,11 +270,11 @@ export const createTicket = async (dto, files) => {
 const assignUsersFromSpecialization = async (spec: any) => {
   const headIds = spec.groupSpecializations.flatMap(
     (gs: any) =>
-      gs.group.heads?.map((h: any) => h.user?.id).filter(Boolean) ?? [],
+      gs.group?.heads?.map((h: any) => h.user?.id).filter(Boolean) ?? [],
   );
 
   const teamLeaderIds = spec.groupSpecializations
-    .map((gs: any) => gs.group.teamLeader?.id)
+    .map((gs: any) => gs.group?.teamLeader?.id)
     .filter(Boolean);
 
   const userIds = Array.from(new Set([...headIds, ...teamLeaderIds]));
@@ -330,6 +330,17 @@ export const getAllTicketsService = async (
   }
 
   logger.info("[server][tickets] getAllTickets | base query initialized");
+
+  if (query.id) {
+    qb.andWhere("ticket.id = :ticketId", {
+      ticketId: query.id,
+    });
+
+    logger.info("[server][tickets] getAllTickets | filter applied", {
+      filter: "id",
+      value: query.id,
+    });
+  }
 
   if (query.title) {
     qb.andWhere("ticket.title ILIKE :title", {
