@@ -34,13 +34,9 @@ app.use(cookieParser());
 
 
 // CORS
-const allowedOrigins = [
-  process.env.CORS_ORIGIN1,
-  process.env.CORS_ORIGIN2,
-  process.env.CORS_ORIGIN3,
-  process.env.CORS_ORIGIN4,
-  process.env.CORS_ORIGIN5,
-].filter(Boolean); // remove undefined / empty
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(",").filter(Boolean)
+  : []; // remove undefined / empty
 
 app.use(
   cors({
