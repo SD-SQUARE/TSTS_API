@@ -2,6 +2,7 @@ import fs from "fs";
 import https from "https";
 import { S3Client } from "@aws-sdk/client-s3";
 
+import { NodeHttpHandler } from "@aws-sdk/node-http-handler";
 
 
 const caCert = fs.readFileSync(process.env.MINIO_CA_CERT || "ca.crt");
@@ -16,7 +17,7 @@ export const s3Client = new S3Client({
     secretAccessKey: process.env.MINIO_PASSWORD || "minioadmin123",
   },
   forcePathStyle: true,
-  requestHandler: new (require("@aws-sdk/node-http-handler").NodeHttpHandler)({
+  requestHandler: new NodeHttpHandler({
     httpsAgent: new https.Agent({
       ca: caCert, // trust mkcert CA
     }),
