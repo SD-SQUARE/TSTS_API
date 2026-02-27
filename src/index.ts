@@ -33,7 +33,10 @@ async function main() {
       initSocket(server);
     });
   } catch (err) {
-    logger.error("❌ Server failed to start", err);
+    logger.error("❌ Server failed to start", {
+      message: err instanceof Error ? err.message : err,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     process.exit(1);
   }
 }
