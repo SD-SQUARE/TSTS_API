@@ -11,6 +11,7 @@ import { seedGroupRelations } from "./groups/group-relations.seed.js";
 import { seedPermissions } from "./permissions/permissions.seed.js";
 import { seedPermissionProfiles } from "./permissions/permission-profiles.seed.js";
 import { seedProblems } from "./problems/problems.seed.js";
+import { seedTickets } from "./tickets/tickets.seed.js";
 
 export async function runSeeds() {
   try {
@@ -24,13 +25,13 @@ export async function runSeeds() {
 
     console.log("📋 Seeding specializations...");
     await seedSpecializations(PostgresDataSource);
-    
+
     console.log("🔧 Seeding problems...");
     await seedProblems(PostgresDataSource);
-    
+
     // Small pause after problems seeding to help with memory
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     console.log("🏫 Seeding universities...");
     await seedUniversities(PostgresDataSource);
 
@@ -52,6 +53,9 @@ export async function runSeeds() {
 
     console.log("🔗 Seeding group relations...");
     await seedGroupRelations(PostgresDataSource);
+
+    console.log("🎫 Seeding tickets...");
+    await seedTickets(PostgresDataSource, 50);
 
     console.log("🎉 Seeding completed successfully!");
   } catch (error) {
