@@ -3,6 +3,7 @@ import { seedCapitalUniversityDomains } from "./domains/capital-university/capit
 import { seedUniversities } from "./university/universities.seed.js";
 import { seedSpecializations } from "./specializations/specializations.seed.js";
 import { seedHelwanNationalUniversityDomains } from "./domains/helwan-national-university/helwanNationalUniversityDomainSeeder.js";
+import { seedSuperAdmin } from "./users/super-admin.seed.js";
 import { seedAdmins } from "./users/admins.seed.js";
 import { seedRequesters } from "./users/requesters.seed.js";
 import { seedTechnicians } from "./users/technicians.seed.js";
@@ -11,6 +12,7 @@ import { seedGroupRelations } from "./groups/group-relations.seed.js";
 import { seedPermissions } from "./permissions/permissions.seed.js";
 import { seedPermissionProfiles } from "./permissions/permission-profiles.seed.js";
 import { seedProblems } from "./problems/problems.seed.js";
+import { seedKnowledgeBase } from "./knowledge-base/knowledge-base.seed.js";
 
 export async function runSeeds() {
   try {
@@ -46,12 +48,16 @@ export async function runSeeds() {
     await seedGroups(PostgresDataSource);
 
     console.log("👤 Seeding users...");
+    await seedSuperAdmin(PostgresDataSource);
     await seedAdmins(PostgresDataSource, 10);
     await seedTechnicians(PostgresDataSource, 50);
     await seedRequesters(PostgresDataSource, 50);
 
     console.log("🔗 Seeding group relations...");
     await seedGroupRelations(PostgresDataSource);
+
+    console.log("📚 Seeding knowledge base...");
+    await seedKnowledgeBase(PostgresDataSource);
 
     console.log("🎉 Seeding completed successfully!");
   } catch (error) {

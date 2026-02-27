@@ -15,7 +15,7 @@ import { getTechnicianByIdService } from "../technician/technicianQueryService.j
 export const getUserProfileByType = async (id, lang: "ar" | "en") => {
   const userType = await userRepository.getUserTypeByUserId(id);
 
-  if (userType == UserType.ADMIN) {
+  if (userType == UserType.ADMIN || userType == UserType.SUPER_ADMIN) {
     return await getAdminByIdService(id, lang);
   } else if (userType == UserType.REQUESTER) {
     return await getRequesterByIdService(id, lang);
@@ -38,7 +38,7 @@ export const getMyProfile = async (id, lang: "ar" | "en") => {
 export const fetchUserGroupsByTypeService = async (
   userId: string,
   query: IPagination,
-  lang: "ar" | "en"
+  lang: "ar" | "en",
 ) => {
   query.page_index = parsePageIndex(query?.page_index);
   query.page_size = parsePageSize(query?.page_size);
@@ -51,12 +51,12 @@ export const fetchUserGroupsByTypeService = async (
   if (userType === UserType.ADMIN || userType === UserType.SUPER_ADMIN) {
     [groups, total] = await userRepository.getAdminsGroupsHeadsPaged(
       userId,
-      query
+      query,
     );
   } else if (userType === UserType.TECHNICIAN) {
     [groups, total] = await userRepository.getTechniciansGroupsPaged(
       userId,
-      query // if you need pagination in repo
+      query, // if you need pagination in repo
     );
   } else {
     return null;
@@ -64,7 +64,6 @@ export const fetchUserGroupsByTypeService = async (
   const dtoList = (
     await Promise.all(groups.map((g) => toGroupDto(g, lang)))
   ).filter(Boolean);
-
 
   return {
     groups: dtoList,
@@ -78,18 +77,18 @@ export const fetchUserGroupsByTypeService = async (
 export const fetchUserSpecializationsService = async (
   userId: string,
   query: IPagination,
-  lang: "ar" | "en"
+  lang: "ar" | "en",
 ) => {
   query.page_index = parsePageIndex(query?.page_index);
   query.page_size = parsePageSize(query?.page_size);
 
   const [specs, total] = await userRepository.getUserSpecializations(
     userId,
-    query
+    query,
   );
 
   const dtoList = await Promise.all(
-    specs.map((g) => toSpecializationDto(g, lang))
+    specs.map((g) => toSpecializationDto(g, lang)),
   );
 
   return {
@@ -103,7 +102,7 @@ export const fetchUserSpecializationsService = async (
 
 export const fetchAllTechniciansGroupsService = async (
   userId: string,
-  lang: "ar" | "en"
+  lang: "ar" | "en",
 ) => {
   const groups = await userRepository.getAllTechniciansGroups(userId);
 
@@ -112,13 +111,13 @@ export const fetchAllTechniciansGroupsService = async (
 
 export const fetchAllAdminsGroupsAsHeadsService = async (
   userId: string,
-  lang: "ar" | "en"
+  lang: "ar" | "en",
 ) => {
   const groups = await userRepository.getAllAdminsGroupsAsHeads(userId);
 
   return Promise.all(
     groups
       .filter((g): g is Group => g !== null) // 👈 REQUIRED
-      .map((g) => toGroupDto(g, lang))
+      .map((g) => toGroupDto(g, lang)),
   );
 };
