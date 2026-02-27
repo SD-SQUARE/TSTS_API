@@ -58,7 +58,7 @@ services:
     command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
     volumes:
       - minio_data:/data
-      - /opt/certs:/root/certs:ro
+      - /opt/tsts-project/certs:/certs:ro
     networks:
       - tsts-network
 
