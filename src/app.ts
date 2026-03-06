@@ -15,7 +15,7 @@ import { socketIoMiddleware } from "./middleware/socketIo.js";
 import { io as socketIoInstance } from "./config/socket.js";
 import { notificationMessage, notificationUser, ticket } from "./services/socket.service.js";
 import { requestContextMiddleware } from "./middleware/requestContextMiddleware.js";
-
+import { auditMiddleware } from "./middleware/audit-middleware.js";
 
 const app = express();
 
@@ -56,6 +56,7 @@ app.use(i18nextMiddleware.handle(i18n));
 app.use(socketIoMiddleware(socketIoInstance));
 
 app.use(requestContextMiddleware);
+app.use(auditMiddleware);
 
 
 import {
