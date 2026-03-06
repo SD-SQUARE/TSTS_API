@@ -13,18 +13,22 @@ import { initSocket } from "./config/socket.js";
 import http from "http";
 import https from "https";
 import fs from "fs";
+import { initMongoDataSource } from "./database/mongo-data-source.js";
 
 const PROTOCOL = process.env.PROTOCOL ?? "http";
 const HOST = process.env.HOST ?? "localhost";
 const PORT = process.env.PORT ?? 3000;
 const BUCKET = process.env.MINIO_BUCKET!;
-const HTTPS_OPTIONS = {
-  key: fs.readFileSync("/certs/staging.myapp.local-key.pem"),
-  cert: fs.readFileSync("/certs/staging.myapp.local.pem"),
-  ca: fs.readFileSync("/certs/rootCA.pem"), // optional for client trust
-};
+// const HTTPS_OPTIONS = {
+//   key: fs.readFileSync("/certs/staging.myapp.local-key.pem"),
+//   cert: fs.readFileSync("/certs/staging.myapp.local.pem"),
+//   ca: fs.readFileSync("/certs/rootCA.pem"), // optional for client trust
+// };
+// const server =
+//   PROTOCOL === "http" ? http.createServer(app) : https.createServer(HTTPS_OPTIONS,app);
+
 const server =
-  PROTOCOL === "http" ? http.createServer(app) : https.createServer(HTTPS_OPTIONS,app);
+http.createServer(app) ;
 
 /**
  * Main entry point of the server.
@@ -34,6 +38,7 @@ const server =
 async function main() {
   try {
     initDataSource();
+    initMongoDataSource();
     connectRedis();
     await ensureBucketExists(BUCKET);
 
