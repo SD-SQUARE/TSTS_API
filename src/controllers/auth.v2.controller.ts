@@ -5,6 +5,7 @@ import { generateAuthenticationOptions,verifyAuthenticationResponse } from "@sim
 import { AppError } from "../utils/AppError.js";
 import { PostgresDataSource } from "../database/postgres-data-source.js";
 import { TrustedDevice } from "../entities/TrustedDevice.js";
+import { audit } from "../helpers/auditBuilder.js";
 
 
 
@@ -13,14 +14,31 @@ const deviceRepo = PostgresDataSource.getRepository(TrustedDevice);
 export const loginV2 = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  const user = await findByEmail(email);
-  if (!user) throw new AppError("Invalid credentials", 400);
+  audit(req)
+    .summary('User login attempt')
+    .action('USER_LOGIN')
+    .metadata({ email })
+    .step('login request received');
 
-  await loginUser(email, password);
+  const user = await findByEmail(email);
+
+  if (!user) {
+    audit(req).step('user not found').metadata({ reason: 'invalid_email' });
+
+    throw new AppError('Invalid credentials', 400);
+  }
+
+  audit(req).resource('USER', user.id).step('user found');
+
+  await loginUser(email, password, req);
 
   const devicesCount = await deviceRepo.count({
     where: { user: { id: user.id }, isActive: true },
   });
+
+  audit(req)
+    .metadata({ trustedDevices: devicesCount })
+    .step(`trusted devices count: ${devicesCount}`);
 
   // 🟢 NO trusted devices → login normally
   if (devicesCount === 0) {
@@ -38,6 +56,11 @@ export const loginV2 = async (req: Request, res: Response) => {
 
     const { accessToken, refreshToken } = generateAuthTokens(payload);
 
+    audit(req)
+      .step('tokens generated')
+      .summary('User logged in without trusted device')
+      .metadata({ loginMethod: 'password_only' });
+
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
       sameSite: "strict",
@@ -52,8 +75,13 @@ export const loginV2 = async (req: Request, res: Response) => {
   }
 
   // 🔐 Devices exist → require verification
+  audit(req)
+    .summary('Trusted device verification required')
+    .metadata({ loginStep: 'DEVICE_VERIFICATION_REQUIRED' })
+    .step('trusted device verification required');
+
   return res.json({
-    step: "TRUSTED_DEVICE_REQUIRED",
+    step: 'TRUSTED_DEVICE_REQUIRED',
     userId: user.id,
   });
 };
@@ -63,7 +91,11 @@ export const loginV2 = async (req: Request, res: Response) => {
 export const getAuthOptions = async (req: any, res: any) => {
   const { userId } = req.body;
 
-
+  audit(req)
+    .summary("Trusted device authentication challenge requested")
+    .action("WEBAUTHN_AUTH_OPTIONS")
+    .resource("USER", userId)
+    .step("authentication options request received");
 
   const options = await generateAuthenticationOptions({
     rpID: process.env.RP_ID! ?? "localhost",
@@ -72,11 +104,24 @@ export const getAuthOptions = async (req: any, res: any) => {
     timeout: 60000,
   });
 
+  audit(req)
+    .step("authentication challenge generated")
+    .metadata({
+      challengeLength: options.challenge?.length,
+      rpID: process.env.RP_ID ?? "localhost",
+    });
+
   // store challenge securely
   req.session.webauthnChallenge = {
     challenge: options.challenge,
     userId,
   };
+
+  audit(req)
+    .step("challenge stored in session")
+    .metadata({
+      sessionStored: true,
+    });
 
   return res.json(options);
 };
@@ -85,21 +130,47 @@ export const verifyAuthOptions = async (req: any, res: any) => {
   const { credential } = req.body;
   const user = req.user;
 
+  audit(req)
+    .summary("Trusted device authentication verification")
+    .action("WEBAUTHN_VERIFY")
+    .resource("USER", user?.id)
+    .step("device verification request received");
+
   const sessionData = req.session.webauthnChallenge;
+
   if (!sessionData) {
+    audit(req)
+      .step("missing webauthn session")
+      .metadata({ reason: "missing_session" });
+
     return res.status(400).json({ message: "Missing WebAuthn session" });
   }
 
   const { challenge, userId } = sessionData;
 
+  audit(req)
+    .step("webauthn session found")
+    .metadata({ userId });
+
   const device = await deviceRepo.findOne({
-    where: { credentialId: Buffer.from(credential.id).toString("base64url"), user: { id: userId } },
+    where: {
+      credentialId: Buffer.from(credential.id).toString("base64url"),
+      user: { id: userId },
+    },
     relations: ["user"],
   });
 
   if (!device) {
+    audit(req)
+      .step("device not found")
+      .metadata({ credentialId: credential.id });
+
     return res.status(400).json({ message: "Unknown device" });
   }
+
+  audit(req)
+    .step("trusted device located")
+    .resource("DEVICE", device.credentialId);
 
   const verification = await verifyAuthenticationResponse({
     response: credential,
@@ -114,14 +185,24 @@ export const verifyAuthOptions = async (req: any, res: any) => {
   });
 
   if (!verification.verified) {
+    audit(req)
+      .step("device verification failed")
+      .metadata({ verificationResult: false });
+
     return res.status(401).json({ message: "Device verification failed" });
   }
+
+  audit(req)
+    .step("device verification successful")
+    .metadata({ verificationResult: true });
 
   // 🔐 Update counter
   device.counter = verification.authenticationInfo!.newCounter;
   await deviceRepo.save(device);
 
-  // ✅ Issue tokens (reuse v1 logic)
+  audit(req).step("device counter updated");
+
+  // ✅ Issue tokens
   const payload = {
     id: device.user.id,
     email: device.user.email,
@@ -134,7 +215,11 @@ export const verifyAuthOptions = async (req: any, res: any) => {
     },
   };
 
-  const { accessToken, refreshToken } = generateAuthTokens(payload);
+  const { accessToken, refreshToken } = generateAuthTokens(payload, req);
+
+  audit(req)
+    .step("authentication tokens issued")
+    .summary("User logged in via trusted device");
 
   res.cookie("refresh_token", refreshToken, {
     httpOnly: true,
@@ -144,6 +229,8 @@ export const verifyAuthOptions = async (req: any, res: any) => {
 
   // cleanup
   req.session.webauthn = null;
+
+  audit(req).step("webauthn session cleared");
 
   return res.json({
     access_token: accessToken,
