@@ -550,10 +550,11 @@ export abstract class BaseReportGeneratorPuppeteer implements IReportGenerator {
           <div class="footer-date">${calendarIcon}<span>${dateFormatted}</span></div>
           <div class="footer-time">${clockIcon}<span>${timeFormatted}</span></div>
         </div>`
-      : `<div class="footer-user">${userIcon}<span>${generatedByLabel}: ${this.config.metadata.generatedBy}</span></div>`;
+      : `<div class="footer-user">${userIcon}<span> ${this.config.metadata.generatedBy}</span></div>`;
 
+    // ${generatedByLabel}:
     const rightContent = isRTL
-      ? `<div class="footer-user">${userIcon}<span>${generatedByLabel}: ${this.config.metadata.generatedBy}</span></div>`
+      ? `<div class="footer-user">${userIcon}<span> ${this.config.metadata.generatedBy}</span></div>`
       : `<div class="footer-datetime">
           <div class="footer-date">${calendarIcon}<span>${dateFormatted}</span></div>
           <div class="footer-time">${clockIcon}<span>${timeFormatted}</span></div>
