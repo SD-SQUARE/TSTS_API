@@ -41,6 +41,7 @@ import {
   getGroupsForUserPagedController,
   getSpecializationsForUserPagedController,
 } from "../controllers/users.controller.js";
+import { getPermissionsOfUser } from "../controllers/PermissionProfile.controller.js";
 
 const router = Router();
 
@@ -64,7 +65,11 @@ router
   .get(
     "/:id/specializations",
     asyncHandler(getSpecializationsForUserPagedController)
-  );
+  ).get(
+  "/:id/permissions",
+  asyncHandler(getPermissionsOfUser)
+);
+  
 
 router
   .post(

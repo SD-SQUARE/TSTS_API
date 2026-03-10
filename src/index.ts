@@ -18,14 +18,19 @@ const PROTOCOL = process.env.PROTOCOL ?? "http";
 const HOST = process.env.HOST ?? "localhost";
 const PORT = process.env.PORT ?? 3000;
 const BUCKET = process.env.MINIO_BUCKET!;
-const HTTPS_OPTIONS = {
-  key: fs.readFileSync("/certs/staging.myapp.local-key.pem"),
-  cert: fs.readFileSync("/certs/staging.myapp.local.pem"),
-  ca: fs.readFileSync("/certs/rootCA.pem"), // optional for client trust
-};
-const server =
-  PROTOCOL === "http" ? http.createServer(app) : https.createServer(HTTPS_OPTIONS,app);
+let server;
 
+if (PROTOCOL === "https") {
+  const HTTPS_OPTIONS = {
+    key: fs.readFileSync(path.join(process.cwd(),"certs/staging.myapp.local-key.pem")),
+    cert: fs.readFileSync(path.join(process.cwd(),"certs/staging.myapp.local.pem")),
+    ca: fs.readFileSync(path.join(process.cwd(),"certs/rootCA.pem")),
+  };
+
+  server = https.createServer(HTTPS_OPTIONS, app);
+} else {
+  server = http.createServer(app);
+}
 /**
  * Main entry point of the server.
  * Initializes the database and Redis, ensures the S3 bucket exists, and starts the server.

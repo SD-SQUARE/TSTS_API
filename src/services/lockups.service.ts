@@ -12,7 +12,11 @@ import { Department } from "../entities/Department.js";
 import { Specialization } from "../entities/Specialization.js";
 import { Group } from "../entities/Group.js";
 import { Ticket } from "../entities/Ticket.js";
+import { PermissionProfile } from "../entities/PermissionProfile.js";
 import { ProblemRepo } from "../repositories/ProblemRepo.js";
+import { log } from "console";
+import logger from "../utils/logger.js";
+
 
 interface UsersLockupQuery {
   first_name?: string;
@@ -71,6 +75,7 @@ const specializationsRepository =
 const groupsRepository = PostgresDataSource.getRepository(Group);
 const ticketsRepository = PostgresDataSource.getRepository(Ticket);
 const problemRepo = new ProblemRepo().getRepository();
+const PermissionProfileRepo = PostgresDataSource.getRepository(PermissionProfile);
 
 export const getUsersLockupService = async (query: UsersLockupQuery) => {
   const { skip, take } = buildPagination({
@@ -130,7 +135,6 @@ export const getUsersLockupService = async (query: UsersLockupQuery) => {
 
 interface PermissionsLockupQuery {
   name?: string;
-  category?: string;
   page?: number;
   limit?: number;
 }
@@ -147,27 +151,20 @@ export const getPermissionsLockupService = async (
 
   if (query.name) {
     qb.andWhere(
-      `permission.code ILIKE :name OR permission.description->>'en' ILIKE :name OR permission.description->>'ar' ILIKE :name`,
+      `permission.name->>'en' ILIKE :name OR permission.name->>'ar' ILIKE :name`,
       { name: `%${query.name}%` }
     );
   }
 
-  if (query.category) {
-    qb.andWhere(`permission.category ILIKE :category`, {
-      category: `%${query.category}%`,
-    });
-  }
+  
 
   const total = await qb.getCount();
   const permissions = await qb.skip(skip).take(take).getMany();
 
   const mappedPermissions = permissions.map((p) => ({
     id: p.id,
-    name_en: p.code || "",
-    name_ar: p.code || "", // assuming code is the same for both languages, or adapt as needed
-    description_en: p.description?.en || "",
-    description_ar: p.description?.ar || "",
-    category: p.category || "",
+    name_en: p.name?.en || "",
+    name_ar: p.name?.ar || "",
   }));
 
   return {
@@ -599,3 +596,41 @@ export const getTicketProblemsService = async (
     ),
   };
 };
+export const getPermissionProfilesLockupService = async (query: PermissionsLockupQuery) => {
+  const { skip, take } = buildPagination({
+    page: query.page,
+    limit: query.limit,
+  });
+
+  const qb = PermissionProfileRepo
+    .createQueryBuilder("permission_profile")
+    .leftJoinAndSelect("permission_profile.permissions", "permission");
+
+  if (query.name) {
+    qb.andWhere(
+      `permission_profile.name->>'en' ILIKE :name OR permission_profile.name->>'ar' ILIKE :name`,
+      { name: `%${query.name}%` }
+    );
+  }
+
+  const total = await qb.getCount();
+  const profiles = await qb
+    .skip(skip)
+    .take(take)
+    .getMany();
+  const mappedProfiles = profiles.map((p) => ({
+    id: p.id,
+    name_en: p.name?.en || "",
+    name_ar: p.name?.ar || "",
+    description_en: p.descriptions?.en || "",
+    description_ar: p.descriptions?.ar || "",
+    permissions: p.permissions.map((perm) => ({
+      Key: perm.key,
+      name_en: perm.name?.en || "",
+      name_ar: perm.name?.ar || "",
+    })),
+  }));
+
+  return mappedProfiles;
+};
+   

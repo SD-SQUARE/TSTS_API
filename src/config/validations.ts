@@ -1,6 +1,5 @@
 // English letters and spaces
-export const ENGLISH_REGEX = /^[A-Za-z\s]+$/;
-
+export const ENGLISH_REGEX = /^[\p{L}\p{N}\s.,!?'"()-]+$/u;
 // Arabic Unicode ranges (common set) - allow spaces
 export const ARABIC_REGEX =
  
