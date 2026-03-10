@@ -27,6 +27,7 @@ export const PostgresDataSource = new DataSource({
   migrationsTableName: "migration",
   migrations: [path.join(__dirname, "src/migrations/*.ts")],
   entities: Object.values(entities),
+  metadataTableName: "typeorm_metadata", // Explicitly set metadata table name
 });
 
 /**
@@ -39,11 +40,16 @@ export async function initDataSource() {
     if (!PostgresDataSource.isInitialized) {
       await PostgresDataSource.initialize();
       logger.info(
-        `[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`
+        `[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`,
       );
       logger.info(
-        `[postgres] Database Connected: ${PostgresDataSource.options.database}`
+        `[postgres] Database Connected: ${PostgresDataSource.options.database}`,
       );
+
+      // Run migrations after initialization
+      // logger.info(`[postgres] Running migrations...`);
+      // await PostgresDataSource.runMigrations();
+      // logger.info(`[postgres] Migrations completed`);
     }
     return PostgresDataSource;
   } catch (err) {
@@ -62,10 +68,10 @@ export async function destroyDataSource() {
   if (PostgresDataSource.isInitialized) {
     await PostgresDataSource.destroy();
     logger.info(
-      `[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`
+      `[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`,
     );
     logger.info(
-      `[postgres] Database Disconnected: ${PostgresDataSource.options.database}`
+      `[postgres] Database Disconnected: ${PostgresDataSource.options.database}`,
     );
   }
 }
