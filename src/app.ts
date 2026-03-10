@@ -76,6 +76,7 @@ import specializationsRouter from "./routes/specializations.router.js";
 import workHourRouter from "./routes/workHour.router.js";
 import knowlegeBaseRouter from "./routes/knowlegeBase.router.js";
 import  ProblemRouter  from "./routes/problems.router.js";
+import permissionProfileRouter from "./routes/permissionProfile.router.js";
 
 import logger from "./utils/logger.js";
 import { en } from '@faker-js/faker';
@@ -120,6 +121,7 @@ app.use("/api/v1/specializations", specializationsRouter);
 app.use("/api/v1/work-hours", workHourRouter);
 app.use("/api/v1/knowledge-base", knowlegeBaseRouter);
 app.use("/api/v1/problems", ProblemRouter);
+app.use("/api/v1/permissions/profile", permissionProfileRouter);
 
 app.use("/api/v1/universities", universitiesRouter);
 app.use("/api/v1/domains", domainsRouter);

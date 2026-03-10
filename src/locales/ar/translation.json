@@ -150,5 +150,12 @@
   "rating_min": "يجب أن يكون التقييم على الأقل 1",
   "rating_max": "يجب ألا يتجاوز التقييم 5",
   "note_too_long": "يجب ألا تتجاوز الملاحظة 2000 حرف",
-  "invalid_problem": "معرف المشكلة غير صالح"
-}
+  "invalid_problem": "معرف المشكلة غير صالح",
+  "permission_profile_exists": "ملف الصلاحيات موجود بالفعل",
+  "permissions_required": "الصلاحيات مع أسماء باللغتين مطلوبة",
+  "permission_profile_created": "تم إنشاء ملف الصلاحيات بنجاح",
+  "permission_profile_not_found": "ملف الصلاحيات غير موجود",
+  "permission_name_invalid": "اسم الصلاحية يجب أن يكون بالإنجليزية أو العربية",
+  "permissions_invalid": "الصلاحيات المقدمة غير صالحة",
+  "permission_profile_updated": "تم تحديث ملف الصلاحيات بنجاح",
+  "permission_profile_deleted": "تم حذف ملف الصلاحيات بنجاح"}

@@ -2,70 +2,53 @@ import { DataSource } from "typeorm";
 import { Permission } from "../../../entities/index.js";
 
 type PermissionSeed = {
-  code: string;
-  category?: string;
-  error?: { en?: string; ar?: string };
-  description?: { en?: string; ar?: string };
+  key: string;
+  name?: { en?: string; ar?: string };
 };
 
 const permissionsSeedData: PermissionSeed[] = [
-  // ─── User Management ──────────────────────────────────────────────
   {
-    code: "users.view",
-    category: "users",
-    description: {
-      en: "View users list and details",
-      ar: "عرض قائمة المستخدمين وتفاصيلهم",
+    key: "users.view",
+    name: {
+      en: "View Users",
+      ar: "عرض المستخدمين",
     },
   },
   {
-    code: "users.create",
-    category: "users",
-    description: {
-      en: "Create new users",
-      ar: "إنشاء مستخدمين جدد",
-    },
-    error: {
-      en: "You are not allowed to create users",
-      ar: "غير مسموح لك بإنشاء مستخدمين",
+    key: "users.create",
+    name: {
+      en: "Create Users",
+      ar: "إنشاء مستخدمين",
     },
   },
   {
-    code: "users.edit",
-    category: "users",
-    description: {
-      en: "Edit existing users",
-      ar: "تعديل بيانات المستخدمين",
+    key: "users.edit",
+    name: {
+      en: "Edit Users",
+      ar: "تعديل المستخدمين",
     },
   },
   {
-    code: "users.delete",
-    category: "users",
-    description: {
-      en: "Soft delete users",
-      ar: "حذف المستخدمين (حذف منطقي)",
+    key: "users.delete",
+    name: {
+      en: "Delete Users",
+      ar: "حذف المستخدمين",
     },
   },
-
-  // ─── Domains & Departments ───────────────────────────────────────
   {
-    code: "domains.manage",
-    category: "domains",
-    description: {
-      en: "Manage domains (faculties / admin units)",
+    key: "domains.manage",
+    name: {
+      en: "Manage Domains",
       ar: "إدارة الكليات / الإدارات",
     },
   },
   {
-    code: "departments.manage",
-    category: "departments",
-    description: {
-      en: "Manage departments",
+    key: "departments.manage",
+    name: {
+      en: "Manage Departments",
       ar: "إدارة الأقسام",
     },
   },
-
-  // ➕ Add more permissions as needed...
 ];
 
 export async function seedPermissions(dataSource: DataSource) {
@@ -74,25 +57,24 @@ export async function seedPermissions(dataSource: DataSource) {
   for (const p of permissionsSeedData) {
     const existing = await permissionRepo
       .createQueryBuilder("perm")
-      .where("perm.code = :code", { code: p.code })
-      .andWhere("perm.deletedAt IS NULL")
+      .where("perm.key = :key", { key: p.key })
       .getOne();
 
     if (existing) {
-      existing.category = p.category;
-      existing.description = p.description;
-      existing.error = p.error;
+      existing.name = p.name;
+
       await permissionRepo.save(existing);
-      console.log(`✅ [Permission] Updated: ${p.code}`);
+
+      console.log(`✅ [Permission] Updated: ${p.key}`);
     } else {
       const newPerm = permissionRepo.create({
-        code: p.code,
-        category: p.category,
-        description: p.description,
-        error: p.error,
+        key: p.key,
+        name: p.name,
       });
+
       await permissionRepo.save(newPerm);
-      console.log(`✅ [Permission] Inserted: ${p.code}`);
+
+      console.log(`✅ [Permission] Inserted: ${p.key}`);
     }
   }
 }
