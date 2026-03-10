@@ -27,6 +27,7 @@
     "db:destroy": "docker-compose -f ./docker/compose.db.yml down -v",
     "db:reset": "run-s db:destroy db:start dev",
     "seed": "tsx src/database/seeding/index.ts",
+    "seed-reports": "tsx src/database/seeding/reports/reports.seed.ts",
     "test": "jest --runInBand",
     "db:ProdBuild": "docker-compose -f ./docker/compose.db.yml up --build -d",
     "db:ProdDown": "docker-compose -f ./docker/compose.db.yml down",
@@ -40,7 +41,9 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.936.0",
+    "@aws-sdk/node-http-handler": "^3.370.0",
     "@aws-sdk/s3-request-presigner": "^3.936.0",
+    "@faker-js/faker": "^10.1.0",
     "@simplewebauthn/server": "^13.2.2",
     "@types/multer": "^2.0.0",
     "archiver": "^7.0.1",
@@ -68,14 +71,14 @@
     "multer": "^2.0.2",
     "nodemailer": "^7.0.10",
     "pg": "^8.16.3",
+    "puppeteer": "^24.37.5",
     "redis": "^5.10.0",
     "reflect-metadata": "^0.2.2",
     "socket.io": "^4.8.1",
     "tsconfig-paths": "^4.2.0",
     "typeorm": "^0.3.27",
     "winston": "^3.18.3",
-    "zod": "^4.1.12",
-    "@faker-js/faker": "^10.1.0"
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.28.5",

@@ -13,14 +13,16 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { csrfMiddleware } from "./config/csrf.js";
 import { socketIoMiddleware } from "./middleware/socketIo.js";
 import { io as socketIoInstance } from "./config/socket.js";
-import { notificationMessage, notificationUser, ticket } from "./services/socket.service.js";
+import {
+  notificationMessage,
+  notificationUser,
+  ticket,
+} from "./services/socket.service.js";
 import { requestContextMiddleware } from "./middleware/requestContextMiddleware.js";
-
 
 const app = express();
 
-
-app.set("trust proxy", process.env.NODE_ENV === "production"? 1 : 0);
+app.set("trust proxy", process.env.NODE_ENV === "production" ? 1 : 0);
 // basic security
 app.use(helmet({ contentSecurityPolicy: false })); // CSP setup later if needed
 app.use(hpp());
@@ -31,7 +33,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cookieParser());
-
 
 // CORS
 const allowedOrigins = [
@@ -46,7 +47,7 @@ app.use(
   cors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : true,
     credentials: true,
-  })
+  }),
 );
 
 // Rate limiter
@@ -63,7 +64,6 @@ app.use(socketIoMiddleware(socketIoInstance));
 
 app.use(requestContextMiddleware);
 
-
 import {
   authRouter,
   usersRouter,
@@ -73,7 +73,7 @@ import {
   chatRouter,
   notificationRouter,
   trustedDevicesRouter,
-  authV2Router
+  authV2Router,
 } from "./routes/index.js";
 import universitiesRouter from "./routes/universities.router.js";
 import domainsRouter from "./routes/domains.router.js";
@@ -81,15 +81,14 @@ import departmentsRouter from "./routes/departments.router.js";
 import specializationsRouter from "./routes/specializations.router.js";
 import workHourRouter from "./routes/workHour.router.js";
 import knowlegeBaseRouter from "./routes/knowlegeBase.router.js";
-import  ProblemRouter  from "./routes/problems.router.js";
+import ProblemRouter from "./routes/problems.router.js";
+import reportRoutes from "./routes/report.router.js";
 
 import logger from "./utils/logger.js";
-import { en } from '@faker-js/faker';
 // routes
 app.get("/api/v1/health", (req, res) => {
   logger.info("[HealthCheck]: OK");
   res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
-
 });
 app.post("/debug/send-events", (_req, res) => {
   notificationMessage("server_started", { message: "Server has started" });
@@ -111,8 +110,7 @@ app.use("/api/v2/auth", authV2Router);
 // CSRF (set up if using cookies and forms; for API token flows consider disabling)
 // @AhmedElsenaty
 // TODO: enable in prod
-if (process.env.NODE_ENV === "production")
-  app.use(csrfMiddleware);
+if (process.env.NODE_ENV === "production") app.use(csrfMiddleware);
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/trusted-devices", trustedDevicesRouter);
@@ -135,6 +133,8 @@ app.use("/api/v1/work-hours", workHourRouter);
 app.use("/api/v1/tickets", ticketsRouter);
 app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/notifications", notificationRouter);
+
+app.use("/api/v1/reports", reportRoutes);
 
 app.use(errorHandler);
 

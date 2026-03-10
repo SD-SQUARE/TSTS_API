@@ -11,6 +11,7 @@ import { connectRedis } from "./database/redis.js";
 import { ensureBucketExists } from "./utils/storage.js";
 import { initSocket } from "./config/socket.js";
 import http from "http";
+import { BaseReportGeneratorPuppeteer } from "./services/reports/base/BaseReportGeneratorPuppeteer.js";
 
 const HOST = process.env.HOST ?? "localhost";
 const PORT = process.env.PORT ?? 3000;
@@ -27,6 +28,11 @@ async function main() {
     initDataSource();
     connectRedis();
     await ensureBucketExists(BUCKET);
+
+    // Pre-warm Puppeteer browser for faster PDF generation
+    BaseReportGeneratorPuppeteer.warmUp().catch(err => {
+      logger.warn('[Puppeteer] Failed to warm up browser:', err);
+    });
 
     server.listen(PORT, () => {
       logger.info(`[server] listening on http://${HOST}:${PORT}`);
