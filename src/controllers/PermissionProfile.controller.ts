@@ -156,7 +156,9 @@ export async function editPermissionProfile(req: Request, res: Response) {
 
   if (!profile) {
     return res.status(ResponseStatus.NOT_FOUND).json({
-      message: req.t ? req.t("permission_profile_not_found") : "Permission profile not found",
+      message: req.t
+        ? req.t("permission_profile_not_found")
+        : "Permission profile not found",
     });
   }
 
@@ -171,49 +173,61 @@ export async function editPermissionProfile(req: Request, res: Response) {
     });
   }
 
-  const permissionKeys = permissions.map((p: any) => p?.key);
+  const permissionEntities: any[] = [];
 
-  const permissionEntities = await permissionRepository.find({
-    where: { key: In(permissionKeys) },
-  });
+  for (const p of permissions) {
+    let permission;
 
-  if (permissionEntities.length !== permissionKeys.length) {
-     const  newPermission= permissions.map((p: any) => 
-     {
-      if(Object.hasOwn(p, "key") && p.key) {
-        return p.key;
-      }else{
-        p.key = `perm-${String(p.id).padStart(3, "0")}`;
-        
-        return `perm-${String(p.id).padStart(3, "0")}`;
+    if (p.key) {
+      permission = await permissionRepository.findOne({
+        where: { key: p.key },
+      });
+    }
+    if (!permission) {
+      permission = await permissionRepository
+        .createQueryBuilder("permission")
+        .where("permission.name->>'en' = :en", { en: p.name_en })
+        .andWhere("permission.name->>'ar' = :ar", { ar: p.name_ar })
+        .getOne();
+    }
+
+    if (permission) {
+      if (!permission.key) {
+        permission.key = `perm-${String(permission.id).padStart(3, "0")}`;
       }
-    }
-    );
-  }
 
-  for (const perm of permissionEntities) {
-    const inputPerm = permissions.find((p: any) => p.key === perm.key);
-
-    if (inputPerm) {
-      perm.name = {
-        en: inputPerm.name_en,
-        ar: inputPerm.name_ar,
+      permission.name = {
+        en: p.name_en,
+        ar: p.name_ar,
       };
-    }
-  }
 
-  await permissionRepository.save(permissionEntities);
+      permission = await permissionRepository.save(permission);
+    } else {
+      permission = permissionRepository.create({
+        name: {
+          en: p.name_en,
+          ar: p.name_ar,
+        },
+      });
+      permission = await permissionRepository.save(permission);
+      permission.key = `perm-${String(permission.id).padStart(3, "0")}`;
+      permission = await permissionRepository.save(permission);
+    }
+
+    permissionEntities.push(permission);
+  }
 
   profile.name = name as { en: string; ar: string };
   profile.descriptions = description;
-
   profile.permissions = permissionEntities;
 
   await permissionProfileRepo.save(profile);
 
   return res.json({
     is_updated: true,
-    message: req.t ? req.t("permission_profile_updated") : "Permission profile updated successfully",
+    message: req.t
+      ? req.t("permission_profile_updated")
+      : "Permission profile updated successfully",
   });
 }
 export const getPermissionsOfUser = async (req, res) => {
