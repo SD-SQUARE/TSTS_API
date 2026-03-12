@@ -68,7 +68,8 @@ import {
   chatRouter,
   notificationRouter,
   trustedDevicesRouter,
-  authV2Router
+  authV2Router,
+  auditActionRouter
 } from "./routes/index.js";
 import universitiesRouter from "./routes/universities.router.js";
 import domainsRouter from "./routes/domains.router.js";
@@ -130,6 +131,7 @@ app.use("/api/v1/work-hours", workHourRouter);
 app.use("/api/v1/tickets", ticketsRouter);
 app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/notifications", notificationRouter);
+app.use("/api/v1/audit-logs", auditActionRouter);
 
 app.use(errorHandler);
 
