@@ -1,0 +1,34 @@
+[
+  {
+    "handler": "specialization-tickets-count",
+    "title": {
+      "en": "Statistical Analysis of Tickets by Specialization",
+      "ar": "التحليل الإحصائي للتذاكر حسب التخصص"
+    },
+    "description": {
+      "en": "Report showing ticket counts grouped by specialization. The report can be filtered by day, month, year, or any custom date range.",
+      "ar": "تقرير يوضح عدد التذاكر مجمعة حسب التخصص مع إمكانية التصفية حسب اليوم أو الشهر أو السنة أو أي نطاق زمني محدد."
+    },
+    "columns": [
+      {
+        "key": "specialization",
+        "label": {
+          "en": "Specialization",
+          "ar": "التخصص"
+        }
+      },
+      {
+        "key": "ticketsCount",
+        "label": {
+          "en": "tickets count",
+          "ar": "عدد التذاكر"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "column": "specializationId"
+      }
+    ]
+  }
+]

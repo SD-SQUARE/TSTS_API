@@ -53,7 +53,7 @@ export const loginV2 = async (req: Request, res: Response) => {
         last: user.lastName,
       },
     };
-
+    (req as any).user = payload;
     const { accessToken, refreshToken } = generateAuthTokens(payload);
 
     audit(req)
