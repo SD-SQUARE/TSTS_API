@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { MongoDataSource } from '../database/mongo-data-source.js';
 import { AuditLog } from '../entities/mongo-entities/AuditAction.js';
+import logger from '../utils/logger.js';
 
 export const auditMiddleware = (
   req: any,
@@ -13,6 +14,9 @@ export const auditMiddleware = (
     steps: [],
   };
 
+  
+  next();
+  
   res.on('finish', async () => {
     try {
       if (!MongoDataSource.isInitialized) {
@@ -21,7 +25,7 @@ export const auditMiddleware = (
       }
 
       const repo = MongoDataSource.getMongoRepository(AuditLog);
-
+      logger.info(`Audit log: ${JSON.stringify(req.audit)}`);
       await repo.insertOne({
         summary: req.audit?.summary,
         action: req.audit?.action,
@@ -29,7 +33,7 @@ export const auditMiddleware = (
         actor: {
           id: req.user?.id,
           type: req.user?.role,
-          ipAddress: req.ip,
+          ipAddress: req.ip.includes('::1') || req.ip === '::1' ? 'localhost' : req.ip,
           userAgent: req.headers['user-agent'],
           full_name: req.user?.name,
         },
@@ -44,5 +48,4 @@ export const auditMiddleware = (
     }
   });
 
-  next();
 };
