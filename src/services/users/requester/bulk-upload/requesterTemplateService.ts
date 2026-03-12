@@ -37,9 +37,9 @@ export const generateRequesterTemplateService =
     const workbook = new ExcelJS.Workbook();
 
     // Create sheets
-    createInstructionsSheet(workbook);
     const data = await fetchTemplateData();
     const worksheet = createMainWorksheet(workbook, data.specializations);
+    createInstructionsSheet(workbook);
 
     // Create dropdown validation sheets
     createDropdownValidationSheets(workbook, data);
@@ -397,7 +397,7 @@ const createDropdownValidationSheets = (
 
   // University list sheet
   const universityListSheet = workbook.addWorksheet("_UniversityList", {
-    state: "hidden",
+    state: "veryHidden",
   });
   universityListSheet.columns = [{ header: "الجامعة", key: "name", width: 40 }];
   universities.forEach((uni, index) => {
@@ -406,7 +406,7 @@ const createDropdownValidationSheets = (
 
   // Domain list sheet with columns per university
   const domainListSheet = workbook.addWorksheet("_DomainList", {
-    state: "hidden",
+    state: "veryHidden",
   });
   const domainsByUniversity = groupByParent(domains, "university");
 
@@ -438,7 +438,7 @@ const createDropdownValidationSheets = (
 
   // Department list sheet with columns per domain
   const departmentListSheet = workbook.addWorksheet("_DepartmentList", {
-    state: "hidden",
+    state: "veryHidden",
   });
   const departmentsByDomain = groupByParent(departments, "domain");
 

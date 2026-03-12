@@ -141,6 +141,9 @@ export async function seedRequesters(
       lastNameEn: englishMenNames[(i + 2) % englishMenNames.length], // English last name
       lastNameAr: arabicMenNames[(i + 2) % arabicMenNames.length], // Arabic last name
 
+      fullNameEn: `${englishNames[i % englishNames.length]} ${englishMenNames[(i + 2) % englishMenNames.length]}`,
+      fullNameAr: `${arabicNames[i % arabicNames.length]} ${arabicMenNames[(i + 2) % arabicMenNames.length]}`,
+
       ssn,
       mobiles: [mobile, mobile],
       phones: [mobile],

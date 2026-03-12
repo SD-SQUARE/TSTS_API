@@ -146,6 +146,9 @@ export async function seedAdmins(dataSource: DataSource, count = 100) {
       lastNameEn: englishMenNames[(i + 2) % englishMenNames.length],
       lastNameAr: arabicMenNames[(i + 2) % arabicMenNames.length],
 
+      fullNameEn: `${englishNames[i % englishNames.length]} ${englishMenNames[(i + 2) % englishMenNames.length]}`,
+      fullNameAr: `${arabicNames[i % arabicNames.length]} ${arabicMenNames[(i + 2) % arabicMenNames.length]}`,
+
       ssn,
       mobiles: [mobile, mobile],
       phones: [mobile],
