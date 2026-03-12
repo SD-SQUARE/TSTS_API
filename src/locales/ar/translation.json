@@ -58,6 +58,11 @@
   "mid_name_ar_must_be_arabic": "الإسم الأوسط يجب أن يكون باللغة العربية",
   "last_name_ar_must_be_arabic": "الإسم الأخير يجب أن يكون باللغة العربية",
 
+  "full_name_en_required": "الإسم الكامل بالإنجليزية مطلوب",
+  "full_name_en_must_be_english": "الإسم الكامل يجب أن يكون باللغة الإنجليزية",
+  "full_name_ar_required": "الإسم الكامل بالعربية مطلوب",
+  "full_name_ar_must_be_arabic": "الإسم الكامل يجب أن يكون باللغة العربية",
+
   "university_required": "الجامعة مطلوبة",
   "domain_required": "المجال مطلوب",
 

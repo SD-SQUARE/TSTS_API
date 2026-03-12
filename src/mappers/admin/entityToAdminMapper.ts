@@ -19,6 +19,9 @@ type AdminDto = {
   last_name_en: string | null;
   last_name_ar: string | null;
 
+  full_name_en: string | null;
+  full_name_ar: string | null;
+
   ssn: string | null;
   university: { id: string; name: string } | null;
   domain: { id: string; name: string } | null;
@@ -75,6 +78,9 @@ export const toAdmin = async (entity: User, lang: Lang): Promise<AdminDto> => {
 
     last_name_en: entity.lastName.en ?? null,
     last_name_ar: entity.lastName.ar ?? null,
+
+    full_name_en: entity.fullName?.en ?? null,
+    full_name_ar: entity.fullName?.ar ?? null,
 
     ssn: entity.ssn ?? null,
 

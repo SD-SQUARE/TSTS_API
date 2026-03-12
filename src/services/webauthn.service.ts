@@ -8,7 +8,7 @@ import { PostgresDataSource } from "../database/postgres-data-source.js";
 import { TrustedDevice } from "../entities/TrustedDevice.js";
 const RP_NAME = "My App";
 const RP_ID = process.env.RP_ID ?? "localhost";
-const ORIGIN = process.env.RP_ORIGIN ?? "http://localhost:3000";
+const ORIGINS = process.env.RP_ORIGINS ?? "http://localhost:3000";
 
 
 const deviceRepo = PostgresDataSource.getRepository(TrustedDevice);
@@ -49,7 +49,7 @@ export const verifyRegisterResponse = async (
   return verifyRegistrationResponse({
     response,
     expectedChallenge,
-    expectedOrigin: ORIGIN,
+    expectedOrigin: ORIGINS.split(","),
     expectedRPID: RP_ID,
   });
 };

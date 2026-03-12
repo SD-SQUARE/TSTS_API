@@ -76,6 +76,10 @@ export const bulkUploadRequestersService = async (
         firstName: data.firstName,
         midName: data.midName,
         lastName: data.lastName,
+        fullName: {
+          en: `${data.firstName.en} ${data.lastName.en}`,
+          ar: `${data.firstName.ar} ${data.lastName.ar}`,
+        },
         ssn: data.ssn,
         user_type: UserType.REQUESTER,
         status: UserStatus.ACTIVE,

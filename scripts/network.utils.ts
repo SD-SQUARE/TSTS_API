@@ -1,14 +1,27 @@
 import { networkInterfaces } from "os";
 
-export const getHostIp = () => {
+export const getHostIp = (): string => {
   const nets = networkInterfaces();
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]!) {
-      // Skip internal (127.0.0.1) and non-IPv4 addresses
+
+  const blockedName = /(vEthernet|WSL|docker|br-|vmnet|hyper-v)/i;
+
+  let fallbackIp: string | null = null;
+
+  for (const [name, interfaces] of Object.entries(nets)) {
+    if (!interfaces || blockedName.test(name)) continue;
+
+    for (const net of interfaces) {
       if (net.family === "IPv4" && !net.internal) {
-        return net.address;
+        // Prefer Ethernet-like interfaces
+        if (/^(eth|en|Ethernet)/i.test(name)) {
+          return net.address;
+        }
+
+        // Save Wi-Fi / others as fallback
+        fallbackIp ??= net.address;
       }
     }
   }
-  return "localhost"; // Fallback
+
+  return fallbackIp ?? "localhost";
 };

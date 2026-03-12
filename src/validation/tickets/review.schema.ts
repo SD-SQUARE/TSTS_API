@@ -10,6 +10,6 @@ export const createTicketReviewSchema = (t: Request["t"]) =>
 
     note: z
       .string()
-      .max(2000, { message: t("note_too_long") })
+      // .max(2000, { message: t("note_too_long") })
       .optional(),
   });

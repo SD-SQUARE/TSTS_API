@@ -14,6 +14,8 @@ services:
       - "5050:5050"
     networks:
       - tsts-network
+    volumes:
+      - /opt/tsts-project/certs:/certs:ro
 
   postgres:
     container_name: postgres_db
@@ -53,9 +55,12 @@ services:
       MINIO_ROOT_USER: ${MINIO_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET}
+      MINIO_CERT_FILE: ${MINIO_CERT_FILE}
+      MINIO_KEY_FILE: ${MINIO_KEY_FILE}
     command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
     volumes:
       - minio_data:/data
+      - /opt/tsts-project/certs:/root/.minio/certs
     networks:
       - tsts-network
 

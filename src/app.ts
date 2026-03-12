@@ -28,20 +28,14 @@ app.use(helmet({ contentSecurityPolicy: false })); // CSP setup later if needed
 app.use(hpp());
 app.use(xss());
 app.use(compression());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ limit: "10mb", extended: true }));
+app.use(express.json({ limit: "1024mb" }));
+app.use(express.urlencoded({ limit: "1024mb", extended: true }));
 app.use(cookieParser());
 
 // CORS
-const allowedOrigins = [
-  process.env.CORS_ORIGIN1,
-  process.env.CORS_ORIGIN2,
-  process.env.CORS_ORIGIN3,
-  process.env.CORS_ORIGIN4,
-  process.env.CORS_ORIGIN5,
-].filter(Boolean); // remove undefined / empty
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(",").filter(Boolean)
+  : []; // remove undefined / empty
 
 app.use(
   cors({
