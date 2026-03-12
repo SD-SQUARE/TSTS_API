@@ -64,6 +64,11 @@
   "mid_name_ar_must_be_arabic": "Middle name must be in Arabic",
   "last_name_ar_must_be_arabic": "Last name must be in Arabic",
 
+  "full_name_en_required": "Full name (EN) is required",
+  "full_name_en_must_be_english": "Full name must be in English",
+  "full_name_ar_required": "Full name (AR) is required",
+  "full_name_ar_must_be_arabic": "Full name must be in Arabic",
+
   "university_required": "University is required",
   "domain_required": "Domain is required",
 

@@ -87,6 +87,18 @@ export const createTechnicianSchema = (t: Request["t"]) =>
       .max(255)
       .regex(ARABIC_REGEX, { message: t("last_name_ar_must_be_arabic") }),
 
+    full_name_en: z
+      .string()
+      .nonempty({ message: t("full_name_en_required") })
+      .max(255)
+      .regex(ENGLISH_REGEX, { message: t("full_name_en_must_be_english") }),
+
+    full_name_ar: z
+      .string()
+      .nonempty({ message: t("full_name_ar_required") })
+      .max(255)
+      .regex(ARABIC_REGEX, { message: t("full_name_ar_must_be_arabic") }),
+
     ssn: z.string().regex(EGYPTIAN_SSN_REGEX, { message: t("invalid_ssn") }),
 
     university: z.string().uuid({ message: t("university_required") }),

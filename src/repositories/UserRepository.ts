@@ -218,28 +218,46 @@ export class UserRepository {
       .leftJoinAndSelect("user.domain", "domain")
       .where("1 = 1");
 
-    qb.andWhere("user.user_type = :userType", {
-      userType: UserType.ADMIN,
+    qb.andWhere("user.user_type IN (:...userTypes)", {
+      userTypes: [UserType.ADMIN, UserType.SUPER_ADMIN],
     });
+
     qb.andWhere("user.deletedAt IS NULL");
     qb.orderBy("user.createdAt", "DESC");
 
     const fn = `"user"."firstName"->>'${lang}'`;
     const mn = `"user"."midName"->>'${lang}'`;
     const ln = `"user"."lastName"->>'${lang}'`;
+    const fullNameExpr = `
+    CONCAT_WS(
+      ' ',
+      "user"."firstName"->>'${lang}',
+      "user"."midName"->>'${lang}',
+      "user"."lastName"->>'${lang}'
+      )
+      `;
 
     // Text search filters
     if (query.first_name) {
-      qb.andWhere(`${fn} ILIKE :fn`, { fn: `%${query.first_name}%` });
-    }
+      const fullNameValue = query.first_name;
 
-    if (query.mid_name) {
-      qb.andWhere(`${mn} ILIKE :mn`, { mn: `%${query.mid_name}%` });
+      if (fullNameValue) {
+        qb.andWhere(`${fullNameExpr} ILIKE :fullName`, {
+          fullName: `%${fullNameValue}%`,
+        });
+      }
     }
+    // if (query.first_name) {
+    //   qb.andWhere(`${fn} ILIKE :fn`, { fn: `%${query.first_name}%` });
+    // }
 
-    if (query.last_name) {
-      qb.andWhere(`${ln} ILIKE :ln`, { ln: `%${query.last_name}%` });
-    }
+    // if (query.mid_name) {
+    //   qb.andWhere(`${mn} ILIKE :mn`, { mn: `%${query.mid_name}%` });
+    // }
+
+    // if (query.last_name) {
+    //   qb.andWhere(`${ln} ILIKE :ln`, { ln: `%${query.last_name}%` });
+    // }
 
     if (query.ssn) {
       qb.andWhere("user.ssn = :ssn", { ssn: query.ssn });
