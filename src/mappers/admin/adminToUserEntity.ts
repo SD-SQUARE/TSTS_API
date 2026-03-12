@@ -29,6 +29,11 @@ export const mapAdminToUserEntity = async (
     ar: dto.lastNameAr,
   };
 
+  user.fullName = {
+    en: dto.fullNameEn,
+    ar: dto.fullNameAr,
+  };
+
   user.ssn = dto.ssn;
 
   user.contacts = {

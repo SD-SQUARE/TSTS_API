@@ -14,6 +14,8 @@ services:
       - "${PORT}:${PORT}"
     networks:
       - tsts-network
+    volumes:
+      - /opt/tsts-project/certs:/certs:ro
 
 networks:
   tsts-network:

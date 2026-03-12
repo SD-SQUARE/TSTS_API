@@ -399,41 +399,6 @@ export const validateRequesterExcelFiles = async (
           // Create a new workbook with validation sheets
           const newWorkbook = new ExcelJS.Workbook();
           
-          // Copy Instructions sheet first (if exists)
-          const instructionsSheet = errorWorkbook.getWorksheet("Instructions");
-          if (instructionsSheet) {
-            const newInstructions = newWorkbook.addWorksheet("Instructions");
-            
-            // Copy all rows
-            instructionsSheet.eachRow((row, rowNumber) => {
-              const newRow = newInstructions.getRow(rowNumber);
-              row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                const newCell = newRow.getCell(colNumber);
-                newCell.value = cell.value;
-                if (cell.style) {
-                  newCell.style = JSON.parse(JSON.stringify(cell.style));
-                }
-              });
-              newRow.commit();
-            });
-            
-            // Copy column widths
-            instructionsSheet.columns.forEach((col, index) => {
-              if (newInstructions.columns[index]) {
-                newInstructions.columns[index].width = col.width;
-              }
-            });
-            
-            // Copy merged cells
-            if (instructionsSheet.model.merges) {
-              instructionsSheet.model.merges.forEach(merge => {
-                newInstructions.mergeCells(merge);
-              });
-            }
-            
-            logger.info(`[bulk-validation] Copied Instructions sheet to error file`);
-          }
-          
           // Copy all hidden validation sheets from original workbook
           const validationSheetNames = ['_UniversityList', '_DomainList', '_DepartmentList'];
           validationSheetNames.forEach(sheetName => {
@@ -461,8 +426,8 @@ export const validateRequesterExcelFiles = async (
                 }
               });
               
-              // Hide the sheet
-              newSheet.state = 'hidden';
+              // Hide the sheet (veryHidden prevents unhiding from Excel UI)
+              newSheet.state = 'veryHidden';
             }
           });
           
@@ -659,6 +624,41 @@ export const validateRequesterExcelFiles = async (
               }
             }
           });
+
+          // Copy Instructions sheet last (if exists) so it appears after Requesters
+          const instructionsSheet = errorWorkbook.getWorksheet("Instructions");
+          if (instructionsSheet) {
+            const newInstructions = newWorkbook.addWorksheet("Instructions");
+            
+            // Copy all rows
+            instructionsSheet.eachRow((row, rowNumber) => {
+              const newRow = newInstructions.getRow(rowNumber);
+              row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                const newCell = newRow.getCell(colNumber);
+                newCell.value = cell.value;
+                if (cell.style) {
+                  newCell.style = JSON.parse(JSON.stringify(cell.style));
+                }
+              });
+              newRow.commit();
+            });
+            
+            // Copy column widths
+            instructionsSheet.columns.forEach((col, index) => {
+              if (newInstructions.columns[index]) {
+                newInstructions.columns[index].width = col.width;
+              }
+            });
+            
+            // Copy merged cells
+            if (instructionsSheet.model.merges) {
+              instructionsSheet.model.merges.forEach(merge => {
+                newInstructions.mergeCells(merge);
+              });
+            }
+            
+            logger.info(`[bulk-validation] Copied Instructions sheet to error file`);
+          }
 
           // Generate buffer with only error rows
           errorFileBuffer = (await newWorkbook.xlsx.writeBuffer()) as any;

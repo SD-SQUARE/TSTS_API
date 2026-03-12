@@ -12,8 +12,8 @@ export const createTicketSchema = (t: Request["t"]) =>
 
     description: z
       .string()
-      .min(1, { message: t("description_required") })
-      .max(2000, { message: t("description_too_long") }),
+      .min(1, { message: t("description_required") }),
+      // .max(2000, { message: t("description_too_long") }),
 
     requester: z.string().uuid({ message: t("invalid_requester") }),
 
@@ -32,6 +32,8 @@ export const createTicketSchema = (t: Request["t"]) =>
 
 export const getTicketsSchema = (t: Request["t"]) =>
   z.object({
+    id: z.string().uuid(t("invalid_ticket_id")).optional(),
+
     title: z.string().optional(),
 
     specialization: z.string().uuid(t("invalid_specialization_id")).optional(),

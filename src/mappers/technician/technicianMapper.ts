@@ -26,6 +26,8 @@ export function mapCreateTechnician(
     first_name_ar,
     mid_name_ar,
     last_name_ar,
+    full_name_en,
+    full_name_ar,
     ssn,
     university,
     domain,
@@ -59,6 +61,9 @@ export function mapCreateTechnician(
     firstNameAr: first_name_ar,
     midNameAr: mid_name_ar,
     lastNameAr: last_name_ar,
+
+    fullNameEn: full_name_en,
+    fullNameAr: full_name_ar,
 
     ssn,
 

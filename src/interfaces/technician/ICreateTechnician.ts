@@ -13,6 +13,9 @@ export interface CreateTechnicianBody {
   mid_name_ar: string;
   last_name_ar: string;
 
+  full_name_en: string;
+  full_name_ar: string;
+
   ssn: string;
 
   university: string; // now a plain string
@@ -47,6 +50,9 @@ export interface CreateTechnicianMapped {
   firstNameAr: string;
   midNameAr: string;
   lastNameAr: string;
+
+  fullNameEn: string;
+  fullNameAr: string;
 
   ssn: string;
 
