@@ -18,11 +18,12 @@ import {
 import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 import { Lang } from "../types/lang.types.js";
 import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 export const createAdmin = async (req: RequestWithFileAndBody, res: Response) => {
   audit(req as unknown as Request)
     .summary("Create admin request received")
-    .action("CREATE_ADMIN")
+    .action(AuditAction.CREATE_ADMIN)
     .metadata({ body: req.body })
     .step("Request received");
 
@@ -49,7 +50,7 @@ export const createAdmin = async (req: RequestWithFileAndBody, res: Response) =>
 export const getAdminsPaged = async (req: Request, res: Response) => {
   audit(req)
     .summary("Fetch paged admins request received")
-    .action("RETRIEVE_ADMINS")
+    .action(AuditAction.RETRIEVE_ADMINS)
     .metadata({ query: req.query })
     .step("Request received");
 
@@ -70,7 +71,7 @@ export const getAdminsPaged = async (req: Request, res: Response) => {
 export const getAdminById = async (req: Request, res: Response) => {
   audit(req)
     .summary("Fetch admin by ID request received")
-    .action("RETRIEVE_ADMIN_BY_ID");
+    .action(AuditAction.RETRIEVE_ADMIN_BY_ID);
 
   const id = req.params.id;
   const lang = req.language as Lang;
@@ -100,7 +101,7 @@ export const EditAdmin = async (req: Request, res: Response) => {
 
   audit(req)
     .summary("Edit admin request received")
-    .action("EDIT_ADMIN")
+    .action(AuditAction.EDIT_ADMIN)
     .resource("ADMIN", id)
     .metadata({ body: adminDto });
 
@@ -132,7 +133,7 @@ export const deleteAdmin = async (req: Request, res: Response) => {
 
   audit(req)
     .summary("Delete admin request received")
-    .action("DELETE_ADMIN")
+    .action(AuditAction.DELETE_ADMIN)
     .resource("ADMIN", id);
 
   const isValid = uuidValidationSchema.safeParse(id);

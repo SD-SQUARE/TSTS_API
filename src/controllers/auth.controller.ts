@@ -11,6 +11,7 @@ import {
 import { AppError } from "../utils/AppError.js";
 import { t } from "i18next";
 import { audit } from '../helpers/auditBuilder.js';
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -97,7 +98,7 @@ export const forgetPasswordController = async (req: Request, res: Response) => {
 
   audit(req)
     .summary('User requested password reset')
-    .action('FORGOT_PASSWORD')
+    .action(AuditAction.FORGOT_PASSWORD)
     .metadata({ email })
     .step('password reset request received');
 
@@ -119,7 +120,7 @@ export const verifyOtpController = async (req: Request, res: Response) => {
 
     audit(req)
       .summary('User verifying password reset OTP')
-      .action('VERIFY_RESET_OTP')
+      .action(AuditAction.VERIFY_RESET_OTP)
       .metadata({ oid })
       .step('otp verification request received');
 
@@ -156,7 +157,7 @@ export const resetPasswordController = async (req: Request, res: Response) => {
 
     audit(req)
       .summary('User resetting password')
-      .action('RESET_PASSWORD')
+      .action(AuditAction.RESET_PASSWORD)
       .step('password reset request received');
 
     const result = await resetPassword(reset_token, password, req);

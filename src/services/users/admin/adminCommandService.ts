@@ -24,7 +24,7 @@ export const createAdminService = async (
   imageFile?: Express.Multer.File,
   req?: any,
 ): Promise<ICreateResponse> => {
-  audit(req).summary("Create admin service started").action("CREATE_ADMIN_SERVICE").metadata({ dto: AdminDto }).step("Service initiated");
+  audit(req).metadata({ dto: AdminDto }).step("Service initiated");
 
   // 2) university + domain + departments in ONE helper
   const entitiesResult = await validateEntities(

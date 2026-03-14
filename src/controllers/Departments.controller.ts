@@ -8,12 +8,13 @@ import logger from "../utils/logger.js";
 import { normalizeRelations } from "../utils/normalizeRelations.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 export async function createDepartment(req: Request, res: Response){
 
     const { name_en,name_ar, description_ar,description_en, domain } = req.body;
     const departmentRepo = new DepartmentRepo().getRepository();
 
-    audit(req).summary("Create department request received").action("CREATE_DEPARTMENT").step("Request received");
+    audit(req).summary("Create department request received").action(AuditAction.CREATE_DEPARTMENT).step("Request received");
 
     if (!domain) {
         audit(req).step("Missing domain in request");
@@ -57,7 +58,7 @@ export async function getDepartmentById(req: Request, res: Response) {
 
   audit(req)
     .summary('Get department by ID request')
-    .action('RETRIEVE_DEPARTMENT')
+    .action(AuditAction.RETRIEVE_DEPARTMENT)
     .step(`Fetching department ${id}`)
 
   const department = await departmentRepo.findOne({
@@ -88,7 +89,7 @@ export async function updateDepartment(req: Request, res: Response) {
     relations: ["domain"],
   });
 
-  audit(req).summary("Update department request").action("UPDATE_DEPARTMENT").step(`Updating department ${id}`);
+  audit(req).summary("Update department request").action(AuditAction.UPDATE_DEPARTMENT).step(`Updating department ${id}`);
 
   if (!department) {
     audit(req).step("Department not found");
@@ -134,7 +135,7 @@ export async function deleteDepartment(req: Request, res: Response) {
   const { id } = req.params;
   const departmentRepo = new DepartmentRepo().getRepository();
 
-  audit(req).summary("Delete department request").action("DELETE_DEPARTMENT").step(`Deleting department ${id}`);
+  audit(req).summary("Delete department request").action(AuditAction.DELETE_DEPARTMENT).step(`Deleting department ${id}`);
 
     const department = await departmentRepo.findOne({ where: { id } });
     if (!department) {
@@ -154,7 +155,7 @@ export async function getAllDepartments(req: Request, res: Response) {
 
   audit(req)
     .summary("Get all departments request")
-    .action("DEPARTMENTS_RETRIEVED")
+    .action(AuditAction.RETRIEVE_DEPARTMENT)
     .step("Fetching departments list");
 
     const filters: any = {
@@ -189,7 +190,7 @@ export async function getDepartmentUsers(req: Request, res: Response) {
 
     audit(req)
       .summary("Get department users request")
-      .action("RETRIEVE_DEPARTMENT_USERS")
+      .action(AuditAction.RETRIEVE_DEPARTMENT_USERS)
       .step(`Fetching users for department ${id}`)
       .resource('DEPARTMENT', id);
 

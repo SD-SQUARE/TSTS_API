@@ -14,6 +14,7 @@ import { t } from 'i18next';
 import { PASSWORD_REGEX } from '../config/validations.js';
 import { audit } from '../helpers/auditBuilder.js';
 import { Request } from 'express';
+import { AuditAction } from '../enums/AuditAction.enum.js';
 
 // Constants
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -248,7 +249,7 @@ export const setStatusActive = async (userId: string): Promise<void> => {
 export const generateAuthTokens = (payload: UserPayload, req?: any) => {
   logger.info(`[server][auth] Generating auth tokens`);
 
-  audit(req).action('TOKEN_GENERATION').step('starting token generation');
+  audit(req).action(AuditAction.TOKEN_GENERATION).step('starting token generation');
 
   const accessToken = generateToken(
     payload,
