@@ -1,15 +1,29 @@
+import { t } from "i18next";
+import { Lang } from "../types/lang.types.js";
+
 export class ValidatorsUtils {
-  static validateUUID(ids?: string[] | null): any {
+  static validateUUID(
+    ids?: string[] | null,
+    entityName?: string,
+    language: Lang = "en",
+  ): any {
     const errors: string[] = [];
 
     if (ids && Array.isArray(ids) && ids.length > 0) {
-      // UUID v4 regex pattern
+      // UUID regex pattern
       const uuidPattern =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
       const invalidIds = ids.filter((id) => !uuidPattern.test(id));
+
       if (invalidIds.length > 0) {
-        errors.push(`Invalid UUID format for IDs: ${invalidIds.join(", ")}`);
+        errors.push(
+          t("common.invalid_uuid", {
+            lng: language,
+            entityName: entityName ?? t("common.ids", { lng: language }),
+            invalidIds: invalidIds.join(", "),
+          }),
+        );
       }
     }
 
@@ -19,7 +33,11 @@ export class ValidatorsUtils {
     };
   }
 
-  static validateDateRange(startDate?: Date | string, endDate?: Date | string) {
+  static validateDateRange(
+    startDate?: Date | string,
+    endDate?: Date | string,
+    language: Lang = "en",
+  ) {
     const errors: string[] = [];
 
     if (startDate && endDate) {
@@ -27,15 +45,15 @@ export class ValidatorsUtils {
       const end = new Date(endDate);
 
       if (isNaN(start.getTime())) {
-        errors.push("Invalid start date format");
+        errors.push(t("common.invalid_date_format_start", { lng: language }));
       }
 
       if (isNaN(end.getTime())) {
-        errors.push("Invalid end date format");
+        errors.push(t("common.invalid_date_format_end", { lng: language }));
       }
 
       if (start > end) {
-        errors.push("Start date must be before or equal to end date");
+        errors.push(t("common.date_range_error", { lng: language }));
       }
     }
 
