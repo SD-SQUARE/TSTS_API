@@ -52,6 +52,7 @@ export class DomainDeptSpecProblemReportHandler implements IReportHandler {
       id: report.id,
       title: report.title[language as Lang] || report.title.en || "",
       columns: [{ key: "index", label: "#" }, ...columns],
+      filters: (report.filters || []).map((f) => f.column),
       records: allRecords,
       meta: {
         page_size: Number(limit ?? 1),
