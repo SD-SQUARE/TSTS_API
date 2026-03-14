@@ -6,12 +6,13 @@ import { UniversityRepo} from "../repositories/UniversityRepo.js";
 import { buildDescription ,buildName} from "../utils/handleNamaAndDesc.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 const domainRepo = new DomainRepo();
 const universityRepo = new UniversityRepo();
 
 export async function getAllDomains(req: Request, res: Response) {
-        audit(req).summary("Fetch all domains request received").action("RETRIEVE_DOMAINS");
+        audit(req).summary("Fetch all domains request received").action(AuditAction.RETRIEVE_DOMAINS);
 
         const domainRepoInstance = domainRepo.returnRepo();
         const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
@@ -38,7 +39,7 @@ export async function getAllDomains(req: Request, res: Response) {
 
 
 export async function createDomain(req: Request, res: Response) {
-    audit(req).summary("Create domain request received").action("CREATE_DOMAIN").metadata({ body: req.body });
+    audit(req).summary("Create domain request received").action(AuditAction.CREATE_DOMAIN).metadata({ body: req.body });
 
     const UniversityRepoInstance = universityRepo.returnRepo();
     const domainRepoInstance = domainRepo.returnRepo();
@@ -85,7 +86,7 @@ export async function createDomain(req: Request, res: Response) {
 
 export async function getDomainById(req: Request, res: Response) {
     const { id } = req.params;
-    audit(req).summary(`Fetch domain by ID request received for ${id}`).action("RETRIEVE_DOMAIN_BY_ID").resource("DOMAIN", id);
+    audit(req).summary(`Fetch domain by ID request received for ${id}`).action(AuditAction.RETRIEVE_DOMAIN_BY_ID).resource("DOMAIN", id);
 
     const domainRepoInstance = domainRepo.returnRepo();
 
@@ -114,7 +115,7 @@ export async function getDomainById(req: Request, res: Response) {
 
 export async function updateDomain(req: Request, res: Response) {
         const { id } = req.params;
-        audit(req).summary(`Update domain request received for ${id}`).action("UPDATE_DOMAIN").resource("DOMAIN", id).metadata({ body: req.body });
+        audit(req).summary(`Update domain request received for ${id}`).action(AuditAction.UPDATE_DOMAIN).resource("DOMAIN", id).metadata({ body: req.body });
 
         const { name_en,name_ar,description_ar,description_en, university } = req.body;
         const existingUniversity = university ? await universityRepo.returnRepo().findOne({ where: { id: university } }) : undefined;
@@ -144,7 +145,7 @@ export async function updateDomain(req: Request, res: Response) {
 
 export async function deleteDomain(req: Request, res: Response) {
         const { id } = req.params;
-        audit(req).summary(`Delete domain request received for ${id}`).action("DELETE_DOMAIN").resource("DOMAIN", id);
+        audit(req).summary(`Delete domain request received for ${id}`).action(AuditAction.DELETE_DOMAIN).resource("DOMAIN", id);
 
         const domainRepoInstance = domainRepo.returnRepo();
         const domain = await domainRepoInstance.findOne({ where: { id } });

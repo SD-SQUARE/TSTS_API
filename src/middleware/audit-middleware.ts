@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { MongoDataSource } from '../database/mongo-data-source.js';
-import { AuditLog } from '../entities/mongo-entities/AuditAction.js';
+import { AuditLog } from '../entities/mongo-entities/AuditLog.js';
 import logger from '../utils/logger.js';
 
 export const auditMiddleware = (

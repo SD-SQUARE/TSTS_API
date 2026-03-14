@@ -6,6 +6,7 @@ import { AppError } from "../utils/AppError.js";
 import { PostgresDataSource } from "../database/postgres-data-source.js";
 import { TrustedDevice } from "../entities/TrustedDevice.js";
 import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 
 
@@ -16,7 +17,7 @@ export const loginV2 = async (req: Request, res: Response) => {
 
   audit(req)
     .summary('User login attempt')
-    .action('USER_LOGIN')
+    .action(AuditAction.USER_LOGIN)
     .metadata({ email })
     .step('login request received');
 
@@ -93,7 +94,7 @@ export const getAuthOptions = async (req: any, res: any) => {
 
   audit(req)
     .summary("Trusted device authentication challenge requested")
-    .action("WEBAUTHN_AUTH_OPTIONS")
+    .action(AuditAction.WEBAUTHN_AUTH_OPTIONS)
     .resource("USER", userId)
     .step("authentication options request received");
 
@@ -132,7 +133,7 @@ export const verifyAuthOptions = async (req: any, res: any) => {
 
   audit(req)
     .summary("Trusted device authentication verification")
-    .action("WEBAUTHN_VERIFY")
+    .action(AuditAction.WEBAUTHN_VERIFY)
     .resource("USER", user?.id)
     .step("device verification request received");
 

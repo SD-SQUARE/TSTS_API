@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { MongoDataSource } from '../database/mongo-data-source.js';
-import { AuditLog } from '../entities/mongo-entities/AuditAction.js';
+import { AuditLog } from '../entities/mongo-entities/AuditLog.js';
 import { AppError } from '../utils/AppError.js';
 import logger from '../utils/logger.js';
 import { buildPagination, PaginationQuery } from '../utils/pagination.js';
