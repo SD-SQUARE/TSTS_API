@@ -54,6 +54,7 @@ export class SpecializationTicketsReportHandler implements IReportHandler {
       id: report.id,
       title: report.title[language as Lang] || report.title.en || "",
       statistics: statistics,
+      filters: (report.filters || []).map((f) => f.column),
       columns: [{ key: "index", label: "#" }, ...columns],
       records: allRecords,
       meta: {

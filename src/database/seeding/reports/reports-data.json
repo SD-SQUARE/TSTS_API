@@ -27,7 +27,7 @@
     ],
     "filters": [
       {
-        "column": "specializationId"
+        "column": "specialization"
       }
     ]
   },
