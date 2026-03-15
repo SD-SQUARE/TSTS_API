@@ -16,6 +16,7 @@ export {
 
 // Specific report generators
 export { SpecializationTicketsReportV1Generic as SpecializationTicketsReportV1 } from "./specialization-tickets/v1.0/services/SpecializationTicketsReportV1Generic.js";
+export { DomainDeptSpecProblemReportV1Generic as DomainDeptSpecProblemReportV1 } from "./domain-dept-spec-problem/v1.0/services/DomainDeptSpecProblemReportV1Generic.js";
 
 // Factory
 export { ReportFactory, ReportType } from "./factory/ReportFactory.js";
