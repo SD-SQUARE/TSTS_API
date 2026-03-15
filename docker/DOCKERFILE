@@ -19,6 +19,17 @@ RUN npm install -g pm2
 COPY package*.json ./
 RUN npm install --omit=dev
 
+# install puppeteer
+RUN npx puppeteer browsers install chrome
+
+# install fonts and chromium
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ttf-freefont
+
 # copy compiled JS only
 COPY --from=builder /app/dist ./dist
 
