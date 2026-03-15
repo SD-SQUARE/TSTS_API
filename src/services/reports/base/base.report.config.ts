@@ -83,7 +83,7 @@ export const BASE_REPORT_STYLE_CONFIG: ReportStyleConfig = {
   },
 
   page: {
-    padding: "0 40px",
+    padding: "0 10px",
     width: "210mm",
     height: "297mm", // A4 height
   },
