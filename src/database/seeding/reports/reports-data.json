@@ -1,0 +1,96 @@
+[
+  {
+    "handler": "specialization-tickets-count",
+    "title": {
+      "en": "Statistical Analysis of Tickets by Specialization",
+      "ar": "التحليل الإحصائي للتذاكر حسب التخصص"
+    },
+    "description": {
+      "en": "Report showing ticket counts grouped by specialization. The report can be filtered by day, month, year, or any custom date range.",
+      "ar": "تقرير يوضح عدد التذاكر مجمعة حسب التخصص مع إمكانية التصفية حسب اليوم أو الشهر أو السنة أو أي نطاق زمني محدد."
+    },
+    "columns": [
+      {
+        "key": "specialization",
+        "label": {
+          "en": "Specialization",
+          "ar": "التخصص"
+        }
+      },
+      {
+        "key": "ticketsCount",
+        "label": {
+          "en": "tickets count",
+          "ar": "عدد التذاكر"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "column": "specialization"
+      }
+    ]
+  },
+  {
+    "handler": "domain-dept-spec-problem",
+    "title": {
+      "en": "Ticket Distribution by Organizational Structure",
+      "ar": "تقرير توزيع التذاكر حسب الهيكل التنظيمي"
+    },
+    "description": {
+      "en": "Detailed report showing ticket counts grouped by domain, department, specialization, and problem. Provides hierarchical view of ticket distribution across organizational structure.",
+      "ar": "تقرير مفصل يوضح عدد التذاكر مجمعة حسب النطاق والقسم والتخصص والمشكلة. يوفر عرضاً هرمياً لتوزيع التذاكر عبر الهيكل التنظيمي."
+    },
+    "columns": [
+      {
+        "key": "domain",
+        "label": {
+          "en": "Domain",
+          "ar": "النطاق"
+        }
+      },
+      {
+        "key": "department",
+        "label": {
+          "en": "Department",
+          "ar": "القسم"
+        }
+      },
+      {
+        "key": "specialization",
+        "label": {
+          "en": "Specialization",
+          "ar": "التخصص"
+        }
+      },
+      {
+        "key": "problem",
+        "label": {
+          "en": "Problem",
+          "ar": "المشكلة"
+        }
+      },
+      {
+        "key": "ticketCount",
+        "label": {
+          "en": "Ticket Count",
+          "ar": "عدد التذاكر"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "column": "domain"
+      },
+      {
+        "column": "department"
+      },
+      {
+        "column": "specialization"
+      },
+      {
+        "column": "problem"
+      }
+    ]
+  }
+]
