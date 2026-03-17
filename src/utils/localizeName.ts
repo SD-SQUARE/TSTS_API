@@ -1,3 +1,5 @@
+import { Lang } from "../types/lang.types.js";
+
 type LocalizedText = {
   ar?: string;
   en?: string;
@@ -9,7 +11,7 @@ export const buildLocalizedName = (
     midName?: LocalizedText;
     lastName?: LocalizedText;
   },
-  lang: "ar" | "en"
+  lang: Lang,
 ) => {
   const parts = [
     user.firstName?.[lang],
