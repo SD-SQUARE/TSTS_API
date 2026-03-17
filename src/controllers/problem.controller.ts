@@ -6,10 +6,18 @@ import { buildName, buildDescription } from "../utils/handleNamaAndDesc.js";
 import logger from "../utils/logger.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 import { ProblemDto } from "../interfaces/response/problemResponse.js";
+import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 export async function getProblemById(req: Request, res: Response) {
     const { id } = req.params;
     const problemRepo = new ProblemRepo().getRepository();
+
+    const auditLog = audit(req)
+    .summary("Fetch problem by ID")
+    .ACTION(AuditAction.GET_PROBLEM_BY_ID)
+    .metadata({ id });
+
 
     const problem = await problemRepo.findOne({
         where: { id },
@@ -17,10 +25,15 @@ export async function getProblemById(req: Request, res: Response) {
     });
 
     if (!problem) {
+        auditLog.step("Problem not found");
         return res.status(ResponseStatus.NOT_FOUND).json({
             message: req.t ? req.t("problem_not_found") : "Problem not found",
         });
     }
+
+    auditLog
+    .step("Problem fetched successfully")
+    .resource("problem", problem.id);
 
     const result: ProblemDto = problem.toApi();
 
@@ -34,6 +47,16 @@ export async function getProblems(req: Request, res: Response) {
     const pageNum = page ? parseInt(page as string, 10) : 1;
     const limitNum = limit ? parseInt(limit as string, 10) : 20;
 
+    const auditLog = audit(req)
+    .summary("Fetch paginated problems")
+    .ACTION(AuditAction.GET_PROBLEMS)
+    .metadata({
+      page: pageNum,
+      limit: limitNum,
+      name: name ?? null,
+      specialization: specialization ?? null,
+    });
+
     const result = await Problem.paginate(
         pageNum,
         limitNum,
@@ -42,6 +65,10 @@ export async function getProblems(req: Request, res: Response) {
         specialization as string | undefined
     );
 
+    auditLog
+    .step("Problems listed successfully")
+    .resource("problem", "all");
+
     logger.info(`Listed problems - Page: ${pageNum}, Limit: ${limitNum}`);
     return res.json(result);
 }
@@ -49,7 +76,17 @@ export async function getProblems(req: Request, res: Response) {
 export async function createProblem(req: Request, res: Response) {
     const { name_en, name_ar, description_en, description_ar, specialization,review_required } = req.body;
 
+    const auditLog = audit(req)
+    .summary("Create new problem")
+    .ACTION(AuditAction.CREATE_PROBLEM)
+    .metadata({
+      name: { en: name_en, ar: name_ar },
+      specialization,
+      review_required,
+    });
+
     if (!specialization) {
+        auditLog.step("Specialization missing");
         return res.status(ResponseStatus.BAD_REQUEST).json({
             message: req.t ? req.t("specialization_required") : "You must provide a specialization",
         });
@@ -58,6 +95,7 @@ export async function createProblem(req: Request, res: Response) {
     const specRepo = new SpecializationRepo().getRepository();
     const spec = await specRepo.findOne({ where: { id: specialization } });
     if (!spec) {
+        auditLog.step("Specialization not found");
         return res.status(ResponseStatus.BAD_REQUEST).json({
             message: req.t ? req.t("specialization_not_found") : "Specialization not found",
         });
@@ -67,6 +105,7 @@ export async function createProblem(req: Request, res: Response) {
 
     const nameObj = buildName({ en: name_en, ar: name_ar });
     if (!nameObj) {
+        auditLog.step("Invalid name");
         return res.status(ResponseStatus.BAD_REQUEST).json({
             message: req.t
                 ? req.t("name_invalid")
@@ -77,6 +116,7 @@ export async function createProblem(req: Request, res: Response) {
     const descObj = buildDescription({ en: description_en, ar: description_ar });
 
      if(review_required==null){
+        auditLog.step("Review required field missing");
         return res.status(ResponseStatus.BAD_REQUEST).json(
             {
                 message:req.t?req.t("review_required"):"you must provide review_required"
@@ -85,6 +125,7 @@ export async function createProblem(req: Request, res: Response) {
     }
     const existing= await problemRepo.findOne({where:{name:nameObj}})
      if (existing) {
+        auditLog.step("Problem already exists");
         return res.status(ResponseStatus.CONFLICT).json({ message:req.t?req.t("problem_existing"): "Problem with this name already exists" });
     }
     const problem =  problemRepo.create({
@@ -95,6 +136,8 @@ export async function createProblem(req: Request, res: Response) {
     });
 
     await problemRepo.save(problem);
+
+    auditLog.step("Problem created successfully").resource("problem", problem.id);
 
     logger.info(`Created problem with ID: ${problem.id}`);
     return res.status(ResponseStatus.CREATED).json({
@@ -107,19 +150,33 @@ export async function updateProblem(req: Request, res: Response) {
     const { id } = req.params;
     const { name_en, name_ar, description_en, description_ar, specialization,review_required } = req.body;
 
+    const auditLog = audit(req)
+    .summary("Update problem")
+    .ACTION(AuditAction.UPDATE_PROBLEM);
+
     const problemRepo = new ProblemRepo().getRepository();
     const problem = await problemRepo.findOne({ where: { id }, relations: ["specialization"] });
 
     if (!problem) {
+        auditLog.step("Problem not found");
         return res.status(ResponseStatus.NOT_FOUND).json({
             message: req.t ? req.t("problem_not_found") : "Problem not found",
         });
     }
 
+    const oldValue: Record<string, any> = {
+        name: problem.name,
+        description: problem.description,
+        specialization: problem.specialization?.id,
+        review_required: problem.review_required,
+    };
+    const newValue: Record<string, any> = { ...oldValue };
+
     if (specialization) {
         const specRepo = new SpecializationRepo().getRepository();
         const spec = await specRepo.findOne({ where: { id: specialization } });
         if (!spec) {
+            auditLog.step("Specialization not found");
             return res.status(ResponseStatus.BAD_REQUEST).json({
                 message: req.t ? req.t("specialization_not_found") : "Specialization not found",
             });
@@ -130,6 +187,7 @@ export async function updateProblem(req: Request, res: Response) {
     if (name_en || name_ar) {
         const nameObj = buildName({ en: name_en, ar: name_ar });
         if (!nameObj) {
+            auditLog.step("Invalid name");
             return res.status(ResponseStatus.BAD_REQUEST).json({
                 message: req.t
                     ? req.t("name_invalid")
@@ -144,6 +202,7 @@ export async function updateProblem(req: Request, res: Response) {
         problem.description = descObj;
     }
      if(review_required==null){
+        auditLog.step("review_required missing");
         return res.status(ResponseStatus.BAD_REQUEST).json(
             {
                 message:req.t?req.t("review_required"):"you must provide review_required"
@@ -153,6 +212,11 @@ export async function updateProblem(req: Request, res: Response) {
     problem.review_required=review_required;
 
     await problemRepo.save(problem);
+
+    auditLog
+    .metadata({ oldValue, newValue })
+    .resource("problem", problem.id)
+    .step("Problem updated successfully")
 
     logger.info(`Updated problem with ID: ${problem.id}`);
     return res.status(ResponseStatus.SUCCESS).json({
@@ -166,13 +230,23 @@ export async function deleteProblem(req: Request, res: Response) {
     const problemRepo = new ProblemRepo().getRepository();
 
     const problem = await problemRepo.findOne({ where: { id } });
+
+    const auditLog = audit(req)
+    .summary("Delete problem")
+    .ACTION(AuditAction.DELETE_PROBLEM)
+
     if (!problem) {
+        auditLog.step("Problem not found");
         return res.status(ResponseStatus.NOT_FOUND).json({
             message: req.t ? req.t("problem_not_found") : "Problem not found",
         });
     }
 
     await problemRepo.remove(problem);
+
+    auditLog
+    .resource("problem", problem.id)
+    .step("Problem deleted successfully");
 
     logger.info(`Deleted problem with ID: ${problem.id}`);
     return res.json({
