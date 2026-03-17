@@ -189,12 +189,14 @@ export class SpecializationTicketsCountPreparation {
 
     // Apply date filters
     if (filter?.startDate) {
+      // FIXME: ensure that filter is applied on the absolute start date
       qb.andWhere("ticket.createdAt >= :startDate", {
         startDate: new Date(filter.startDate),
       });
     }
 
     if (filter?.endDate) {
+      // FIXME: ensure that filter is applied on the absolute end date
       qb.andWhere("ticket.createdAt <= :endDate", {
         endDate: new Date(filter.endDate),
       });
