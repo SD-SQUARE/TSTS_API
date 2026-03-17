@@ -14,6 +14,8 @@ import {
   bulkAssignUsersSchema,
   createGroupSchema,
 } from "../validation/group.schema.js";
+import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 export const addGroup = async (req: Request, res: Response) => {
   const t = req.t;
@@ -24,15 +26,26 @@ export const addGroup = async (req: Request, res: Response) => {
   if (!validated.success) {
     logger.info(
       "[server][groups][controller] Validation failed: " +
-        validated.error.issues.map((e) => e.message).join(", ")
+        validated.error.issues.map((e) => e.message).join(", "),
     );
     throw new AppError(validated.error.issues[0].message, 400);
   }
 
-  const result = await createGroup(validated.data, t);
+  audit(req)
+    .summary("Add group request received")
+    .action(AuditAction.ADD_GROUP)
+    .metadata({ requestBody: req.body })
+    .step("Validated input");
+
+  const result = await createGroup(validated.data, t, req);
+
+  audit(req)
+    .step("Group creation completed")
+    .resource("group", result.id)
+    .metadata({ groupName: result.name });
 
   logger.info(
-    `[server][groups][controller] Group created successfully id=${result.id}`
+    `[server][groups][controller] Group created successfully id=${result.id}`,
   );
 
   return res.status(200).json({
@@ -44,10 +57,15 @@ export const addGroup = async (req: Request, res: Response) => {
 
 export const bulkAssignUsersController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const t = req.t;
   const groupId = req.params.id;
+
+  const auditLog = audit(req)
+    .summary("Bulk assign users to group")
+    .action(AuditAction.BULK_ASSIGN_USERS)
+    .metadata({ groupId, requestBody: req.body });
 
   logger.info("[server][groups][controller] bulkAssignUsers request received", {
     groupId,
@@ -57,11 +75,22 @@ export const bulkAssignUsersController = async (
   const result = bulkAssignUsersSchema(t).safeParse(req.body);
   if (!result.success) {
     const messages = result.error.issues.map((i) => i.message).join(", ");
+    auditLog.step(`Validation failed: ${messages}`);
     logger.info("[server][groups][controller] Validation failed: " + messages);
     throw new AppError(result.error.issues[0].message, 400);
   }
 
-  await bulkAssignUsersToGroup(groupId, result.data.users, t);
+  const { added, removed } = await bulkAssignUsersToGroup(
+    groupId,
+    result.data.users,
+    t,
+    req,
+  );
+
+  auditLog
+    .step(`Users assigned: ${added.length}, removed: ${removed.length}`)
+    .resource("group", groupId)
+    .metadata({ addedUserIds: added, removedUserIds: removed });
 
   return res.status(200).json({
     is_updated: true,
@@ -75,17 +104,28 @@ export const getGroupController = async (req: Request, res: Response) => {
   const lang = req.language;
   const groupId = req.params.id;
 
+  const auditLog = audit(req)
+    .summary("Get group details")
+    .action(AuditAction.GET_GROUP)
+    .metadata({ groupId });
+
   logger.info(
     "[server][groups][controller] getGroupController request received",
-    { groupId }
+    { groupId },
   );
 
   if (!groupId) {
+    auditLog.step("Group ID missing");
     logger.info("[server][groups][controller] Group ID missing");
     throw new AppError(t("group_id_required"), 400);
   }
 
-  const group = await getGroupById(groupId, t, lang);
+  const group = await getGroupById(groupId, t, lang, req);
+
+  auditLog
+    .step("Group retrieved successfully")
+    .resource("group", group.id)
+    .metadata({ groupName: group.name_en });
   return res.status(200).json(group);
 };
 
@@ -93,20 +133,31 @@ export const deleteGroupController = async (req: Request, res: Response) => {
   const t = req.t;
   const groupId = req.params.id;
 
+  const auditLog = audit(req)
+    .summary("Delete group request")
+    .action(AuditAction.DELETE_GROUP)
+    .metadata({ groupId });
+
   logger.info(
     "[server][groups][controller] deleteGroupController request received",
-    { groupId }
+    { groupId },
   );
 
   if (!groupId) {
+    auditLog.step("Group ID missing");
     logger.info("[server][groups][controller] Group ID missing");
     throw new AppError(t("group_id_required"), 400);
   }
 
   try {
     const result = await softDeleteGroup(groupId, t);
+    auditLog
+      .step(result.is_deleted ? "Group soft-deleted" : "Group already deleted")
+      .resource("group", groupId);
+
     return res.status(200).json(result);
   } catch (err: any) {
+    auditLog.step("Error deleting group");
     logger.error("[server][groups][controller] Error deleting group", {
       error: err,
     });
@@ -120,9 +171,14 @@ export const deleteGroupController = async (req: Request, res: Response) => {
 export const getAllGroupsController = async (req: Request, res: Response) => {
   const t = req.t;
 
+  const auditLog = audit(req)
+    .summary("Get all groups")
+    .action(AuditAction.GET_ALL_GROUPS)
+    .metadata({ query: req.query });
+
   logger.info(
     "[server][groups][controller] getAllGroupsController request received",
-    { query: req.query }
+    { query: req.query },
   );
 
   const { name, page_index, page_size } = req.query;
@@ -136,25 +192,46 @@ export const getAllGroupsController = async (req: Request, res: Response) => {
     name: name as string | undefined,
   };
 
-  const result = await getAllGroups(pagination, filters, t);
+  const result = await getAllGroups(pagination, filters, t, req);
+
+  auditLog.step(`Fetched ${result.groups.length} groups`).metadata({
+    filters,
+    pagination,
+  });
+
 
   return res.status(200).json(result);
 };
 
 export const getGroupUsersController = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const { page_index, page_size } = req.query;
 
-  const data = await getGroupUsersService(id, req.query);
+  const auditLog = audit(req)
+    .summary("Get users of a group")
+    .action(AuditAction.GET_GROUP_USERS)
+    .metadata({ id, query: req.query });
+
+  const data = await getGroupUsersService(id, req.query, req);
+
+  auditLog
+    .step(`Users fetched: ${data.technicians.length} technicians, ${data.heads.length} heads, team leader present: ${!!data.team_leader}`)
+    .resource("group", id)
+    .metadata({ page_index, page_size, total: data.meta_data.total });
 
   return res.status(200).json({
     ...data,
   });
 };
 
-
 export const editGroupController = async (req: any, res: any) => {
   const t = req.t;
   const groupId = req.params.id;
+
+  const auditLog = audit(req)
+    .summary("Edit group")
+    .action(AuditAction.EDIT_GROUP)
+    .metadata({ groupId });
 
   logger.info("[server][groups][controller] editGroup request received", {
     groupId,
@@ -162,13 +239,20 @@ export const editGroupController = async (req: any, res: any) => {
   });
 
   if (!groupId) {
+    auditLog.step("Group ID missing");
     throw new AppError(t("group_id_required"), 400);
   }
 
   try {
-    const result = await editGroup(groupId, req.body, t);
+    const result = await editGroup(groupId, req.body, t, req);
+
+    auditLog
+      .step("Group edited successfully")
+      .resource("group", groupId);
+
     return res.status(200).json(result);
   } catch (err: any) {
+     auditLog.step("Error editing group");
     logger.error("[server][groups][controller] Error editing group", {
       error: err,
     });
