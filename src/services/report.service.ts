@@ -6,6 +6,9 @@ import { ReportHandlerFactory } from "./reports/handlers/ReportHandlerFactory.js
 import { PeriodType, ReportTypes } from "./reports/types/report.types.js";
 import { Specialization } from "../entities/Specialization.js";
 import { SpecializationTicketsCountPreparation } from "./reports/specialization-tickets/v1.0/services/SpecializationTicketsCountPreparation.js";
+import { audit } from "../helpers/auditBuilder.js";
+import { Request } from "express";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 export class ReportService {
   private reportRepo: Repository<Report>;
@@ -217,13 +220,21 @@ export class ReportService {
     currentLang: Lang,
     user: any,
     res: any,
+    req?: Request,
   ): Promise<void> {
     const archiver = (await import("archiver")).default;
     const logger = (await import("../utils/logger.js")).default;
 
+    const auditLog = req ? audit(req)
+    .summary("Stream report ZIP")
+    .ACTION(AuditAction.DOWNLOAD_REPORT)
+    .resource("Report", report.id)
+    .metadata({ userId: user.id, filters, types, language: currentLang }) : null;
+
     logger.info(
       `[report-zip] Generating ZIP for report: ${report.id} with types: ${types.join(", ")}`,
     );
+     auditLog?.step("ZIP generation started");
 
     // Set response headers
     res.status(200);
@@ -240,6 +251,7 @@ export class ReportService {
 
     archive.on("error", (err) => {
       logger.error("[report-zip] ZIP error:", err);
+      auditLog?.metadata({ error: err.message }).step("ZIP generation failed");
       res.end(); // ⛔ do NOT throw
     });
 
@@ -264,6 +276,7 @@ export class ReportService {
 
         // Add report file to archive
         archive.append(reportBuffer, { name: filename });
+         auditLog?.step(`Added ${reportType} report to ZIP`);
         logger.info(
           `[report-zip] Added ${reportType} report to ZIP: ${filename}`,
         );
@@ -284,6 +297,9 @@ export class ReportService {
           ),
           { name: `error-${reportType}.json` },
         );
+        auditLog?.metadata({ [`error_${reportType}`]: error.message }).step(
+        `Failed to generate ${reportType} report`,
+      );
       }
     }
 
@@ -300,11 +316,13 @@ export class ReportService {
     archive.append(JSON.stringify(metadata, null, 2), {
       name: "report_metadata.json",
     });
+     auditLog?.step("Added metadata to ZIP");
 
     await archive.finalize();
     logger.info(
       `[report-zip] ZIP generated successfully for report: ${report.id}`,
     );
+    auditLog?.step("ZIP generation completed successfully");
 
     return; // ⛔ ABSOLUTELY REQUIRED
   }
