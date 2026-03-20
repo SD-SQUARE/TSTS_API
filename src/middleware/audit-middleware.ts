@@ -1,26 +1,37 @@
-import { Response, NextFunction } from 'express';
-import { MongoDataSource } from '../database/mongo-data-source.js';
-import { AuditLog } from '../entities/mongo-entities/AuditLog.js';
-import logger from '../utils/logger.js';
+import { Response, NextFunction } from "express";
+import { MongoDataSource } from "../database/mongo-data-source.js";
+import { AuditLog } from "../entities/mongo-entities/AuditLog.js";
+import logger from "../utils/logger.js";
 
 export const auditMiddleware = (
   req: any,
   res: Response,
   next: NextFunction,
 ) => {
+  const excludedRoutes = [
+    "/lockups",
+    "/work-hours",
+    "/chat",
+    "/notifications",
+    "/trusted-devices",
+  ];
+
+  if (excludedRoutes.some((route) => req.path.startsWith(`/api/v1${route}`))) {
+    return next();
+  }
+
   const createdAt = new Date();
 
   req.audit = {
     steps: [],
   };
 
-  
   next();
-  
-  res.on('finish', async () => {
+
+  res.on("finish", async () => {
     try {
       if (!MongoDataSource.isInitialized) {
-        console.warn('MongoDataSource not ready, skipping audit log');
+        console.warn("MongoDataSource not ready, skipping audit log");
         return;
       }
 
@@ -29,12 +40,13 @@ export const auditMiddleware = (
       await repo.insertOne({
         summary: req.audit?.summary,
         action: req.audit?.action,
-        status: res.statusCode < 400 ? 'SUCCESS' : 'FAILED',
+        status: res.statusCode < 400 ? "SUCCESS" : "FAILED",
         actor: {
           id: req.user?.id,
           type: req.user?.role,
-          ipAddress: req.ip.includes('::1') || req.ip === '::1' ? 'localhost' : req.ip,
-          userAgent: req.headers['user-agent'],
+          ipAddress:
+            req.ip.includes("::1") || req.ip === "::1" ? "localhost" : req.ip,
+          userAgent: req.headers["user-agent"],
           full_name: req.user?.name,
         },
         resource: req.audit?.resource,
@@ -44,8 +56,7 @@ export const auditMiddleware = (
         finishedAt: new Date(),
       });
     } catch (err) {
-      console.error('Audit log failed:', err);
+      console.error("Audit log failed:", err);
     }
   });
-
 };
