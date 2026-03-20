@@ -16,13 +16,18 @@ import { UploadedFile } from "../../../../types/UploadedFile.js";
 import { formatActor } from "../../../../helpers/formatActor.js";
 import { TicketActivityType } from "../../../../enums/TicketActivity.enum.js";
 import { logTicketActivity } from "../../../tickets.service.js";
+import { Request } from "express";
+import { audit } from "../../../../helpers/auditBuilder.js";
 
 // todo  Emit WebSocket event
 export const uploadTicketAssetsService = async (
   ticketId: string,
   files: UploadedFile[],
-  userData: UserData
+  userData: UserData,
+  req?: Request,
 ): Promise<ICreateResponse> => {
+  const auditLog = audit(req);
+
   logger.info("[server][tickets-service] uploadTicketAssetsService | start", {
     ticketId,
     filesCount: Array.isArray(files) ? files.length : 0,
@@ -31,9 +36,11 @@ export const uploadTicketAssetsService = async (
   const existingTicket = await fetchExistingTicket(ticketId);
 
   if (!existingTicket) {
+    auditLog.step("Ticket not found");
+
     logger.info(
       "[server][tickets-service] uploadTicketAssetsService | not found",
-      { ticketId }
+      { ticketId },
     );
 
     return ticketNotFound("is_added", ticketId) as ICreateResponse;
@@ -60,7 +67,7 @@ export const uploadTicketAssetsService = async (
           const safeKey = await uploadFilesWithUniqueKey(
             IMAGE_PATHS.TicketMedia,
             ticketId,
-            file
+            file,
           );
 
           const row = mediaRepo.create({
@@ -82,21 +89,23 @@ export const uploadTicketAssetsService = async (
             `[server][tickets-service] Failed to upload file: ${file.originalname}`,
             {
               error: err?.message,
-            }
+            },
           );
           failedFiles.push(file.originalname); // Track the file that failed
           return null;
         }
-      })
+      }),
     );
 
     const addedCount = createdMedia.filter(Boolean).length;
 
     if (addedCount === 0 && failedFiles.length === safeFiles.length) {
+      auditLog.metadata({ failedFiles }).step("All file uploads failed");
+
       // If all files failed
       logger.info(
         "[server][tickets-service] uploadTicketAssetsService | all files failed to upload",
-        { ticketId }
+        { ticketId },
       );
 
       return {
@@ -132,8 +141,16 @@ export const uploadTicketAssetsService = async (
         changes,
         updatedFields: Object.keys(changes),
         mediaIds: createdMediaIds,
-      }
+      },
     );
+
+    auditLog
+      .metadata({
+        addedCount,
+        failedCount: failedFiles.length,
+        createdMediaIds,
+      })
+      .step("Ticket media uploaded and activity logged");
 
     logger.info(
       "[server][tickets-service] uploadTicketAssetsService | completed",
@@ -141,7 +158,7 @@ export const uploadTicketAssetsService = async (
         ticketId,
         addedCount,
         createdMediaIdsCount: createdMediaIds.length,
-      }
+      },
     );
 
     return {
@@ -158,13 +175,17 @@ export const uploadTicketAssetsService = async (
           : [],
     };
   } catch (e: any) {
+    auditLog
+      .metadata({ error: e?.message })
+      .step("Ticket media upload failed (exception)");
+
     logger.error(
       "[server][tickets-service] uploadTicketAssetsService | failed",
       {
         ticketId,
         error: e?.message,
         stack: e?.stack,
-      }
+      },
     );
 
     return {
