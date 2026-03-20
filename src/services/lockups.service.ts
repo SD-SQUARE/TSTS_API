@@ -13,6 +13,8 @@ import { Specialization } from "../entities/Specialization.js";
 import { Group } from "../entities/Group.js";
 import { Ticket } from "../entities/Ticket.js";
 import { ProblemRepo } from "../repositories/ProblemRepo.js";
+import { MongoDataSource } from "../database/mongo-data-source.js";
+import { AuditAction } from "../entities/mongo-entities/AuditAction.js";
 
 interface UsersLockupQuery {
   first_name?: string;
@@ -71,6 +73,7 @@ const specializationsRepository =
 const groupsRepository = PostgresDataSource.getRepository(Group);
 const ticketsRepository = PostgresDataSource.getRepository(Ticket);
 const problemRepo = new ProblemRepo().getRepository();
+const auditActionRepo = MongoDataSource.getMongoRepository(AuditAction);
 
 export const getUsersLockupService = async (query: UsersLockupQuery) => {
   const { skip, take } = buildPagination({
@@ -598,4 +601,14 @@ export const getTicketProblemsService = async (
       }, {})
     ),
   };
+};
+
+export const getAuditActionsLockupService = async (lang: "en" | "ar") => {
+  const auditActions = await auditActionRepo.find();
+
+  return auditActions.map((action) => ({
+    id: action._id.toHexString(),
+    key: action.key,
+    name: action.name[lang] || action.name.en,
+  }));
 };
