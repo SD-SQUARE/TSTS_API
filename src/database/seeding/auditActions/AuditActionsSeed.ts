@@ -197,4 +197,158 @@ export const auditActionsSeed = [
     key: AuditAction.DOWNLOAD_REPORT,
     name: { en: "Download Report", ar: "تنزيل التقرير" },
   },
+  {
+    key: AuditAction.CREATE_REQUESTER,
+    name: { en: "Create Requester", ar: "إنشاء طالب خدمة" },
+  },
+  {
+    key: AuditAction.GET_REQUESTERS,
+    name: { en: "Get Requesters", ar: "الحصول على الطلاب" },
+  },
+  {
+    key: AuditAction.GET_REQUESTER,
+    name: { en: "Get Requester", ar: "الحصول على الطالب" },
+  },
+  {
+    key: AuditAction.EDIT_REQUESTER,
+    name: { en: "Edit Requester", ar: "تعديل الطالب" },
+  },
+  {
+    key: AuditAction.DELETE_REQUESTER,
+    name: { en: "Delete Requester", ar: "حذف الطالب" },
+  },
+  {
+    key: AuditAction.GET_SPECIALIZATION,
+    name: { en: "Get Specialization", ar: "الحصول على التخصص" },
+  },
+  {
+    key: AuditAction.GET_ALL_SPECIALIZATIONS,
+    name: { en: "Get All Specializations", ar: "الحصول على جميع التخصصات" },
+  },
+  {
+    key: AuditAction.CREATE_SPECIALIZATION,
+    name: { en: "Create Specialization", ar: "إنشاء تخصص" },
+  },
+  {
+    key: AuditAction.UPDATE_SPECIALIZATION,
+    name: { en: "Update Specialization", ar: "تحديث التخصص" },
+  },
+  {
+    key: AuditAction.DELETE_SPECIALIZATION,
+    name: { en: "Delete Specialization", ar: "حذف التخصص" },
+  },
+  {
+    key: AuditAction.CREATE_TECHNICIAN,
+    name: { en: "Create Technician", ar: "إنشاء فني" },
+  },
+  {
+    key: AuditAction.GET_TECHNICIANS,
+    name: { en: "Get Technicians", ar: "الحصول على الفنيين" },
+  },
+  {
+    key: AuditAction.GET_TECHNICIAN,
+    name: { en: "Get Technician", ar: "الحصول على الفني" },
+  },
+  {
+    key: AuditAction.EDIT_TECHNICIAN,
+    name: { en: "Edit Technician", ar: "تعديل الفني" },
+  },
+  {
+    key: AuditAction.DELETE_TECHNICIAN,
+    name: { en: "Delete Technician", ar: "حذف الفني" },
+  },
+  {
+    key: AuditAction.CREATE_TICKET,
+    name: { en: "Create Ticket", ar: "إنشاء تذكرة" },
+  },
+  {
+    key: AuditAction.GET_TICKET,
+    name: { en: "Get Ticket", ar: "الحصول على التذكرة" },
+  },
+  {
+    key: AuditAction.GET_TICKETS,
+    name: { en: "Get Tickets", ar: "الحصول على التذاكر" },
+  },
+  {
+    key: AuditAction.GET_TICKET_ACTIVITIES,
+    name: { en: "Get Ticket Activities", ar: "الحصول على أنشطة التذكرة" },
+  },
+  {
+    key: AuditAction.EDIT_TICKET,
+    name: { en: "Edit Ticket", ar: "تعديل التذكرة" },
+  },
+  {
+    key: AuditAction.EDIT_TICKET_REQUESTER,
+    name: { en: "Edit Ticket Requester", ar: "تعديل طالب التذكرة" },
+  },
+  {
+    key: AuditAction.DELETE_TICKET,
+    name: { en: "Delete Ticket", ar: "حذف التذكرة" },
+  },
+  {
+    key: AuditAction.UPLOAD_TICKET_ASSETS,
+    name: { en: "Upload Ticket Assets", ar: "تحميل ملفات التذكرة" },
+  },
+  {
+    key: AuditAction.GET_TICKET_ASSETS,
+    name: { en: "Get Ticket Assets", ar: "الحصول على ملفات التذكرة" },
+  },
+  {
+    key: AuditAction.GET_SINGLE_TICKET_ASSET,
+    name: { en: "Get Single Ticket Asset", ar: "الحصول على ملف تذكرة واحد" },
+  },
+  {
+    key: AuditAction.DELETE_TICKET_ASSET,
+    name: { en: "Delete Ticket Asset", ar: "حذف ملف التذكرة" },
+  },
+  {
+    key: AuditAction.UPLOAD_TICKET_CHAT_MEDIA,
+    name: { en: "Upload Ticket Chat Media", ar: "تحميل وسائط محادثة التذكرة" },
+  },
+  {
+    key: AuditAction.CREATE_TICKET_CHAT_MESSAGE,
+    name: {
+      en: "Create Ticket Chat Message",
+      ar: "إنشاء رسالة محادثة للتذكرة",
+    },
+  },
+  {
+    key: AuditAction.GET_CHAT_MESSAGES_FOR_TICKET,
+    name: {
+      en: "Get Chat Messages For Ticket",
+      ar: "الحصول على رسائل المحادثة للتذكرة",
+    },
+  },
+  {
+    key: AuditAction.CREATE_TICKET_REVIEW,
+    name: { en: "Create Ticket Review", ar: "إنشاء مراجعة للتذكرة" },
+  },
+  {
+    key: AuditAction.GET_TICKET_REVIEWS,
+    name: { en: "Get Ticket Reviews", ar: "الحصول على مراجعات التذاكر" },
+  },
+  {
+    key: AuditAction.CHANGE_TICKET_STATUS,
+    name: { en: "Change Ticket Status", ar: "تغيير حالة التذكرة" },
+  },
+  {
+    key: AuditAction.GET_ALL_UNIVERSITIES,
+    name: { en: "Get All Universities", ar: "الحصول على جميع الجامعات" },
+  },
+  {
+    key: AuditAction.CREATE_UNIVERSITY,
+    name: { en: "Create University", ar: "إنشاء جامعة" },
+  },
+  {
+    key: AuditAction.GET_UNIVERSITY_BY_ID,
+    name: { en: "Get University By ID", ar: "الحصول على جامعة بالمعرف" },
+  },
+  {
+    key: AuditAction.UPDATE_UNIVERSITY,
+    name: { en: "Update University", ar: "تحديث الجامعة" },
+  },
+  {
+    key: AuditAction.DELETE_UNIVERSITY,
+    name: { en: "Delete University", ar: "حذف الجامعة" },
+  },
 ];

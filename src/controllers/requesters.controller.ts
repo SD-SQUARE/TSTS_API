@@ -22,6 +22,7 @@ import { generateRequesterTemplateService } from "../services/users/requester/bu
 import { validateRequesterExcelFiles } from "../services/users/requester/bulk-upload/requesterBulkValidationService.js";
 import { bulkUploadRequestersService } from "../services/users/requester/bulk-upload/requesterBulkUploadService.js";
 import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 export const createRequester = async (
   req: RequestWithFileAndBody,
@@ -29,7 +30,7 @@ export const createRequester = async (
 ) => {
   const auditLog = audit(req as any)
     .summary("Create requester")
-    .action("CREATE_REQUESTER");
+    .ACTION(AuditAction.CREATE_REQUESTER);
 
   const requesterDto = mapCreateRequester(req);
   const result = await createRequesterService(requesterDto, req.file, req as Request);
@@ -55,7 +56,7 @@ export const getRequestersPaged = async (req, res) => {
 
   const auditLog = audit(req)
     .summary("Fetch requesters list")
-    .action("GET_REQUESTERS")
+    .ACTION(AuditAction.GET_REQUESTERS)
     .resource("User", "requesters")
     .metadata({ query });
 
@@ -79,7 +80,7 @@ export const getRequesterById = async (req, res) => {
 
   const auditLog = audit(req)
     .summary("Fetch requester by ID")
-    .action("GET_REQUESTER")
+    .ACTION(AuditAction.GET_REQUESTER)
     .resource("User", id);
 
   const isValid = uuidValidationSchema.safeParse(id);
@@ -116,7 +117,7 @@ export const EditRequester = async (req, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Edit requester")
-    .action("EDIT_REQUESTER")
+    .ACTION(AuditAction.EDIT_REQUESTER)
     .resource("User", id);
 
   if (!id || !isValid.success) {
@@ -153,7 +154,7 @@ export const deleteRequester = async (req, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Delete requester")
-    .action("DELETE_REQUESTER")
+    .ACTION(AuditAction.DELETE_REQUESTER)
     .resource("User", id);
 
   if (!id || !isValid.success) {

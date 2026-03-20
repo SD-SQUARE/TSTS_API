@@ -19,6 +19,7 @@ import {
 } from "../services/users/technician/technicianQueryService.js";
 import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 export const createTechnician = async (
   req: RequestWithFileAndBody,
@@ -26,7 +27,7 @@ export const createTechnician = async (
 ) => {
   const auditLog = audit(req as any)
     .summary("Create technician")
-    .action("CREATE_TECHNICIAN");
+    .ACTION(AuditAction.CREATE_TECHNICIAN);
 
   const technicianDto = mapCreateTechnician(req);
 
@@ -56,7 +57,7 @@ export const getTechniciansPaged = async (req, res) => {
 
   const auditLog = audit(req)
     .summary("Fetch technicians list")
-    .action("GET_TECHNICIANS")
+    .ACTION(AuditAction.GET_TECHNICIANS)
     .resource("User", "technicians")
     .metadata({ query });
 
@@ -80,7 +81,7 @@ export const getTechnicianById = async (req, res) => {
 
   const auditLog = audit(req)
     .summary("Fetch technician by ID")
-    .action("GET_TECHNICIAN")
+    .ACTION(AuditAction.GET_TECHNICIAN)
     .resource("User", id);
 
   const isValid = uuidValidationSchema.safeParse(id);
@@ -112,7 +113,7 @@ export const EditTechnician = async (req, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Edit technician")
-    .action("EDIT_TECHNICIAN")
+    .ACTION(AuditAction.EDIT_TECHNICIAN)
     .resource("User", id);
 
   if (!id) {
@@ -144,7 +145,7 @@ export const deleteTechnician = async (req, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Delete technician")
-    .action("DELETE_TECHNICIAN")
+    .ACTION(AuditAction.DELETE_TECHNICIAN)
     .resource("User", id);
 
   if (!id || !isValid.success) {

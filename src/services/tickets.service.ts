@@ -25,6 +25,7 @@ import { formatTicketStatus } from "../helpers/ticketsHelper.js";
 import { Group } from "../entities/Group.js";
 import { Request } from "express";
 import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
@@ -63,7 +64,7 @@ export const logTicketActivity = async (
 };
 
 export const createTicket = async (dto, files, req?: Request) => {
-  const auditLog = audit(req).summary("Create Ticket").action("CREATE_TICKET");
+  const auditLog = audit(req).summary("Create Ticket").ACTION(AuditAction.CREATE_TICKET);
   // FIXME: Take Problem From body and update ticket entity
   const { title, description, requester, specialization, problem } = dto;
 
@@ -356,7 +357,7 @@ export const getAllTicketsService = async (
   });
   const auditLog = audit(req)
     .summary("Get All Tickets")
-    .action("GET_TICKETS")
+    .ACTION(AuditAction.GET_TICKETS)
     .metadata({ userId: user.id });
 
   auditLog.step("Resolve pagination");

@@ -6,13 +6,14 @@ import logger from "../utils/logger.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 import {SpecializationDto} from "../interfaces/response/specializationResponse.js"
 import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 export async function getSpecializationById(req: Request, res: Response) {
     const { id } = req.params;
 
     const auditLog = audit(req)
     .summary("Fetch specialization by ID")
-    .action("GET_SPECIALIZATION")
+    .ACTION(AuditAction.GET_SPECIALIZATION)
     .resource("Specialization", id);
 
     const specializationRepo = new SpecializationRepo().getRepository();
@@ -41,7 +42,7 @@ export async function getAllSpecializations(req: Request, res: Response) {
 
     const auditLog = audit(req)
     .summary("Fetch all specializations")
-    .action("GET_ALL_SPECIALIZATIONS")
+    .ACTION(AuditAction.GET_ALL_SPECIALIZATIONS)
     .metadata({
       page: pageNum,
       limit: limitNum,
@@ -65,7 +66,7 @@ export async function createSpecialization(req: Request, res: Response) {
     
     const auditLog = audit(req)
     .summary("Create specialization")
-    .action("CREATE_SPECIALIZATION");
+    .ACTION(AuditAction.CREATE_SPECIALIZATION);
 
     const specializationRepo = new SpecializationRepo().getRepository();
     const name = { en: name_en, ar: name_ar };
@@ -120,7 +121,7 @@ export async function updateSpecialization(req: Request, res: Response) {
     
     const auditLog = audit(req)
     .summary("Update specialization")
-    .action("UPDATE_SPECIALIZATION")
+    .ACTION(AuditAction.UPDATE_SPECIALIZATION)
     .resource("Specialization", id);
     
     const specializationRepo = new SpecializationRepo().getRepository();
@@ -196,7 +197,7 @@ export async function deleteSpecialization(req: Request, res: Response) {
 
     const auditLog = audit(req)
     .summary("Delete specialization")
-    .action("DELETE_SPECIALIZATION")
+    .ACTION(AuditAction.DELETE_SPECIALIZATION)
     .resource("Specialization", id);
 
     const specializationRepo = new SpecializationRepo().getRepository();
