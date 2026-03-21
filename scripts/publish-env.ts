@@ -7,7 +7,7 @@ async function main() {
   // const HOST_IP = "192.168.1.200";
   // prod stagging
   // const HOST_IP = "172.1.50.91";
-  const FROM = `./secrets/.env.stagging`;
+  const FROM = `./secrets/.env.example`;
 
   const TARGETS = [`./docker/.env`, `./.env`, `./tests/.env.test`];
 

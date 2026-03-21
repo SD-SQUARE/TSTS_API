@@ -4,7 +4,6 @@ import { parseGroupsForUserQuery } from "../interfaces/users/IGroupsForUser.inte
 import { parseSpecializationsForUserQuery } from "../interfaces/users/ISpecializationsForUser.interface.js";
 import logger from "../utils/logger.js";
 import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
-
 export const getGroupsForUserPagedController = async (req, res) => {
   const query = parseGroupsForUserQuery(req.params, req.query);
   const lang = req.language;

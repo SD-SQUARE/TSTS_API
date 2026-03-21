@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import e, { Request, Response, NextFunction } from "express";
 import {
   getDepartmentsLockupService,
   getDomainDepartmentsLockupService,
@@ -14,6 +14,7 @@ import {
   getUserTicketsLockupService,
   getProblemsLockUpService,
   getTicketProblemsService,
+  getPermissionProfilesLockupService,
   getAuditActionsLockupService,
 } from "../services/lockups.service.js";
 import { UserType } from "../enums/UserType.enum.js";
@@ -173,10 +174,24 @@ export const getTicketProblemsLockupController = async (
 
   return res.status(200).json(specializations);
 };
+export const getPermissionsLockup = async (
+  req: Request,
+  res: Response
+) => {
+  const { name, page_index, page_size } = req.query;
+
+  const permissionProfiles = await getPermissionProfilesLockupService({
+    name: name as string | undefined,
+    page: page_index ? Number(page_index) : undefined,
+    limit: page_size ? Number(page_size) : undefined,
+  });
+
+  return res.status(200).json(permissionProfiles);
+};
 
 export const getAuditActionsLockupController = async (
   req: Request,
-  res: Response,
+  res: Response
 ) => {
   try {
     const lang = (req.language || "en") as "en" | "ar";

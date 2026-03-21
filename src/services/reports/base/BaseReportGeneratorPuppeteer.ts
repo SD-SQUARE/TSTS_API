@@ -150,16 +150,23 @@ export abstract class BaseReportGeneratorPuppeteer implements IReportGenerator {
   /**
    * Generate PDF from HTML
    */
-  protected async generatePDFFromHTML(html: string): Promise<Buffer> {
+  protected async generatePDFFromHTML(html: string, landscape = false): Promise<Buffer> {
     const browser = await BaseReportGeneratorPuppeteer.getBrowser();
     const page = await browser.newPage();
 
+    // A4 at 96dpi: portrait 794x1123, landscape 1123x794
+    const viewport = landscape
+      ? { width: 1123, height: 794 }
+      : { width: 794, height: 1123 };
+
     try {
+      await page.setViewport(viewport);
       // Use domcontentloaded instead of networkidle0 for faster generation
       await page.setContent(html, { waitUntil: "domcontentloaded" });
 
       const pdfBuffer = await page.pdf({
         format: "A4",
+        landscape,
         printBackground: true,
         margin: {
           top: "0px",
@@ -167,7 +174,7 @@ export abstract class BaseReportGeneratorPuppeteer implements IReportGenerator {
           left: "0px",
           right: "0px",
         },
-        displayHeaderFooter: false, // We use CSS for headers/footers
+        displayHeaderFooter: false,
       });
 
       return Buffer.from(pdfBuffer);
@@ -179,7 +186,7 @@ export abstract class BaseReportGeneratorPuppeteer implements IReportGenerator {
   /**
    * Get base CSS styles
    */
-  protected getBaseStyles(): string {
+  protected getBaseStyles(landscape = false): string {
     const isRTL = this.config.translations?.isRTL || false;
     const fontsPath = path.join(process.cwd(), "assets", "fonts");
     const cairoRegularPath = path.join(fontsPath, "Cairo-Regular.ttf");
@@ -224,7 +231,7 @@ export abstract class BaseReportGeneratorPuppeteer implements IReportGenerator {
     }
 
     .page {
-      width: ${s.page?.width || "210mm"};
+      width: 100%;
       padding: ${s.page?.padding || "0 40px"};
       margin: 0 auto;
       background: white;
@@ -233,9 +240,10 @@ export abstract class BaseReportGeneratorPuppeteer implements IReportGenerator {
 
     .page-content {
       page-break-after: always;
-      min-height: ${s.page?.height || "297mm"};
+      height: ${landscape ? "794px" : "1123px"}; /* A4 at 96dpi */
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     .page-content:last-child {
@@ -277,6 +285,7 @@ export abstract class BaseReportGeneratorPuppeteer implements IReportGenerator {
       max-width: ${s.logos?.citcWidth || "120px"};
       object-fit: contain;
       order: 3; /* Always last */
+      margin-left: auto; /* Push to the rightmost position */
     }
 
     .header-content {
@@ -324,6 +333,7 @@ export abstract class BaseReportGeneratorPuppeteer implements IReportGenerator {
       padding: ${s.footer?.padding || "10px 10px"};
       background: white;
       border-top: ${s.footer?.borderTopWidth || "1px"} solid ${s.footer?.borderTopColor || "#eee"};
+      margin-top: auto; /* Push footer to the bottom of the flex column */
     }
 
     .footer-info {
@@ -403,6 +413,7 @@ export abstract class BaseReportGeneratorPuppeteer implements IReportGenerator {
       text-align: ${isRTL ? "right" : "left"};
       border: ${s.table?.borderWidth || "0.5px"} solid ${s.table?.borderColor || "#ddd"};
       font-size: 11pt;
+      vertical-align: middle;
     }
 
     th.center {
@@ -417,6 +428,7 @@ export abstract class BaseReportGeneratorPuppeteer implements IReportGenerator {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      vertical-align: middle;
     }
 
     td.center {
@@ -594,6 +606,21 @@ export abstract class BaseReportGeneratorPuppeteer implements IReportGenerator {
     const pages: any[][] = [];
     for (let i = 0; i < tableData.rows.length; i += rowsPerPage) {
       pages.push(tableData.rows.slice(i, i + rowsPerPage));
+    }
+
+    // If no data, return a single page with header and empty-state row
+    if (pages.length === 0) {
+      const noDataText = isRTL ? "لا توجد بيانات" : "No data available";
+      return [`
+        <table>
+          <thead><tr>${headerHTML}</tr></thead>
+          <tbody>
+            <tr>
+              <td colspan="${columns.length}" class="center" style="padding: 20px; color: #999;">${noDataText}</td>
+            </tr>
+          </tbody>
+        </table>
+      `];
     }
 
     // Build separate table for each page

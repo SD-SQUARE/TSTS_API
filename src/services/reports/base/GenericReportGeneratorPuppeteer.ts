@@ -11,15 +11,16 @@ import { formatNumber } from "../../../utils/NumberHelper.js";
 
 export interface GenericReportConfig {
   reportHandler: ReportHandler;
-  rowsPerPage: number | { en: number; ar: number }; // Support different rows per page for each language
+  rowsPerPage: number | { en: number; ar: number };
   indexColumnHeader?: string;
   indexColumnWidth?: number;
   indexStartOffset?: number;
   showIndex?: boolean;
-  columnMappings?: Record<string, string>; // Map data keys to column keys in DB
-  columnWidths?: Record<string, number>; // Map data keys to column widths in pixels
-  columnAlignments?: Record<string, "left" | "center" | "right">; // Map data keys to alignments
-  styleConfig?: ReportStyleConfig; // Custom styling that overrides base config
+  columnMappings?: Record<string, string>;
+  columnWidths?: Record<string, number>;
+  columnAlignments?: Record<string, "left" | "center" | "right">;
+  styleConfig?: ReportStyleConfig;
+  landscape?: boolean; // Whether to render in landscape orientation
 }
 
 /**
@@ -58,7 +59,7 @@ export class GenericReportGeneratorPuppeteer extends BaseReportGeneratorPuppetee
 
   async generate(input: any[] | { data: any[] }): Promise<Buffer> {
     const html = await this.buildHTML(input);
-    return this.generatePDFFromHTML(html);
+    return this.generatePDFFromHTML(html, this.reportConfig.landscape ?? false);
   }
 
   protected async buildHTML(input: any[] | { data: any[] }): Promise<string> {
@@ -162,13 +163,16 @@ export class GenericReportGeneratorPuppeteer extends BaseReportGeneratorPuppetee
       : isRTL
         ? this.reportConfig.rowsPerPage.ar
         : this.reportConfig.rowsPerPage.en;
-    const totalPages = Math.ceil(data.length / rowsPerPage);
+    const totalPages = Math.max(1, Math.ceil(data.length / rowsPerPage));
 
     // Build table HTML for each page
     const tablesHTML = this.buildTableHTML(tableData, rowsPerPage);
 
+    // Always render at least one page (even if empty)
+    const pagesToRender = tablesHTML.length > 0 ? tablesHTML : [""];
+
     // Build pages
-    const pagesHTML = tablesHTML
+    const pagesHTML = pagesToRender
       .map((tableHTML, index) => {
         const pageNumber = index + 1;
         return `
@@ -191,7 +195,7 @@ export class GenericReportGeneratorPuppeteer extends BaseReportGeneratorPuppetee
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
-        ${this.getBaseStyles()}
+        ${this.getBaseStyles(this.reportConfig.landscape ?? false)}
       </style>
     </head>
     <body>

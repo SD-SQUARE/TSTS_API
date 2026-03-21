@@ -3,37 +3,32 @@ import {
   ViewReportParams,
   DownloadReportParams,
 } from "../../../handlers/IReportHandler.js";
-import { SpecializationTicketsCountPreparation } from "./SpecializationTicketsCountPreparation.js";
-import { PeriodType, ReportTypes } from "../../../types/report.types.js";
+import { DomainDeptSpecProblemPreparation } from "./DomainDeptSpecProblemPreparation.js";
 import { Lang } from "../../../../../types/lang.types.js";
-import { SpecializationTicketsReportPdf } from "./SpecializationTicketsReportPdf.js";
+import { ReportTypes } from "../../../types/report.types.js";
+import { DomainDeptSpecProblemReportPdf } from "./DomainDeptSpecProblemReportPdf.js";
 
-export class SpecializationTicketsReportHandler implements IReportHandler {
+export class DomainDeptSpecProblemReportHandler implements IReportHandler {
   async view(params: ViewReportParams): Promise<any> {
-    const { report, filters, periodType, language, page, limit } = params;
+    const { report, filters, language, page, limit } = params;
 
     // Validate filters
-    const validation =
-      SpecializationTicketsCountPreparation.validateFilter(filters);
+    const validation = DomainDeptSpecProblemPreparation.validateFilter(
+      filters,
+      language as Lang,
+    );
     if (!validation.isValid) {
       throw new Error(`Invalid filters: ${JSON.stringify(validation.errors)}`);
     }
 
     // Fetch data with pagination
     const data =
-      await SpecializationTicketsCountPreparation.getSpecializationTicketsCountData(
+      await DomainDeptSpecProblemPreparation.getDomainDeptSpecProblemData(
         filters,
         language as Lang,
         true,
         page,
         limit,
-      );
-
-    // Get time-series statistics based on periodType
-    const statistics =
-      await SpecializationTicketsCountPreparation.getTimeSeriesStatistics(
-        filters,
-        periodType as PeriodType,
       );
 
     // Format columns from report metadata
@@ -44,18 +39,20 @@ export class SpecializationTicketsReportHandler implements IReportHandler {
 
     // Format all records (data has already been paginated)
     const allRecords = data.results.map((item, index) => ({
-      index: index + 1 + (page - 1) * limit, // Adjust index for pagination
+      index: index + 1 + (page - 1) * limit,
+      domain: item.domain,
+      department: item.department,
       specialization: item.specialization,
-      ticketsCount: item.ticketsCount,
+      problem: item.problem,
+      ticketCount: item.ticketCount,
     }));
 
     // Build response
     return {
       id: report.id,
       title: report.title[language as Lang] || report.title.en || "",
-      statistics: statistics,
-      filters: (report.filters || []).map((f) => f.column),
       columns: [{ key: "index", label: "#" }, ...columns],
+      filters: (report.filters || []).map((f) => f.column),
       records: allRecords,
       meta: {
         page_size: Number(limit ?? 1),
@@ -70,7 +67,7 @@ export class SpecializationTicketsReportHandler implements IReportHandler {
     const { type } = params;
 
     if (type === ReportTypes.PDF) {
-      return new SpecializationTicketsReportPdf().downloadPDF(params);
+      return new DomainDeptSpecProblemReportPdf().downloadPDF(params);
     } else {
       throw new Error(`Unsupported report type: ${type}. Supported types: pdf`);
     }
