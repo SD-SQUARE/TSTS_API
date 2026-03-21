@@ -1,5 +1,6 @@
 import { IReportHandler } from "./IReportHandler.js";
 import { SpecializationTicketsReportHandler } from "../specialization-tickets/v1.0/services/SpecializationTicketsReportHandler.js";
+import { DomainDeptSpecProblemReportHandler } from "../domain-dept-spec-problem/v1.0/services/DomainDeptSpecProblemReportHandler.js";
 import { ReportHandler } from "../../../enums/ReportHandler.enum.js";
 
 export class ReportHandlerFactory {
@@ -7,6 +8,10 @@ export class ReportHandlerFactory {
     [
       ReportHandler.SPECIALIZATION_TICKETS_COUNT,
       SpecializationTicketsReportHandler,
+    ],
+    [
+      ReportHandler.DOMAIN_DEPT_SPEC_PROBLEM,
+      DomainDeptSpecProblemReportHandler,
     ],
     // Add more report handlers here as needed
   ]);

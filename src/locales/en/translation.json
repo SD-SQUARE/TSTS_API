@@ -153,8 +153,15 @@
   "rating_min": "Rating must be at least 1",
   "rating_max": "Rating must not exceed 5",
   "note_too_long": "Note is too long (maximum 2000 characters)",
+  "permission_profile_exists": "Permission profile already exists",
+  "permissions_required": "Permissions with names in both languages are required",
+  "permission_profile_created": "Permission profile created successfully",
+  "permission_profile_not_found": "Permission profile not found",
+  "permission_name_invalid": "Permission name must be in English or Arabic",
+  "permissions_invalid": "Invalid permissions provided",
+  "permission_profile_updated": "Permission profile updated successfully",
+  "permission_profile_deleted": "Permission profile deleted successfully",
   "invalid_problem": "Invalid Problem!",
-
   "report_common": {
     "invalid_report_id": "Invalid report ID",
     "report_not_found": "Report not found",
@@ -171,5 +178,17 @@
     "filter_selected": "selected",
     "filter_all_specializations": "All Specializations",
     "showing_records": "Showing {{filtered}} of {{total}} records"
+  },
+  "common": {
+    "not_available": "Not available",
+    "domains": "Domains",
+    "departments": "Departments",
+    "specializations": "Specializations",
+    "problems": "Problems",
+    "ids": "IDs",
+    "invalid_uuid": "Invalid UUID format for {{entityName}}: {{invalidIds}}",
+    "invalid_date_format_start": "Invalid start date format",
+    "invalid_date_format_end": "Invalid end date format",
+    "date_range_error": "Start date must be before or equal to end date"
   }
 }
