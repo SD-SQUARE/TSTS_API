@@ -23,6 +23,9 @@ import { Problem } from "../entities/problem.js";
 import { getPresignedUrl } from "../utils/storage.js";
 import { formatTicketStatus } from "../helpers/ticketsHelper.js";
 import { Group } from "../entities/Group.js";
+import { Request } from "express";
+import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
@@ -60,7 +63,8 @@ export const logTicketActivity = async (
   await ticketActivityRepo.save(activity);
 };
 
-export const createTicket = async (dto, files) => {
+export const createTicket = async (dto, files, req?: Request) => {
+  const auditLog = audit(req).summary("Create Ticket").action(AuditAction.CREATE_TICKET);
   // FIXME: Take Problem From body and update ticket entity
   const { title, description, requester, specialization, problem } = dto;
 
@@ -71,9 +75,13 @@ export const createTicket = async (dto, files) => {
     hasFiles: !!files?.length,
   });
 
+  auditLog.step("Validating requester").metadata({ requester });
+
   const requesterUser = await userRepo.findOne({ where: { id: requester } });
 
   if (!requesterUser) {
+    auditLog.step("Requester not found");
+
     logger.warn("[tickets] createTicket | requester not found", {
       requester,
     });
@@ -95,6 +103,8 @@ export const createTicket = async (dto, files) => {
 
   // FIXME: ticket should be created with problem and specialization
   if (specialization) {
+    auditLog.step("Validating specialization").metadata({ specialization });
+
     logger.info("[tickets] createTicket | specialization provided", {
       specialization,
     });
@@ -111,6 +121,8 @@ export const createTicket = async (dto, files) => {
     });
 
     if (!assignedSpecialization) {
+      auditLog.step("Specialization not found");
+
       logger.warn("[tickets] createTicket | specialization not found", {
         specialization,
       });
@@ -129,6 +141,8 @@ export const createTicket = async (dto, files) => {
     });
   }
   if (problem) {
+    auditLog.step("Validating problem").metadata({ problem });
+
     logger.info("[tickets] createTicket | problem provided", {
       problem,
     });
@@ -138,6 +152,8 @@ export const createTicket = async (dto, files) => {
     });
 
     if (!assignedProblem) {
+      auditLog.step("Problem not found");
+
       logger.warn("[tickets] createTicket | problem not found", {
         problem,
       });
@@ -154,6 +170,7 @@ export const createTicket = async (dto, files) => {
     });
   }
 
+  auditLog.step("Assigning users");
   if (assignedSpecialization) {
     assignedUsers = await assignUsersFromSpecialization(assignedSpecialization);
 
@@ -210,6 +227,11 @@ export const createTicket = async (dto, files) => {
 
   const savedTicket = await ticketRepo.save(ticket);
 
+  auditLog.step("Ticket created").metadata({
+    ticketId: savedTicket.id,
+    assignees: assignedUsers.map((u) => u.id),
+  });
+
   logger.info("[tickets] createTicket | ticket saved", {
     ticketId: savedTicket.id,
   });
@@ -234,6 +256,8 @@ export const createTicket = async (dto, files) => {
 
   // handle media
   if (files?.length) {
+    auditLog.step("Uploading media").metadata({ fileCount: files.length });
+
     logger.info("[tickets] createTicket | uploading media", {
       ticketId: savedTicket.id,
       fileCount: files.length,
@@ -272,6 +296,10 @@ export const createTicket = async (dto, files) => {
     }
   }
 
+  auditLog
+    .step("Ticket creation completed")
+    .metadata({ ticketId: savedTicket.id });
+
   logger.info("[tickets] createTicket | completed successfully", {
     ticketId: savedTicket.id,
   });
@@ -306,7 +334,7 @@ const assignAllGroupHeadsAndLeaders = async (): Promise<User[]> => {
   });
 
   const headIds = groups.flatMap(
-    (g) => g.heads?.map((h) => h.user?.id).filter(Boolean) ?? []
+    (g) => g.heads?.map((h) => h.user?.id).filter(Boolean) ?? [],
   );
 
   const teamLeaderIds = groups.map((g) => g.teamLeader?.id).filter(Boolean);
@@ -321,11 +349,18 @@ export const getAllTicketsService = async (
   query: GetTicketsQuery,
   lang: "ar" | "en",
   user: ReqUserPayload,
+  req?: Request,
 ) => {
   logger.info("[server][tickets] getAllTickets | start", {
     lang,
     query,
   });
+  const auditLog = audit(req)
+    .summary("Get All Tickets")
+    .action(AuditAction.GET_TICKETS)
+    .metadata({ userId: user.id });
+
+  auditLog.step("Resolve pagination");
 
   const { skip, take, meta } = buildPagination({
     page: query.page_index,
@@ -346,6 +381,7 @@ export const getAllTicketsService = async (
     .leftJoinAndSelect("ticket.problem", "problem")
     .leftJoinAndSelect("ticket.assigneeList", "assignee");
 
+  auditLog.step("Applying role-based filters");
   if (user.role === UserType.REQUESTER) {
     qb.andWhere("requester.id = :userId", {
       userId: user.id,
@@ -363,7 +399,7 @@ export const getAllTicketsService = async (
   }
 
   logger.info("[server][tickets] getAllTickets | base query initialized");
-
+  auditLog.step("Applying query filters");
   if (query.id) {
     qb.andWhere("ticket.id = :ticketId", {
       ticketId: query.id,
@@ -440,6 +476,7 @@ export const getAllTicketsService = async (
 
   logger.info("[server][tickets] getAllTickets | executing query");
 
+  auditLog.step("Executing query");
   const [tickets, total] = await qb.getManyAndCount();
 
   logger.info("[server][tickets] getAllTickets | query executed", {
@@ -451,6 +488,10 @@ export const getAllTicketsService = async (
     ticketsCount: tickets.length,
     lang,
   });
+
+  auditLog
+    .step("Mapping tickets to DTO")
+    .metadata({ returnedCount: tickets.length });
 
   const mappedTickets = tickets.map((ticket) => ({
     id: ticket.id,
@@ -498,6 +539,10 @@ export const getAllTicketsService = async (
     pageSize: meta.page_size,
   });
 
+  auditLog
+    .step("Completed")
+    .metadata({ total, pageIndex: meta.page_index, pageSize: meta.page_size });
+
   return {
     tickets: mappedTickets,
     meta: {
@@ -513,9 +558,12 @@ export const getSingleTicketService = async (
   lang: "ar" | "en",
   userId: string,
   userName: string,
+  req?: Request,
 ) => {
+  const auditLog = audit(req);
   logger.info("[server][tickets] getSingleTicket | start", { ticketId, lang });
 
+  auditLog.step("Querying ticket from database");
   const ticket = await ticketRepo
     .createQueryBuilder("ticket")
     .leftJoinAndSelect("ticket.requester", "requester")
@@ -526,12 +574,21 @@ export const getSingleTicketService = async (
     .getOne();
 
   if (!ticket) {
+    auditLog.step("Ticket not found");
+
     logger.info("[server][tickets] getSingleTicket | not found", { ticketId });
     return null;
   }
 
   logger.info("[server][tickets] getSingleTicket | found", {
     ticketId: ticket.id,
+    requesterId: ticket.requester?.id ?? null,
+    specializationId: ticket.specialization?.id ?? null,
+    problemId: ticket.problem?.id ?? null,
+    assigneeCount: ticket.assigneeList?.length ?? 0,
+  });
+
+  auditLog.step("Ticket found").metadata({
     requesterId: ticket.requester?.id ?? null,
     specializationId: ticket.specialization?.id ?? null,
     problemId: ticket.problem?.id ?? null,
@@ -575,6 +632,7 @@ export const getSingleTicketService = async (
       })) || [],
   };
 
+  auditLog.step("Logging ticket view activity");
   // log ticket view activity
   logTicketActivity(
     ticket,
@@ -590,12 +648,23 @@ export const getSingleTicketService = async (
     requesterId: mappedTicket.requester?.id ?? null,
     assigneeCount: mappedTicket.assignee.length,
   });
+  auditLog.step("Completed ticket mapping").metadata({
+    assigneeCount: mappedTicket.assignee.length,
+    requesterId: mappedTicket.requester?.id ?? null,
+  });
 
   return mappedTicket;
 };
 
-export const getTicketActivitiesService = async (ticketId: string) => {
+export const getTicketActivitiesService = async (
+  ticketId: string,
+  req?: Request,
+) => {
+  const auditLog = audit(req);
+
   try {
+    const auditLog = audit(req);
+
     const activities = await ticketActivityRepo.find({
       where: { ticket: { id: ticketId } },
       order: { createdAt: "DESC" },
@@ -604,6 +673,10 @@ export const getTicketActivitiesService = async (ticketId: string) => {
     logger.info(
       `Fetched ${activities.length} activities for ticket ${ticketId}`,
     );
+
+    auditLog
+      .metadata({ activitiesCount: activities.length })
+      .step("Activities retrieved");
 
     return await Promise.all(
       activities.map(async (activity) => {
@@ -619,6 +692,10 @@ export const getTicketActivitiesService = async (ticketId: string) => {
         if (userId) {
           userMeta = await getUserMetaById(userId);
 
+          auditLog
+            .metadata({ userId })
+            .step("User metadata fetched for activity");
+
           if (userMeta?.image) {
             const imageUrl = await getPresignedUrl(
               process.env.MINIO_BUCKET!,
@@ -627,6 +704,10 @@ export const getTicketActivitiesService = async (ticketId: string) => {
             );
 
             userMeta.image = imageUrl;
+
+            auditLog
+              .metadata({ userId })
+              .step("User image presigned URL generated");
           }
         }
 
@@ -640,6 +721,10 @@ export const getTicketActivitiesService = async (ticketId: string) => {
       }),
     );
   } catch (error) {
+    auditLog
+      .metadata({ error: error.message })
+      .step("Failed to fetch ticket activities");
+
     logger.error(`Error fetching activities for ticket ${ticketId}: ${error}`);
     throw new Error("Could not fetch ticket activities");
   }
@@ -649,6 +734,7 @@ export const createTicketReviewService = async (
   ticketId: string,
   dto: { rating: number; note?: string },
   user: any,
+  auditLog?: ReturnType<typeof audit>,
 ) => {
   logger.info("[server][tickets][review] createTicketReview | start", {
     ticketId,
@@ -665,6 +751,7 @@ export const createTicketReviewService = async (
     logger.info("[server][tickets][review] ticket not found", {
       ticketId,
     });
+    auditLog?.step("Ticket not found").metadata({ reason: "TICKET_NOT_FOUND" });
 
     return {
       status: 404,
@@ -674,6 +761,12 @@ export const createTicketReviewService = async (
       },
     };
   }
+
+  auditLog?.step("Ticket fetched").metadata({
+    status: ticket.status,
+    closeCount: ticket.closeCount,
+    requesterId: ticket.requester?.id,
+  });
 
   logger.info("[server][tickets][review] ticket fetched", {
     ticketId: ticket.id,
@@ -687,6 +780,11 @@ export const createTicketReviewService = async (
       ticketId,
       requesterId: ticket.requester.id,
       attemptedBy: user.id,
+    });
+
+    auditLog?.step("Forbidden review attempt").metadata({
+      attemptedBy: user.id,
+      requesterId: ticket.requester.id,
     });
 
     return {
@@ -705,6 +803,11 @@ export const createTicketReviewService = async (
       ticketId,
       previousStatus: ticket.status,
       previousCloseCount: ticket.closeCount,
+    });
+
+    auditLog?.step("Ticket closed before review").metadata({
+      previousStatus: ticket.status,
+      newCloseCount: closeCycle,
     });
 
     closeCycle += 1;
@@ -734,6 +837,8 @@ export const createTicketReviewService = async (
       reviewerId: user.id,
     });
 
+    auditLog?.step("Duplicate review detected").metadata({ closeCycle });
+
     return {
       status: 409,
       payload: {
@@ -752,6 +857,8 @@ export const createTicketReviewService = async (
   });
 
   await ticketReviewRepo.save(review);
+
+  auditLog?.step("Review saved").metadata({ reviewId: review.id, closeCycle });
 
   logger.info("[server][tickets][review] review saved", {
     ticketId,
@@ -772,6 +879,8 @@ export const createTicketReviewService = async (
       closeCycle: closeCycle,
     },
   );
+
+  auditLog?.step("Ticket activity logged");
 
   logger.info("[server][tickets][review] activity logged", {
     ticketId,
@@ -798,6 +907,7 @@ export const getTicketReviewsService = async (
   ticketId: string,
   user: any,
   t: any,
+  auditLog?: ReturnType<typeof audit>,
 ) => {
   logger.info("[server][tickets][review] getTicketReviews | start", {
     ticketId,
@@ -815,6 +925,8 @@ export const getTicketReviewsService = async (
       requestedBy: user.id,
     });
 
+    auditLog?.step("Ticket not found").metadata({ reason: "TICKET_NOT_FOUND" });
+
     return {
       status: 404,
       payload: {
@@ -826,6 +938,11 @@ export const getTicketReviewsService = async (
 
   logger.info("[server][tickets][review] ticket fetched", {
     ticketId: ticket.id,
+    requesterId: ticket.requester?.id,
+    assigneeCount: ticket.assigneeList?.length || 0,
+  });
+
+  auditLog?.step("Ticket fetched").metadata({
     requesterId: ticket.requester?.id,
     assigneeCount: ticket.assigneeList?.length || 0,
   });
@@ -847,6 +964,13 @@ export const getTicketReviewsService = async (
       isAssignee,
     });
 
+    auditLog?.step("Forbidden access attempt").metadata({
+      attemptedBy: user.id,
+      isAdmin: user.role === UserType.ADMIN,
+      isRequester,
+      isAssignee,
+    });
+
     return {
       status: 403,
       payload: {
@@ -861,6 +985,8 @@ export const getTicketReviewsService = async (
     relations: ["reviewer"],
     order: { createdAt: "DESC" },
   });
+
+  auditLog?.step("Reviews fetched").metadata({ reviewsCount: reviews.length });
 
   logger.info("[server][tickets][review] reviews fetched", {
     ticketId,
@@ -912,6 +1038,11 @@ export const getTicketReviewsService = async (
     userId: user.id,
   });
 
+  auditLog
+    ?.step("Ticket activity logged")
+    .metadata({ reviewsCount: formatted.length });
+  auditLog?.step("Completed successfully");
+
   return {
     status: 200,
     payload: {
@@ -928,6 +1059,7 @@ export const changeTicketStatusService = async (
   dto: { status: TicketStatus },
   user: any,
   t: any,
+  auditLog?: ReturnType<typeof audit>,
 ) => {
   logger.info("[server][tickets] changeTicketStatus | start", {
     ticketId,
@@ -945,6 +1077,8 @@ export const changeTicketStatusService = async (
       ticketId,
       requestedBy: user.id,
     });
+    auditLog?.step("Ticket not found").metadata({ reason: "TICKET_NOT_FOUND" });
+
     return {
       status: 404,
       payload: {
@@ -954,6 +1088,12 @@ export const changeTicketStatusService = async (
     };
   }
 
+  auditLog?.step("Ticket fetched").metadata({
+    requesterId: ticket.requester?.id,
+    assigneeCount: ticket.assigneeList?.length || 0,
+    previousStatus: ticket.status,
+  });
+
   const isRequester = ticket.requester?.id === user.id;
 
   const isAssignee = ticket.assigneeList?.some(
@@ -961,7 +1101,7 @@ export const changeTicketStatusService = async (
   );
 
   const isAdmin = user.role === UserType.ADMIN;
-  // FIXME: Requester should be able to change status to re_open and 
+  // FIXME: Requester should be able to change status to re_open and
   // also if specialization or problem has review_required set to true  let requester change status to closed
 
   let isAllowed = false;
@@ -984,6 +1124,14 @@ export const changeTicketStatusService = async (
       isAdmin: user.role === UserType.ADMIN,
       isAssignee,
     });
+
+    auditLog?.step("Forbidden status change attempt").metadata({
+      attemptedBy: user.id,
+      isAdmin,
+      isAssignee,
+      requestedStatus: dto.status,
+    });
+
     return {
       status: 403,
       payload: {
@@ -1033,6 +1181,10 @@ export const changeTicketStatusService = async (
   ticket.status = newStatus;
   await ticketRepo.save(ticket);
 
+  auditLog
+    ?.step("Ticket status updated")
+    .metadata({ previousStatus, newStatus, closeCycle: ticket.closeCount });
+
   await logTicketActivity(
     ticket,
     "Ticket Status Changed",
@@ -1044,9 +1196,13 @@ export const changeTicketStatusService = async (
       newStatus,
       closeCycle: ticket.closeCount,
       old: previousStatus,
-      new : newStatus
+      new: newStatus,
     },
   );
+
+  auditLog
+    ?.step("Ticket activity logged")
+    .metadata({ previousStatus, newStatus });
 
   logger.info("[server][tickets] ticket status updated successfully", {
     ticketId,
@@ -1054,6 +1210,8 @@ export const changeTicketStatusService = async (
     newStatus,
     closeCycle: ticket.closeCount,
   });
+
+  auditLog?.step("Completed successfully");
 
   return {
     status: 200,

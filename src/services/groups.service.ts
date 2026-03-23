@@ -10,6 +10,7 @@ import { PostgresDataSource } from "../database/postgres-data-source.js";
 import logger from "../utils/logger.js";
 import { In } from "typeorm";
 import { buildPagination, PaginationQuery } from "../utils/pagination.js";
+import { audit } from "../helpers/auditBuilder.js";
 
 const groupsRepository = PostgresDataSource.getRepository(Group);
 const usersRepository = PostgresDataSource.getRepository(User);
@@ -36,8 +37,13 @@ interface GroupFilters {
   name?: string;
 }
 
-export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
+export const createGroup = async (
+  data: CreateGroupInput,
+  t: Request["t"],
+  req?: Request,
+) => {
   logger.info("[server][groups][service] createGroup start", { data });
+  const auditLog = audit(req);
 
   // Validate team leader exists
   const leader = await usersRepository.findOne({
@@ -45,6 +51,7 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
   });
 
   if (!leader) {
+    auditLog.step(`Team leader not found: ${data.team_leader_id}`);
     logger.info("[server][groups][service] team leader not found", {
       team_leader: data.team_leader_id,
     });
@@ -58,6 +65,7 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
   });
 
   if (foundHeads.length !== data.heads.length) {
+    auditLog.step("One or more heads not found");
     logger.info("[groups][service] One or more heads not found", {
       expected: data.heads,
       found: foundHeads.map((h) => h.id),
@@ -72,6 +80,7 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
   });
 
   if (foundSpecs.length !== data.specializations.length) {
+    auditLog.step("One or more specializations not found");
     logger.info("[groups][service] One or more specializations not found", {
       expected: data.specializations,
       found: foundSpecs.map((s) => s.id),
@@ -89,6 +98,7 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
 
   try {
     await groupsRepository.save(group);
+    auditLog.step(`Group saved with team leader ${leader.id}`);
     logger.info("[server][groups][service] Group saved with team leader", {
       id: group.id,
       teamLeaderId: leader.id,
@@ -102,6 +112,7 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
         user: headUser,
       });
       await groupHeadRepository.save(gh);
+      auditLog.step(`Assigned head ${headId}`);
       logger.info("[server][groups][service] Head assigned", {
         groupId: group.id,
         headId,
@@ -116,12 +127,14 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
         specialization: spec,
       });
       await groupSpecializationRepository.save(gs);
+      auditLog.step(`Assigned specialization ${specId}`);
       logger.info("[server][groups][service] Specialization assigned", {
         groupId: group.id,
         specId,
       });
     }
 
+    auditLog.step("createGroup completed");
     logger.info("[server][groups][service] createGroup completed", {
       groupId: group.id,
     });
@@ -133,6 +146,7 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
       color: group.color,
     };
   } catch (err: any) {
+    auditLog.step("Error occurred during group creation");
     logger.error("[server][groups][service] Error saving group or relations", {
       error: err,
     });
@@ -142,7 +156,7 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
     } catch (deleteErr) {
       logger.error(
         "[server][groups][service] Failed to cleanup group after error",
-        { error: deleteErr }
+        { error: deleteErr },
       );
     }
     throw new AppError(t("internal_server_error"), 500);
@@ -209,8 +223,10 @@ export const createGroup = async (data: CreateGroupInput, t: Request["t"]) => {
 export const getGroupById = async (
   groupId: string,
   t: any,
-  lang: string = "en"
+  lang: string = "en",
+  req?: Request,
 ) => {
+  const auditLog = audit(req);
   logger.info("[server][groups][service] getGroupById request received", {
     groupId,
   });
@@ -231,6 +247,7 @@ export const getGroupById = async (
   const group = await groupQuery.getOne();
 
   if (!group) {
+    auditLog.step("Group not found");
     logger.info("[server][groups][service] Group not found", { groupId });
     throw new AppError(t("group_not_found"), 404);
   }
@@ -252,7 +269,12 @@ export const getGroupById = async (
   };
 };
 
-export const softDeleteGroup = async (groupId: string, t: any) => {
+export const softDeleteGroup = async (
+  groupId: string,
+  t: any,
+  req?: Request,
+) => {
+  const auditLog = audit(req);
   logger.info("[server][groups][service] softDeleteGroup request received", {
     groupId,
   });
@@ -261,11 +283,13 @@ export const softDeleteGroup = async (groupId: string, t: any) => {
     where: { id: groupId, deletedAt: null },
   });
   if (!group) {
+    auditLog.step("Group not found");
     logger.info("[server][groups][service] Group not found", { groupId });
     throw new AppError(t("group_not_found"), 404);
   }
 
   if (group.deletedAt) {
+    auditLog.step("Group already deleted");
     logger.info("[server][groups][service] Group already deleted", { groupId });
     return {
       is_deleted: false,
@@ -277,6 +301,7 @@ export const softDeleteGroup = async (groupId: string, t: any) => {
   group.deletedAt = new Date();
   await groupsRepository.save(group);
 
+  auditLog.step("Group soft-deleted successfully").resource("group", groupId);
   logger.info("[server][groups][service] Group soft-deleted successfully", {
     groupId,
   });
@@ -357,8 +382,11 @@ const getUserFullName = (user: User, locale: string): string => {
 export const getAllGroups = async (
   pagination: PaginationQuery,
   filters: GroupFilters,
-  t: any
+  t: any,
+  req?: Request,
 ) => {
+  const auditLog = audit(req);
+
   logger.info("[server][groups][service] getAllGroups request received", {
     pagination,
     filters,
@@ -383,7 +411,7 @@ export const getAllGroups = async (
   if (filters.name && filters.name.trim()) {
     queryBuilder.andWhere(
       `("group"."name"->>'en' ILIKE :name OR "group"."name"->>'ar' ILIKE :name)`,
-      { name: `%${filters.name.trim()}%` }
+      { name: `%${filters.name.trim()}%` },
     );
   }
 
@@ -393,6 +421,11 @@ export const getAllGroups = async (
   // Get paginated results
   const groups = await queryBuilder.skip(skip).take(take).getMany();
 
+  auditLog.step(`Groups fetched successfully`).metadata({
+    total,
+    returned: groups.length,
+    locale,
+  });
   logger.info("[server][groups][service] Groups fetched successfully", {
     total,
     returned: groups.length,
@@ -435,7 +468,13 @@ export const getAllGroups = async (
   };
 };
 
-export const getGroupUsersService = async (groupId: string, query: any) => {
+export const getGroupUsersService = async (
+  groupId: string,
+  query: any,
+  req?: Request,
+) => {
+  const auditLog = audit(req);
+
   const pageIndex = +(query.page_index || 1);
   const pageSize = +(query.page_size || 10);
 
@@ -452,10 +491,14 @@ export const getGroupUsersService = async (groupId: string, query: any) => {
 
   console.log(group);
   logger.info(
-    `[server][groups][service] getGroupUsers request received ${group.id}`
+    `[server][groups][service] getGroupUsers request received ${group.id}`,
   );
 
-  if (!group) throw new AppError("group_not_found", 404);
+  if (!group) {
+    auditLog.step("Group not found");
+    throw new AppError("group_not_found", 404);
+  }
+
   // Extract ids from actual fields
   const teamLeaderId = (group as any).__teamLeader__?.id ?? null;
   const headIds = (group as any).heads?.map((h) => h.user.id) ?? [];
@@ -476,6 +519,15 @@ export const getGroupUsersService = async (groupId: string, query: any) => {
   const heads = headIds.length
     ? await usersRepository.find({ where: { id: In(headIds) } })
     : [];
+
+  auditLog.step(`Group users fetched successfully`).metadata({
+    total,
+    page_index: pageIndex,
+    page_size: pageSize,
+    technicians: technicians.length,
+    heads: heads.length,
+    teamLeader: !!teamLeader,
+  });
 
   return {
     team_leader: mapUserToResponse(teamLeader),
@@ -504,8 +556,14 @@ const mapUserToResponse = (user: any) => {
   };
 };
 
+export const editGroup = async (
+  groupId: string,
+  data: any,
+  t: any,
+  req?: Request,
+) => {
+  const auditLog = audit(req);
 
-export const editGroup = async (groupId: string, data: any, t: any) => {
   logger.info("[server][groups][service] editGroup request received", {
     groupId,
     data,
@@ -513,9 +571,21 @@ export const editGroup = async (groupId: string, data: any, t: any) => {
 
   const group = await groupsRepository.findOne({ where: { id: groupId } });
   if (!group) {
+    auditLog.step("Group not found");
     logger.info("[server][groups][service] Group not found", { groupId });
     throw new AppError(t("group_not_found"), 404);
   }
+
+  // --- Track old values for audit ---
+  const oldValue: any = {
+    name: { ...group.name },
+    descriptions: { ...group.descriptions },
+    color: group.color,
+    teamLeaderId: group.teamLeader?.id ?? null,
+    heads: (group as any).heads?.map((h) => h.user.id) || [],
+    specializations:
+      (group as any).specializations?.map((s) => s.specialization.id) || [],
+  };
 
   // --- Update basic info ---
   group.name.en = data.name_en ?? group.name.en;
@@ -558,7 +628,7 @@ export const editGroup = async (groupId: string, data: any, t: any) => {
       });
 
       const newHeads = foundHeads.map((user) =>
-        groupHeadRepository.create({ group, user })
+        groupHeadRepository.create({ group, user }),
       );
       await groupHeadRepository.save(newHeads);
     }
@@ -580,7 +650,7 @@ export const editGroup = async (groupId: string, data: any, t: any) => {
       });
 
       const newSpecs = foundSpecs.map((spec) =>
-        groupSpecializationRepository.create({ group, specialization: spec })
+        groupSpecializationRepository.create({ group, specialization: spec }),
       );
       await groupSpecializationRepository.save(newSpecs);
     }
@@ -601,6 +671,21 @@ export const editGroup = async (groupId: string, data: any, t: any) => {
     ],
   });
 
+  const newValue: any = {
+    name: { ...group.name },
+    descriptions: { ...group.descriptions },
+    color: group.color,
+    teamLeaderId: group.teamLeader?.id ?? null,
+    heads: (group as any).heads?.map((h) => h.user.id) || [],
+    specializations:
+      (group as any).specializations?.map((s) => s.specialization.id) || [],
+  };
+
+  auditLog
+    .step("Group updated successfully")
+    .resource("group", groupId)
+    .metadata({ oldValue, newValue });
+
   logger.info("[server][groups][service] Group updated successfully", {
     groupId,
     updatedGroup,
@@ -613,12 +698,13 @@ export const editGroup = async (groupId: string, data: any, t: any) => {
   };
 };
 
-
 export const bulkAssignUsersToGroup = async (
   groupId: string,
   userIds: string[],
-  t: any
+  t: any,
+  req?: Request,
 ) => {
+  const auditLog = audit(req);
   logger.info("[server][groups][service] bulkAssignUsersToGroup start", {
     groupId,
     userIds,
@@ -628,7 +714,10 @@ export const bulkAssignUsersToGroup = async (
     where: { id: groupId, deletedAt: null },
     relations: ["technicians", "technicians.user"], // include current assignments
   });
-  if (!group) throw new AppError(t("group_not_found"), 404);
+  if (!group) {
+    auditLog.step(`Group not found: ${groupId}`);
+    throw new AppError(t("group_not_found"), 404);
+  }
 
   const users = await usersRepository.findBy({
     id: In(userIds),
@@ -638,9 +727,10 @@ export const bulkAssignUsersToGroup = async (
   if (users.length !== userIds.length) {
     const foundIds = users.map((u) => u.id);
     const missing = userIds.filter((id) => !foundIds.includes(id));
+    auditLog.step(`Some users not found: ${missing.join(", ")}`);
     throw new AppError(
       t("some_users_not_found", { ids: missing.join(", ") }),
-      404
+      404,
     );
   }
 
@@ -649,7 +739,7 @@ export const bulkAssignUsersToGroup = async (
 
   // Users to remove
   const toRemove = group.technicians.filter(
-    (t: any) => !userIds.includes(t.user.id)
+    (t: any) => !userIds.includes(t.user.id),
   );
 
   // Users to add
@@ -663,7 +753,7 @@ export const bulkAssignUsersToGroup = async (
 
     // Add new assignments
     const newRelations = toAdd.map((user) =>
-      technicianGroupRepository.create({ group, user })
+      technicianGroupRepository.create({ group, user }),
     );
     if (newRelations.length > 0) {
       await technicianGroupRepository.save(newRelations);
@@ -675,10 +765,15 @@ export const bulkAssignUsersToGroup = async (
         groupId,
         added: toAdd.map((u) => u.id),
         removed: toRemove.map((r) => r.user.id),
-      }
+      },
     );
-    return true;
+
+    return {
+      added: toAdd.map((u) => u.id),
+      removed: toRemove.map((r) => r.user.id),
+    };
   } catch (err: any) {
+    auditLog.step("Failed to assign/remove users due to internal error");
     logger.error("[server][groups][service] Failed to assign/remove users", {
       error: err,
     });

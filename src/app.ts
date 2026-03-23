@@ -13,12 +13,10 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { csrfMiddleware } from "./config/csrf.js";
 import { socketIoMiddleware } from "./middleware/socketIo.js";
 import { io as socketIoInstance } from "./config/socket.js";
-import {
-  notificationMessage,
-  notificationUser,
-  ticket,
-} from "./services/socket.service.js";
+
 import { requestContextMiddleware } from "./middleware/requestContextMiddleware.js";
+import { auditMiddleware } from "./middleware/audit-middleware.js";
+import { authMiddleware } from "./middleware/auth.js";
 
 const app = express();
 
@@ -68,6 +66,7 @@ import {
   notificationRouter,
   trustedDevicesRouter,
   authV2Router,
+  auditActionRouter,
 } from "./routes/index.js";
 import universitiesRouter from "./routes/universities.router.js";
 import domainsRouter from "./routes/domains.router.js";
@@ -77,6 +76,7 @@ import workHourRouter from "./routes/workHour.router.js";
 import knowlegeBaseRouter from "./routes/knowlegeBase.router.js";
 import ProblemRouter from "./routes/problems.router.js";
 import reportRoutes from "./routes/report.router.js";
+import permissionProfileRouter from "./routes/permissionProfile.router.js";
 
 import logger from "./utils/logger.js";
 // routes
@@ -84,20 +84,7 @@ app.get("/api/v1/health", (req, res) => {
   logger.info("[HealthCheck]: OK");
   res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
 });
-app.post("/debug/send-events", (_req, res) => {
-  notificationMessage("server_started", { message: "Server has started" });
-  notificationUser("user_update", {
-    userId: "00d53802-93a0-4213-a729-10555798929e",
-    info: "Profile updated",
-  });
-  notificationUser("user_ticket", {
-    userId: "00d53802-93a0-4213-a729-10555798929e",
-    ticketId: "ticket111",
-    info: "New comment",
-  });
-  ticket("ticket_update", { ticketId: "ticket111", status: "In Progress" });
-  res.sendStatus(204);
-});
+
 
 app.use("/api/v2/auth", authV2Router);
 
@@ -107,28 +94,30 @@ app.use("/api/v2/auth", authV2Router);
 if (process.env.NODE_ENV === "production") app.use(csrfMiddleware);
 
 app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/trusted-devices", trustedDevicesRouter);
-app.use("/api/v1/users", usersRouter);
-app.use("/api/v1/groups", groupsRouter);
-app.use("/api/v1/lockups", lockupsRouter);
-app.use("/api/v1/universities", universitiesRouter);
-app.use("/api/v1/domains", domainsRouter);
-app.use("/api/v1/departments", departmentsRouter);
-app.use("/api/v1/specializations", specializationsRouter);
-app.use("/api/v1/work-hours", workHourRouter);
-app.use("/api/v1/knowledge-base", knowlegeBaseRouter);
-app.use("/api/v1/problems", ProblemRouter);
 
-app.use("/api/v1/universities", universitiesRouter);
-app.use("/api/v1/domains", domainsRouter);
-app.use("/api/v1/departments", departmentsRouter);
-app.use("/api/v1/specializations", specializationsRouter);
+app.use(authMiddleware);
+
 app.use("/api/v1/work-hours", workHourRouter);
-app.use("/api/v1/tickets", ticketsRouter);
 app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/notifications", notificationRouter);
+app.use("/api/v1/audit-logs", auditActionRouter);
+app.use("/api/v1/lockups", lockupsRouter);
+app.use("/api/v1/trusted-devices", trustedDevicesRouter);
 
+app.use(auditMiddleware);
+
+app.use("/api/v1/users", usersRouter);
+app.use("/api/v1/groups", groupsRouter);
+app.use("/api/v1/universities", universitiesRouter);
+app.use("/api/v1/domains", domainsRouter);
+app.use("/api/v1/departments", departmentsRouter);
+app.use("/api/v1/specializations", specializationsRouter);
+app.use("/api/v1/knowledge-base", knowlegeBaseRouter);
+app.use("/api/v1/problems", ProblemRouter);
+app.use("/api/v1/permissions/profile", permissionProfileRouter);
+app.use("/api/v1/tickets", ticketsRouter);
 app.use("/api/v1/reports", reportRoutes);
+
 
 app.use(errorHandler);
 

@@ -21,17 +21,30 @@ import archiver from "archiver";
 import { generateRequesterTemplateService } from "../services/users/requester/bulk-upload/requesterTemplateService.js";
 import { validateRequesterExcelFiles } from "../services/users/requester/bulk-upload/requesterBulkValidationService.js";
 import { bulkUploadRequestersService } from "../services/users/requester/bulk-upload/requesterBulkUploadService.js";
+import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 export const createRequester = async (
   req: RequestWithFileAndBody,
   res: Response,
 ) => {
+  const auditLog = audit(req as any)
+    .summary("Create requester")
+    .action(AuditAction.CREATE_REQUESTER);
+
   const requesterDto = mapCreateRequester(req);
-  const result = await createRequesterService(requesterDto, req.file);
+  const result = await createRequesterService(requesterDto, req.file, req as Request);
   if (!result.is_added) {
+     auditLog
+      .metadata({ errors: result.errors })
+      .step("Requester creation failed");
     result.message = t("user_not_created");
     return res.status(ResponseStatus.BAD_REQUEST).json(result);
   }
+  auditLog
+    .resource("User", requesterDto.email)
+    .step("Requester created successfully")
+
   return res.status(ResponseStatus.CREATED).json({
     result,
   });
@@ -41,7 +54,21 @@ export const getRequestersPaged = async (req, res) => {
   const query = parseGetUsersQuery(req.query);
   const lang = req.language;
 
-  const result = await getAllRequestersService(query, lang);
+  const auditLog = audit(req)
+    .summary("Fetch requesters list")
+    .action(AuditAction.GET_REQUESTERS)
+    .resource("User", "requesters")
+    .metadata({ query });
+
+  const result = await getAllRequestersService(query, lang, req)
+
+  auditLog
+      .metadata({
+        total: result.meta_.total,
+        returned: result.users.length,
+      })
+      .step("Requesters fetched successfully");
+      ;
   return res
     .status(ResponseStatus.SUCCESS)
     .json({ users: result.users, meta_data: result.meta_ });
@@ -50,21 +77,35 @@ export const getRequestersPaged = async (req, res) => {
 export const getRequesterById = async (req, res) => {
   const id = req.params.id;
   const lang = req.language as "en" | "ar";
+
+  const auditLog = audit(req)
+    .summary("Fetch requester by ID")
+    .action(AuditAction.GET_REQUESTER)
+    .resource("User", id);
+
   const isValid = uuidValidationSchema.safeParse(id);
 
   if (!id || !isValid.success) {
+     auditLog
+      .metadata({ reason: "invalid_uuid" })
+      .step("Invalid requester ID");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ is_deleted: false, message: t("invalid_requester_id") });
   }
 
-  const requester = await getRequesterByIdService(id, lang);
+  const requester = await getRequesterByIdService(id, lang, req);
 
   if (!requester || !isValid.success) {
+    auditLog.step("Requester not found");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ message: "Requester not found" });
   }
+
+  auditLog.step("Requester fetched successfully");
 
   return res.status(ResponseStatus.SUCCESS).json(requester);
 };
@@ -74,17 +115,33 @@ export const EditRequester = async (req, res: Response) => {
   const id = req.params.id;
   const isValid = uuidValidationSchema.safeParse(id);
 
+  const auditLog = audit(req)
+    .summary("Edit requester")
+    .action(AuditAction.EDIT_REQUESTER)
+    .resource("User", id);
+
   if (!id || !isValid.success) {
+    auditLog
+      .metadata({ reason: "invalid_uuid" })
+      .step("Invalid requester ID");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ is_edited: false, message: t("user_not_found"), errors: [] });
   }
 
-  const result = await editRequesterService(id, requesterDto, req.file);
+  const result = await editRequesterService(id, requesterDto, req.file, req);
   if (!result.is_edited) {
+    auditLog
+      .metadata({ errors: result.errors })
+      .step("Requester edit failed");
+
     result.message = t("user_not_edited");
     return res.status(ResponseStatus.BAD_REQUEST).json(result);
   }
+
+  auditLog.step("Requester edited successfully");
+
   return res.status(ResponseStatus.SUCCESS).json({
     is_edited: result.is_edited,
     message: t("user_edited"),
@@ -95,18 +152,33 @@ export const deleteRequester = async (req, res: Response) => {
   const id = req.params.id;
   const isValid = uuidValidationSchema.safeParse(id);
 
+  const auditLog = audit(req)
+    .summary("Delete requester")
+    .action(AuditAction.DELETE_REQUESTER)
+    .resource("User", id);
+
   if (!id || !isValid.success) {
+    auditLog
+      .metadata({ reason: "invalid_uuid" })
+      .step("Invalid requester ID");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ is_deleted: false, message: t("invalid_requester_id") });
   }
 
-  const result = await deleteRequesterService(id);
+  const result = await deleteRequesterService(id, req);
   if (!result.is_deleted) {
+    auditLog
+      .metadata({ reason: result.message })
+      .step("Requester deletion failed");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ is_deleted: result.is_deleted, message: result.message });
   }
+
+  auditLog.step("Requester deleted successfully");
 
   return res.status(ResponseStatus.SUCCESS).json({
     is_deleted: result.is_deleted,

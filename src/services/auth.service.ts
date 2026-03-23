@@ -1,17 +1,20 @@
-import crypto from "crypto";
-import { PostgresDataSource } from "../database/postgres-data-source.js";
-import { redisClient } from "../database/redis.js";
-import { redisKeys } from "../utils/redisKeys.js";
-import { User } from "../entities/User.js";
-import { UserStatus } from "../enums/UserStatus.enum.js";
-import { AppError } from "../utils/AppError.js";
-import { generateToken, verifyToken } from "../utils/jwt.js";
-import { comparePassword, hashPassword } from "../utils/secrets.js";
-import { StringValue } from "ms";
-import logger from "../utils/logger.js";
-import { sendMail } from "../config/mailer.js";
-import { t } from "i18next";
-import { PASSWORD_REGEX } from "../config/validations.js";
+import crypto from 'crypto';
+import { PostgresDataSource } from '../database/postgres-data-source.js';
+import { redisClient } from '../database/redis.js';
+import { redisKeys } from '../utils/redisKeys.js';
+import { User } from '../entities/User.js';
+import { UserStatus } from '../enums/UserStatus.enum.js';
+import { AppError } from '../utils/AppError.js';
+import { generateToken, verifyToken } from '../utils/jwt.js';
+import { comparePassword, hashPassword } from '../utils/secrets.js';
+import { StringValue } from 'ms';
+import logger from '../utils/logger.js';
+import { sendMail } from '../config/mailer.js';
+import { t } from 'i18next';
+import { PASSWORD_REGEX } from '../config/validations.js';
+import { audit } from '../helpers/auditBuilder.js';
+import { Request } from 'express';
+import { AuditAction } from '../enums/AuditAction.enum.js';
 
 // Constants
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -21,7 +24,7 @@ const REFRESH_TOKEN_DURATION_SECONDS = 604800; // 7 days
 const CSRF_TOKEN_EXPIRES = 15 * 60; // 15 minutes in seconds
 const FORGET_PASSWORD_EXPIRE = 3 * 60; // 3 minutes
 const RESET_TOKEN_EXPIRE = 10 * 60;
-const RESET_TOKEN_PREFIX = "reset_token:";
+const RESET_TOKEN_PREFIX = 'reset_token:';
 
 const userRepo = PostgresDataSource.getRepository(User);
 
@@ -47,42 +50,59 @@ interface UserPayload {
 
 export const loginUser = async (
   email: string,
-  password: string
+  password: string,
+  req?: Request,
 ): Promise<LoginResult> => {
   logger.info(`[server][auth] Login request received for email: ${email}`);
+  audit(req)?.step('validating login input');
 
   if (!email || !password) {
     logger.info(`[server][auth] Missing email or password`);
-    throw new AppError(t("invalid_input"), 400);
+    audit(req)?.step('missing email or password');
+    throw new AppError(t('invalid_input'), 400);
   }
+
+  audit(req)?.step('searching user by email');
 
   const user = await findByEmail(email);
 
   if (!user) {
     logger.info(`[server][auth] User not found for email: ${email}`);
-    throw new AppError(t("user_not_found"), 400);
+    audit(req)?.step('user not found');
+    throw new AppError(t('user_not_found'), 400);
   }
 
   logger.info(`[server][auth] User found: ${user.id}`);
 
+  audit(req)?.step('user record found');
+
   // Check lock status
+  audit(req)?.step('checking account lock status');
   if (await isLocked(email)) {
     logger.info(
-      `[server][auth] Account locked due to too many attempts: ${email}`
+      `[server][auth] Account locked due to too many attempts: ${email}`,
     );
-    throw new AppError(t("account_locked"), 400);
+    audit(req)?.step('account locked due to too many attempts');
+    throw new AppError(t('account_locked'), 400);
   }
 
   // Validate password
+  audit(req)?.step('validating password');
   const isPasswordValid = await comparePassword(password, user.password);
+
   if (!isPasswordValid) {
     logger.info(`[server][auth] Invalid password attempt for ${email}`);
+    audit(req)?.step('password validation failed');
     await handleFailedAttempt(email);
   }
 
   logger.info(`[server][auth] Password validated successfully for ${email}`);
 
+  audit(req)?.step('password validated successfully');
+
   // Reset failed attempts
+  audit(req)?.step('resetting login attempts');
+
   await resetAttempts(email);
   logger.info(`[server][auth] Reset failed attempts for ${email}`);
 
@@ -101,18 +121,22 @@ export const loginUser = async (
 
   logger.info(`[server][auth] Generating tokens for user ${user.id}`);
 
+  audit(req)?.step('generating authentication tokens');
+
   const { accessToken, refreshToken } = generateAuthTokens(userPayload);
   const csrfToken = generateCsrfToken();
 
   // Cache tokens + update status
+  audit(req)?.step('caching tokens and updating user status');
   await Promise.all([
     cacheTokens(user.id, refreshToken, csrfToken),
     setStatusActive(user.id),
   ]);
 
   logger.info(
-    `[server][auth] Login successful: user=${user.id}, email=${email}`
+    `[server][auth] Login successful: user=${user.id}, email=${email}`,
   );
+  audit(req)?.step('login process completed');
 
   return {
     accessToken,
@@ -149,7 +173,7 @@ export const handleFailedAttempt = async (email: string): Promise<void> => {
   const newAttempts = currentAttempts + 1;
 
   logger.info(
-    `[server][auth] Failed attempts for ${email}: ${currentAttempts} -> ${newAttempts}`
+    `[server][auth] Failed attempts for ${email}: ${currentAttempts} -> ${newAttempts}`,
   );
 
   await redisClient.set(attemptsKey, newAttempts.toString(), {
@@ -222,8 +246,10 @@ export const setStatusActive = async (userId: string): Promise<void> => {
   await userRepo.update(userId, { status: UserStatus.ACTIVE });
 };
 
-export const generateAuthTokens = (payload: UserPayload) => {
+export const generateAuthTokens = (payload: UserPayload, req?: any) => {
   logger.info(`[server][auth] Generating auth tokens`);
+
+  audit(req).action(AuditAction.TOKEN_GENERATION).step('starting token generation');
 
   const accessToken = generateToken(
     payload,
@@ -231,10 +257,15 @@ export const generateAuthTokens = (payload: UserPayload) => {
   );
   const refreshToken = generateToken(
     payload,
-    process.env.JWT_REFRESH_TOKEN_EXPIRATION as unknown as StringValue
+    process.env.JWT_REFRESH_TOKEN_EXPIRATION as unknown as StringValue,
   );
 
   logger.info(`[server][auth] Tokens generated successfully`);
+
+  audit(req).step('tokens generated successfully').metadata({
+    accessTokenIssued: true,
+    refreshTokenIssued: true,
+  });
 
   return { accessToken, refreshToken };
 };
@@ -326,25 +357,33 @@ export const getRefreshTokenById = async (
 };
 
 export const forgetPassword = async (
-  email: string
+  email: string,
+  req?: any,
 ): Promise<{ oid: string; otp: string }> => {
-  if (!email) throw new AppError(t("email_required"), 400);
+  if (!email) throw new AppError(t('email_required'), 400);
 
   const user = await userRepo.findOne({ where: { email } });
-  if (!user) throw new AppError(t("user_not_found"), 404);
+
+  if (!user) {
+    audit(req).step('user not found for password reset');
+    throw new AppError(t('user_not_found'), 404);
+  }
+
+  audit(req).resource('USER', user.id).step('user located for password reset');
 
   const oid = crypto.randomUUID();
-  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Store OTP + userId in Redis
   await redisClient.set(
     redisKeys.forgetPassword(oid),
     JSON.stringify({ otp, userId: user.id }),
-    { EX: FORGET_PASSWORD_EXPIRE }
+    { EX: FORGET_PASSWORD_EXPIRE },
   );
 
+  audit(req).step('otp stored in redis').metadata({ oid });
+
   logger.info(
-    `[server][auth] Forget password OTP generated for user ${user.id}: ${otp} (OID: ${oid})`
+    `[server][auth] Forget password OTP generated for user ${user.id}: ${otp} (OID: ${oid})`,
   );
 
   const html = `
@@ -354,33 +393,51 @@ export const forgetPassword = async (
     <p>This OTP will expire in 3 minutes.</p>
   `;
 
-  await sendMail(user.email, "Your Password Reset OTP", html).catch((err) =>
-    logger.warn(`[server] [auth] couldn't send email, skipping... ${err}`)
+  await sendMail(user.email, 'Your Password Reset OTP', html).catch((err) =>
+    logger.warn(`[server] [auth] couldn't send email, skipping... ${err}`),
   );
+
+  req.step('password reset email sent');
 
   return { oid, otp };
 };
 
-export const verifyOtp = async (oid: string, otp: string): Promise<string> => {
-  if (!oid || !otp) throw new AppError(t("invalid_input"), 400);
+export const verifyOtp = async (
+  oid: string,
+  otp: string,
+  req?: any,
+): Promise<string> => {
+  if (!oid || !otp) throw new AppError(t('invalid_input'), 400);
 
   const dataStr = await redisClient.get(redisKeys.forgetPassword(oid));
-  if (!dataStr) throw new AppError(t("otp_expired"), 400);
+
+  if (!dataStr) {
+    audit(req).step('otp expired or not found');
+    throw new AppError(t('otp_expired'), 400);
+  }
 
   const data = JSON.parse(dataStr as string);
-  if (data.otp !== otp) throw new AppError(t("otp_invalid"), 400);
 
-  // Generate reset token and store userId in Redis
+  if (data.otp !== otp) {
+    req.step('otp mismatch');
+    throw new AppError(t('otp_invalid'), 400);
+  }
+
   const resetToken = crypto.randomUUID();
+
   await redisClient.set(`${RESET_TOKEN_PREFIX}${resetToken}`, data.userId, {
     EX: RESET_TOKEN_EXPIRE,
   });
 
-  // Delete OTP after successful verification
   await redisClient.del(redisKeys.forgetPassword(oid));
 
+  audit(req)
+    .resource('USER', data.userId)
+    .step('otp verified')
+    .metadata({ resetTokenIssued: true });
+
   logger.info(
-    `[server][auth] OTP verified successfully for OID ${oid}, reset token generated`
+    `[server][auth] OTP verified successfully for OID ${oid}, reset token generated`,
   );
 
   return resetToken;
@@ -388,44 +445,63 @@ export const verifyOtp = async (oid: string, otp: string): Promise<string> => {
 
 export const resetPassword = async (
   resetToken: string,
-  newPassword: string
+  newPassword: string,
+  req?: any,
 ): Promise<{ is_updated: boolean; message?: string; error?: string }> => {
-  if (!resetToken || !newPassword) throw new AppError(t("invalid_input"), 400);
+  if (!resetToken || !newPassword) throw new AppError(t('invalid_input'), 400);
 
   if (!PASSWORD_REGEX.test(newPassword)) {
-    return { is_updated: false, error: t("invalid_password") };
+    req.step('password validation failed');
+    return { is_updated: false, error: t('invalid_password') };
   }
 
-  // Retrieve userId directly from reset token
   const userId = await redisClient.get(`${RESET_TOKEN_PREFIX}${resetToken}`);
-  if (!userId) return { is_updated: false, error: t("user_not_found") };
+
+  if (!userId) {
+    audit(req).step('invalid or expired reset token');
+    return { is_updated: false, error: t('user_not_found') };
+  }
 
   const hashedPassword = await hashPassword(newPassword);
+
   await userRepo.update(userId, { password: hashedPassword });
 
-  // Delete reset token
   await redisClient.del(`${RESET_TOKEN_PREFIX}${resetToken}`);
 
+  audit(req)
+    .resource('USER', userId as string)
+    .step('password updated successfully');
+
   logger.info(`[server][auth] Password reset successfully for user ${userId}`);
 
-  return { is_updated: true, message: t("password_updated") };
+  return { is_updated: true, message: t('password_updated') };
 };
 
-export const resetProfilePassword = async (newPassword: string, userId:string): Promise<{ is_updated: boolean; message?: string; error?: string }> => {
-  if (!newPassword) throw new AppError(t("invalid_input"), 400);
-
+export const resetProfilePassword = async (
+  newPassword: string,
+  userId: string,
+  auditLog?: ReturnType<typeof audit>
+): Promise<{ is_updated: boolean; message?: string; error?: string }> => {
+  if (!newPassword) {
+    auditLog?.metadata({ status: "invalid_input" }).step("Password not provided");
+    throw new AppError(t('invalid_input'), 400);
+  }
   if (!PASSWORD_REGEX.test(newPassword)) {
-    return { is_updated: false, error: t("invalid_password") };
+    auditLog?.metadata({ status: "invalid_password" }).step("Password failed validation");
+    return { is_updated: false, error: t('invalid_password') };
   }
 
   // Retrieve userId directly from reset token
-  if (!userId) return { is_updated: false, error: t("user_not_found") };
+  if (!userId) {
+    auditLog?.metadata({ status: "user_not_found" }).step("User ID not provided");
+    return { is_updated: false, error: t('user_not_found') };
+  }
 
   const hashedPassword = await hashPassword(newPassword);
   await userRepo.update(userId, { password: hashedPassword });
 
-
+  auditLog?.metadata({ status: "success" }).step("Password hashed and saved");
   logger.info(`[server][auth] Password reset successfully for user ${userId}`);
 
-  return { is_updated: true, message: t("password_updated") };
+  return { is_updated: true, message: t('password_updated') };
 };

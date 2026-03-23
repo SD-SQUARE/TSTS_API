@@ -14,11 +14,17 @@ import { seedPermissionProfiles } from "./permissions/permission-profiles.seed.j
 import { seedProblems } from "./problems/problems.seed.js";
 import { seedKnowledgeBase } from "./knowledge-base/knowledge-base.seed.js";
 import { seedTickets } from "./tickets/tickets.seed.js";
+import { seedAuditActions } from "./auditActions/seedAuditActions.js";
+import { MongoDataSource } from "../mongo-data-source.js";
 
 export async function runSeeds() {
   try {
     if (!PostgresDataSource.isInitialized) {
       await PostgresDataSource.initialize();
+    }
+
+    if(!MongoDataSource.isInitialized) {
+      await MongoDataSource.initialize();
     }
 
     console.log("🚀 Starting database seeding...");
@@ -63,7 +69,12 @@ export async function runSeeds() {
     console.log("🎫 Seeding tickets...");
     await seedTickets(PostgresDataSource, 50);
 
+    console.log("📃 seeding audit actions...");
+    await seedAuditActions(MongoDataSource);
+    
+
     console.log("🎉 Seeding completed successfully!");
+    process.exit(0);
   } catch (error) {
     console.error("❌ Error during seeding:", error);
     process.exitCode = 1;

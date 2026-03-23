@@ -18,11 +18,16 @@ import { IDeleteResponse } from "../../../interfaces/response/IDeleteResponse.js
 
 import { mapTechnicianToUserEntity } from "../../../mappers/technician/technicianToUserEntity.js";
 import { CreateTechnicianMapped } from "../../../interfaces/technician/ICreateTechnician.js";
+import { Request } from "express";
+import { audit } from "../../../helpers/auditBuilder.js";
 
 export const createTechnicianService = async (
   technicianDto: CreateTechnicianMapped,
   imageFile?: Express.Multer.File,
+  req?: Request,
 ): Promise<ICreateResponse> => {
+  const auditLog = audit(req);
+
   // 2) university + domain in ONE helper
   const entitiesResult = await validateEntities(
     technicianDto.university,
@@ -30,6 +35,9 @@ export const createTechnicianService = async (
   );
 
   if (!entitiesResult.is_valid) {
+    auditLog
+    .metadata({ errors: entitiesResult.errors })
+    .step("Invalid university/domain");
     return {
       is_added: false,
       message: "",
@@ -47,6 +55,8 @@ export const createTechnicianService = async (
   );
 
   if (!permResult.is_valid) {
+    auditLog.metadata({ errors: permResult.errors }).step("Invalid permission configuration");
+
     return {
       is_added: false,
       message: "",
@@ -59,6 +69,8 @@ export const createTechnicianService = async (
   );
 
   if (!specsResult.is_valid) {
+    auditLog.metadata({ errors: specsResult.errors }).step("Invalid specializations");
+
     return {
       is_added: false,
       message: "",
@@ -82,11 +94,16 @@ export const createTechnicianService = async (
       imageFile,
     );
     userData.image = safeKey;
+
+    auditLog.step("User image uploaded");
   }
 
   // 10) Save user
   const user = await userRepository.createAndSave(userData);
   logger.info(`[server] [user] Creating user ${userData.email}`);
+
+  auditLog.resource("User", user.id).metadata({ email: user.email }).step("Technician entity created");
+
   const usersPermissionsRepo =
     PostgresDataSource.getRepository(UsersPermissions);
   const allowedSpecializationsRepo = PostgresDataSource.getRepository(
@@ -115,6 +132,9 @@ export const createTechnicianService = async (
         }),
       ),
     );
+
+    auditLog.step("Technician specializations assigned");
+
   }
 
   return { is_added: true, message: t("user_created") };
@@ -124,7 +144,10 @@ export const editTechnicianService = async (
   id: string,
   technicianDto: CreateTechnicianMapped,
   imageFile?: Express.Multer.File,
+  req?: Request
 ): Promise<IEditResponse> => {
+  const auditLog = audit(req);
+
   const userRepo = PostgresDataSource.getRepository(User);
   const usersPermissionsRepo =
     PostgresDataSource.getRepository(UsersPermissions);
@@ -139,8 +162,18 @@ export const editTechnicianService = async (
   });
 
   if (!userEntity) {
+    auditLog.step("Technician not found");
     return { is_edited: false, message: t("user_not_found"), errors: [] };
   }
+
+  const oldValues = {
+    email: userEntity.email,
+    university: userEntity.university?.id,
+    domain: userEntity.domain?.id,
+    permissions: userEntity.usersPermissions?.map((up) => up.permissionProfile?.id),
+    specializations: userEntity.allowedSpecializations?.map((s) => s.specialization.id),
+    hasImage: !!userEntity.image,
+  };
 
   // 2) Validate university + domain
   const entitiesResult = await validateEntities(
@@ -149,6 +182,8 @@ export const editTechnicianService = async (
   );
 
   if (!entitiesResult.is_valid) {
+    auditLog.step("Invalid university/domain");
+
     return {
       is_edited: false,
       message: "",
@@ -166,6 +201,8 @@ export const editTechnicianService = async (
   );
 
   if (!permResult.is_valid) {
+    auditLog.step("Invalid permission configuration");
+
     return {
       is_edited: false,
       message: "",
@@ -179,6 +216,8 @@ export const editTechnicianService = async (
   );
 
   if (!specsResult.is_valid) {
+    auditLog.step("Invalid specializations");
+
     return {
       is_edited: false,
       message: "",
@@ -208,6 +247,8 @@ export const editTechnicianService = async (
       imageFile,
     );
     userEntity.image = safeKey;
+
+    auditLog.step("User image updated");
   }
 
   // 8) Save updated user
@@ -244,18 +285,34 @@ export const editTechnicianService = async (
     );
   }
 
+  const newValues = {
+    email: user.email,
+    university: university?.id,
+    domain: domain?.id,
+    permissions: permResult.profile?.id,
+    specializations: technicianDto.allowedSpecializations || [],
+    hasImage: !!user.image,
+  };
+
+  auditLog.metadata({ oldValue: oldValues, newValue: newValues }).step("Technician updated");
+
   return { is_edited: true, message: t("user_edited") };
 };
 
 export const deleteTechnicianService = async (
   id: string,
+  req?: Request
 ): Promise<IDeleteResponse> => {
+  const auditLog = audit(req);
+
   const userRepo = PostgresDataSource.getRepository(User);
 
   // 0) Load existing user
   const userEntity = await userRepo.findOne({ where: { id } });
 
   if (!userEntity) {
+    auditLog.step("Technician not found");
+
     return { is_deleted: false, message: t("user_not_found") };
   }
 
@@ -263,6 +320,8 @@ export const deleteTechnicianService = async (
   // await userRepo.softDelete(id);
   userEntity.deletedAt = new Date();
   await userRepo.update(id, userEntity);
+
+  auditLog.step("Technician soft-deleted");
 
   logger.info(`[server] [user] Deleted user ${userEntity.email}`);
   return { is_deleted: true, message: t("user_deleted") };
