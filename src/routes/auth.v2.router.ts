@@ -2,6 +2,7 @@ import { Router } from "express";
 import session from "express-session";
 import { loginV2, getAuthOptions, verifyAuthOptions } from "../controllers/auth.v2.controller.js";
 import { forgetPasswordController, verifyOtpController, resetPasswordController } from "../controllers/auth.controller.js";
+import { auditMiddleware } from "../middleware/audit-middleware.js";
 const router = Router();
 
 router.use(
@@ -18,7 +19,8 @@ router.use(
   })
 );
 // Login
-router.post("/login", loginV2);
+
+router.post("/login",auditMiddleware, loginV2);
 router.post("/trusted-device/options", getAuthOptions);
 router.post("/trusted-device/verify", verifyAuthOptions);
 

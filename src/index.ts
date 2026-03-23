@@ -14,6 +14,7 @@ import http from "http";
 import https from "https";
 import fs from "fs";
 import { BaseReportGeneratorPuppeteer } from "./services/reports/base/BaseReportGeneratorPuppeteer.js";
+import { initMongoDataSource } from "./database/mongo-data-source.js";
 
 const PROTOCOL = process.env.PROTOCOL ?? "http";
 const HOST = process.env.HOST ?? "localhost";
@@ -45,6 +46,7 @@ else
 async function main() {
   try {
     initDataSource();
+    initMongoDataSource();
     connectRedis();
     await ensureBucketExists(BUCKET);
 

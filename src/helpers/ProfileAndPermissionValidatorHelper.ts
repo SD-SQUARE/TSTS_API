@@ -37,28 +37,31 @@ export const validateExistingPermission = async (
     };
   }
 
-  // 2) Check extra + revoked permissions
-  const allPermissionIds = [
-    ...(extraPermissions ?? []),
-    ...(revokedPermissions ?? []),
-  ];
+ // 2) Check extra + revoked permissions
+const allPermissionIds = [
+  ...(extraPermissions ?? []),
+  ...(revokedPermissions ?? []),
+];
 
-  if (allPermissionIds.length > 0) {
-    const existing = await permissionsRepo.findBy({
-      id: In(allPermissionIds),
+if (allPermissionIds.length > 0) {
+
+  const existing = await permissionsRepo.findBy({
+    id: In(allPermissionIds.map(Number)),
+  });
+
+  const existingIds = new Set(existing.map((p) => p.id));
+
+  const missing = allPermissionIds.filter(
+    (id) => !existingIds.has(Number(id))
+  );
+
+  if (missing.length > 0) {
+    errors.push({
+      key: "permissions",
+      message: "some_permissions_do_not_exist",
     });
-
-    const existingIds = new Set(existing.map((p) => p.id));
-    const missing = allPermissionIds.filter((id) => !existingIds.has(id));
-
-    if (missing.length > 0) {
-      errors.push({
-        key: "permissions",
-        message: "some_permissions_do_not_exist",
-      });
-    }
   }
-
+}
   // If there were any errors, return them
   if (errors.length > 0) {
     return {

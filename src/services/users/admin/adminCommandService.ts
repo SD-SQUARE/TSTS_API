@@ -17,11 +17,15 @@ import { uploadFilesWithUniqueKey } from "../../../helpers/ImagesHelper.js";
 import { IDeleteResponse } from "../../../interfaces/response/IDeleteResponse.js";
 import { CreateAdminMapped } from "../../../interfaces/admin/ICreateAdmin.js";
 import { mapAdminToUserEntity } from "../../../mappers/admin/adminToUserEntity.js";
+import { audit } from "../../../helpers/auditBuilder.js";
 
 export const createAdminService = async (
   AdminDto: CreateAdminMapped,
   imageFile?: Express.Multer.File,
+  req?: any,
 ): Promise<ICreateResponse> => {
+  audit(req).metadata({ dto: AdminDto }).step("Service initiated");
+
   // 2) university + domain + departments in ONE helper
   const entitiesResult = await validateEntities(
     AdminDto.university,
@@ -29,6 +33,7 @@ export const createAdminService = async (
   );
 
   if (!entitiesResult.is_valid) {
+    audit(req).step("Entity validation failed").metadata({ errors: entitiesResult.errors });
     return {
       is_added: false,
       message: "",
@@ -46,6 +51,7 @@ export const createAdminService = async (
   );
 
   if (!permResult.is_valid) {
+    audit(req).step("Permission validation failed").metadata({ errors: permResult.errors });
     return {
       is_added: false,
       message: "",
@@ -58,6 +64,7 @@ export const createAdminService = async (
   );
 
   if (!specsResult.is_valid) {
+    audit(req).step("Specializations validation failed").metadata({ errors: specsResult.errors });
     return {
       is_added: false,
       message: "",
@@ -67,11 +74,13 @@ export const createAdminService = async (
 
   // 7) Set user type
   AdminDto.userType = UserType.ADMIN;
+  audit(req).step("User type set to ADMIN");
 
   // 8) Map DTO → Entity
   const userData = await mapAdminToUserEntity(AdminDto);
   userData.university = university;
   userData.domain = domain;
+  audit(req).step("Mapped DTO to User entity").metadata({ userEmail: userData.email });
 
   // 9) Handle image upload if exists
   if (imageFile) {
@@ -81,10 +90,13 @@ export const createAdminService = async (
       imageFile,
     );
     userData.image = safeKey;
+    audit(req).step("Admin image uploaded").metadata({ imageKey: safeKey });
   }
 
   // 10) Save user
   const user = await userRepository.createAndSave(userData);
+  audit(req).resource("USER", user.id).step("User saved to database").metadata({ email: userData.email });
+
   logger.info(`[server] [user] Creating user ${userData.email}`);
   const usersPermissionsRepo =
     PostgresDataSource.getRepository(UsersPermissions);
@@ -103,6 +115,7 @@ export const createAdminService = async (
       revokedPermissions: AdminDto.revokedPermissions,
     }),
   );
+  audit(req).step("User permissions saved").metadata({ permissionProfile: profile.name });
 
   // 12) Save allowedSpecializations
   if (AdminDto.allowedSpecializations?.length > 0) {
@@ -114,7 +127,10 @@ export const createAdminService = async (
         }),
       ),
     );
+    audit(req).step("Allowed specializations saved").metadata({ specializationIds: AdminDto.allowedSpecializations });
   }
+
+  audit(req).step("Admin creation process completed successfully").metadata({ userId: user.id, email: user.email });
 
   return { is_added: true, message: t("user_created") };
 };
@@ -123,6 +139,7 @@ export const editAdminService = async (
   id: string,
   AdminDto: CreateAdminMapped,
   imageFile?: Express.Multer.File,
+  req?: any,
 ): Promise<IEditResponse> => {
   const userRepo = PostgresDataSource.getRepository(User);
   const usersPermissionsRepo =
@@ -138,8 +155,11 @@ export const editAdminService = async (
   });
 
   if (!userEntity) {
+    audit(req).step("User not found for editing");
     return { is_edited: false, message: t("user_not_found"), errors: [] };
   }
+
+  audit(req).step("Existing user loaded").metadata({ userId: id });
 
   // 2) Validate university + domain + departments
   const entitiesResult = await validateEntities(
@@ -148,6 +168,7 @@ export const editAdminService = async (
   );
 
   if (!entitiesResult.is_valid) {
+    audit(req).step("Entity validation failed").metadata({ errors: entitiesResult.errors });
     return {
       is_edited: false,
       message: "",
@@ -165,6 +186,7 @@ export const editAdminService = async (
   );
 
   if (!permResult.is_valid) {
+    audit(req).step("Permission validation failed").metadata({ errors: permResult.errors });
     return {
       is_edited: false,
       message: "",
@@ -178,6 +200,7 @@ export const editAdminService = async (
   );
 
   if (!specsResult.is_valid) {
+    audit(req).step("Specialization validation failed").metadata({ errors: specsResult.errors });
     return {
       is_edited: false,
       message: "",
@@ -194,6 +217,7 @@ export const editAdminService = async (
   userRepo.merge(userEntity, userData);
   userEntity.university = university;
   userEntity.domain = domain;
+  audit(req).step("Mapped DTO to User entity and merged").metadata({ userEmail: userEntity.email });
 
   // 7) Handle image upload if exists
   if (imageFile) {
@@ -207,12 +231,15 @@ export const editAdminService = async (
       imageFile,
     );
     userEntity.image = safeKey;
+    audit(req).step("Admin image uploaded").metadata({ imageKey: safeKey });
   }
 
   // 8) Save updated user
   const user = await userRepo.save(userEntity);
 
   logger.info(`[server] [user] Editing user ${userEntity.email}`);
+
+  audit(req).step("User saved to database").metadata({ userId: user.id });
 
   // 9) Clear old relations and re-create them
 
@@ -228,6 +255,7 @@ export const editAdminService = async (
       revokedPermissions: AdminDto.revokedPermissions,
     }),
   );
+  audit(req).step("User permissions saved").metadata({ permissionProfile: profile.name });
 
   // 9.3) AllowedSpecializations – clear then add
   await allowedSpecializationsRepo.delete({ user: { id: user.id } as any });
@@ -241,13 +269,17 @@ export const editAdminService = async (
         }),
       ),
     );
+    audit(req).step("Allowed specializations saved").metadata({ specializationIds: AdminDto.allowedSpecializations });
   }
+
+  audit(req).step("Admin edit process completed successfully").metadata({ userId: user.id, email: user.email });
 
   return { is_edited: true, message: "Admin_edited_successfully" };
 };
 
 export const deleteAdminService = async (
   id: string,
+  req?: any,
 ): Promise<IDeleteResponse> => {
   const userRepo = PostgresDataSource.getRepository(User);
 
@@ -255,13 +287,16 @@ export const deleteAdminService = async (
   const userEntity = await userRepo.findOne({ where: { id } });
 
   if (!userEntity) {
+    audit(req).step("User not found for deletion");
     return { is_deleted: false, message: t("user_not_found") };
   }
+  audit(req).step("User loaded for deletion").metadata({ email: userEntity.email });
 
   // 1) Delete user (soft delete)
   // await userRepo.softDelete(id);
   userEntity.deletedAt = new Date();
   await userRepo.update(id, userEntity);
+  audit(req).step("User soft-deleted").metadata({ deletedAt: userEntity.deletedAt });
 
   logger.info(`[server] [user] Deleted user ${userEntity.email}`);
   return { is_deleted: true, message: t("user_deleted") };
