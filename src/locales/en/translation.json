@@ -173,6 +173,8 @@
     "departments": "Departments",
     "specializations": "Specializations",
     "problems": "Problems",
+    "requesters": "Requesters",
+    "requester_name": "Requester Name",
     "ids": "IDs",
     "invalid_uuid": "Invalid UUID format for {{entityName}}: {{invalidIds}}",
     "invalid_date_format_start": "Invalid start date format",

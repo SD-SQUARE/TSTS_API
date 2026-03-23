@@ -92,5 +92,47 @@
         "column": "problem"
       }
     ]
+  },
+  {
+    "handler": "requester-domain",
+    "title": {
+      "en": "Ticket Count by Requester and Domain",
+      "ar": "عدد التذاكر حسب مقدم الطلب و الجهة"
+    },
+    "description": {
+      "en": "Report showing the number of tickets submitted by each requester grouped by domain.",
+      "ar": "تقرير يوضح عدد التذاكر المقدمة من كل مستخدم مجمعة حسب الجهة."
+    },
+    "columns": [
+      {
+        "key": "requesterName",
+        "label": {
+          "en": "Requester Name",
+          "ar": "اسم مقدم الطلب"
+        }
+      },
+      {
+        "key": "domain",
+        "label": {
+          "en": "Domain",
+          "ar": "الجهة"
+        }
+      },
+      {
+        "key": "ticketCount",
+        "label": {
+          "en": "Ticket Count",
+          "ar": "عدد التذاكر"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "column": "domain"
+      },
+      {
+        "column": "user"
+      }
+    ]
   }
 ]
