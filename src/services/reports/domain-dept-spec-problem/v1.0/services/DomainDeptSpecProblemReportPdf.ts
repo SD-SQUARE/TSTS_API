@@ -5,25 +5,25 @@ import { ReportFactory, ReportType } from "../../../factory/ReportFactory.js";
 import { DownloadReportParams } from "../../../handlers/IReportHandler.js";
 import { BaseReportConfig } from "../../../index.js";
 import { ReportTranslationHelper } from "../../../utils/ReportTranslationHelper.js";
-import { SpecializationTicketsCountPreparation } from "./SpecializationTicketsCountPreparation.js";
+import { DomainDeptSpecProblemPreparation } from "./DomainDeptSpecProblemPreparation.js";
 
-export class SpecializationTicketsReportPdf {
+export class DomainDeptSpecProblemReportPdf {
   async downloadPDF(params: DownloadReportParams): Promise<void> {
     const { report, filters, language, user, res } = params;
 
     // Validate filters
     const validation =
-      SpecializationTicketsCountPreparation.validateFilter(filters);
+      DomainDeptSpecProblemPreparation.validateFilter(filters);
     if (!validation.isValid) {
       throw new Error(`Invalid filters: ${JSON.stringify(validation.errors)}`);
     }
 
-    // Fetch data
+    // Fetch data (no pagination for PDF - get all records)
     const filteredData =
-      await SpecializationTicketsCountPreparation.getSpecializationTicketsCountData(
+      await DomainDeptSpecProblemPreparation.getDomainDeptSpecProblemData(
         filters,
         language as Lang,
-        false,
+        false
       );
 
     if (filteredData.results.length === 0) {
@@ -31,8 +31,8 @@ export class SpecializationTicketsReportPdf {
     }
 
     // Prepare data for report
-    const reportData = SpecializationTicketsCountPreparation.prepareForReport(
-      filteredData.results,
+    const reportData = DomainDeptSpecProblemPreparation.prepareForReport(
+      filteredData.results
     );
 
     // Get translations
@@ -58,7 +58,7 @@ export class SpecializationTicketsReportPdf {
       if (filters?.startDate) {
         const startDateFormatted = formatDateForReport(
           filters.startDate,
-          language,
+          language
         );
         dateParts.push(`${translations.filterFrom}: ${startDateFormatted}`);
       }
@@ -94,14 +94,14 @@ export class SpecializationTicketsReportPdf {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="report-${report.handler}-${Date.now()}.pdf"`,
+      `attachment; filename="report-${report.handler}-${Date.now()}.pdf"`
     );
     res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
 
     // Generate PDF
     const reportGenerator = ReportFactory.createReport(
-      ReportType.SPECIALIZATION_TICKETS,
-      BaseConfig,
+      ReportType.DOMAIN_DEPT_SPEC_PROBLEM,
+      BaseConfig
     );
     await reportGenerator.generateStream(reportInput, res);
   }

@@ -1,14 +1,14 @@
 import { IReportHandler } from "./IReportHandler.js";
 import { SpecializationTicketsReportHandler } from "../specialization-tickets/v1.0/services/SpecializationTicketsReportHandler.js";
+import { DomainDeptSpecProblemReportHandler } from "../domain-dept-spec-problem/v1.0/services/DomainDeptSpecProblemReportHandler.js";
+import { RequesterDomainReportHandler } from "../requester-domain/v1.0/services/RequesterDomainReportHandler.js";
 import { ReportHandler } from "../../../enums/ReportHandler.enum.js";
 
 export class ReportHandlerFactory {
   private static handlers: Map<string, new () => IReportHandler> = new Map([
-    [
-      ReportHandler.SPECIALIZATION_TICKETS_COUNT,
-      SpecializationTicketsReportHandler,
-    ],
-    // Add more report handlers here as needed
+    [ReportHandler.SPECIALIZATION_TICKETS_COUNT, SpecializationTicketsReportHandler],
+    [ReportHandler.DOMAIN_DEPT_SPEC_PROBLEM, DomainDeptSpecProblemReportHandler],
+    [ReportHandler.REQUESTER_DOMAIN, RequesterDomainReportHandler],
   ]);
 
   static createHandler(handlerType: string): IReportHandler {
