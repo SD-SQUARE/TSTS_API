@@ -55,10 +55,21 @@ export class RequesterDomainPreparation {
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedResult> {
+    const startDate = filter.startDate ? new Date(filter.startDate) : null;
+    const endDate = filter.endDate ? new Date(filter.endDate) : null;
+
+    if (startDate) {
+      startDate.setHours(0, 0, 0, 0);
+    }
+
+    if (endDate) {
+      endDate.setHours(23, 59, 59, 999);
+    }
+
     const baseParams: any[] = [
       language,
-      filter.startDate || null,
-      filter.endDate || null,
+      startDate,
+      endDate,
       filter.groupedFilters?.domain ?? null,
       filter.groupedFilters?.user ?? null,
     ];

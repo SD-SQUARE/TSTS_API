@@ -78,21 +78,26 @@ export class SpecializationTicketsCountPreparation {
     const whereConditions: any = {};
 
     // Date range filter - only apply if at least one date is provided
-    if (filter?.startDate && filter?.endDate) {
-      whereConditions.createdAt = Between(
-        new Date(filter.startDate),
-        new Date(filter.endDate),
-      );
-    } else if (filter?.startDate) {
-      whereConditions.createdAt = Between(
-        new Date(filter.startDate),
-        new Date(),
-      );
-    } else if (filter?.endDate) {
-      whereConditions.createdAt = Between(
-        new Date("1970-01-01"),
-        new Date(filter.endDate),
-      );
+    const startDate = filter?.startDate ? new Date(filter.startDate) : null;
+    const endDate = filter?.endDate ? new Date(filter.endDate) : null;
+
+    if (startDate) {
+      startDate.setHours(0, 0, 0, 0);
+    }
+
+    if (endDate) {
+      endDate.setHours(23, 59, 59, 999);
+    }
+
+    if (startDate && endDate) {
+      whereConditions.createdAt = Between(startDate, endDate);
+    } else if (startDate) {
+      whereConditions.createdAt = Between(startDate, new Date());
+    } else if (endDate) {
+      const minDate = new Date("1970-01-01");
+      minDate.setHours(0, 0, 0, 0);
+
+      whereConditions.createdAt = Between(minDate, endDate);
     }
 
     // Group filters by column (use pre-grouped if available)
@@ -189,14 +194,20 @@ export class SpecializationTicketsCountPreparation {
 
     // Apply date filters
     if (filter?.startDate) {
+      const startDate = new Date(filter.startDate);
+      startDate.setHours(0, 0, 0, 0); // start of day
+
       qb.andWhere("ticket.createdAt >= :startDate", {
-        startDate: new Date(filter.startDate),
+        startDate,
       });
     }
 
     if (filter?.endDate) {
+      const endDate = new Date(filter.endDate);
+      endDate.setHours(23, 59, 59, 999); // end of day
+
       qb.andWhere("ticket.createdAt <= :endDate", {
-        endDate: new Date(filter.endDate),
+        endDate,
       });
     }
 
