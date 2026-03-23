@@ -12,7 +12,7 @@ const universityRepo = new UniversityRepo();
 export async function getAllUniversities(req: Request, res: Response) {
   const auditLog = audit(req)
     .summary("Fetch all universities")
-    .ACTION(AuditAction.GET_ALL_UNIVERSITIES)
+    .action(AuditAction.GET_ALL_UNIVERSITIES)
     .resource("University")
     .metadata({ query: req.query });  
   
@@ -40,7 +40,7 @@ export async function getAllUniversities(req: Request, res: Response) {
 export async function createUniversity(req: Request, res: Response) {
    const auditLog = audit(req)
     .summary("Create new university")
-    .ACTION(AuditAction.CREATE_UNIVERSITY)
+    .action(AuditAction.CREATE_UNIVERSITY)
     .resource("University")
     .metadata({ body: req.body });  
   
@@ -94,7 +94,7 @@ export async function getUniversityById(req: Request, res: Response) {
         const { id } = req.params;
         const auditLog = audit(req)
           .summary("Fetch single university by ID")
-          .ACTION(AuditAction.GET_UNIVERSITY_BY_ID)
+          .action(AuditAction.GET_UNIVERSITY_BY_ID)
           .resource("University", id)
           .metadata({ requestedBy: (req as any).user?.id });
 
@@ -118,7 +118,7 @@ export async function updateUniversity(req: Request, res: Response) {
         
         const auditLog = audit(req)
           .summary("Update university")
-          .ACTION(AuditAction.UPDATE_UNIVERSITY)
+          .action(AuditAction.UPDATE_UNIVERSITY)
           .resource("University", id)
           .metadata({ requestedBy: (req as any).user?.id, body: req.body });
         
@@ -151,7 +151,7 @@ export async function deleteUniversity(req: Request, res: Response) {
 
          const auditLog = audit(req)
           .summary("Delete university")
-          .ACTION(AuditAction.DELETE_UNIVERSITY)
+          .action(AuditAction.DELETE_UNIVERSITY)
           .resource("University", id)
           .metadata({ requestedBy: (req as any).user?.id });
 

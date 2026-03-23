@@ -64,7 +64,7 @@ export const logTicketActivity = async (
 };
 
 export const createTicket = async (dto, files, req?: Request) => {
-  const auditLog = audit(req).summary("Create Ticket").ACTION(AuditAction.CREATE_TICKET);
+  const auditLog = audit(req).summary("Create Ticket").action(AuditAction.CREATE_TICKET);
   // FIXME: Take Problem From body and update ticket entity
   const { title, description, requester, specialization, problem } = dto;
 
@@ -357,7 +357,7 @@ export const getAllTicketsService = async (
   });
   const auditLog = audit(req)
     .summary("Get All Tickets")
-    .ACTION(AuditAction.GET_TICKETS)
+    .action(AuditAction.GET_TICKETS)
     .metadata({ userId: user.id });
 
   auditLog.step("Resolve pagination");

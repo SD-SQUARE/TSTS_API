@@ -30,7 +30,7 @@ export const createRequester = async (
 ) => {
   const auditLog = audit(req as any)
     .summary("Create requester")
-    .ACTION(AuditAction.CREATE_REQUESTER);
+    .action(AuditAction.CREATE_REQUESTER);
 
   const requesterDto = mapCreateRequester(req);
   const result = await createRequesterService(requesterDto, req.file, req as Request);
@@ -56,7 +56,7 @@ export const getRequestersPaged = async (req, res) => {
 
   const auditLog = audit(req)
     .summary("Fetch requesters list")
-    .ACTION(AuditAction.GET_REQUESTERS)
+    .action(AuditAction.GET_REQUESTERS)
     .resource("User", "requesters")
     .metadata({ query });
 
@@ -80,7 +80,7 @@ export const getRequesterById = async (req, res) => {
 
   const auditLog = audit(req)
     .summary("Fetch requester by ID")
-    .ACTION(AuditAction.GET_REQUESTER)
+    .action(AuditAction.GET_REQUESTER)
     .resource("User", id);
 
   const isValid = uuidValidationSchema.safeParse(id);
@@ -117,7 +117,7 @@ export const EditRequester = async (req, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Edit requester")
-    .ACTION(AuditAction.EDIT_REQUESTER)
+    .action(AuditAction.EDIT_REQUESTER)
     .resource("User", id);
 
   if (!id || !isValid.success) {
@@ -154,7 +154,7 @@ export const deleteRequester = async (req, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Delete requester")
-    .ACTION(AuditAction.DELETE_REQUESTER)
+    .action(AuditAction.DELETE_REQUESTER)
     .resource("User", id);
 
   if (!id || !isValid.success) {

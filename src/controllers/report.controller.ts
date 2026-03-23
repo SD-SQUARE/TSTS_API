@@ -21,7 +21,7 @@ export class ReportController {
 
     const auditLog = audit(req)
       .summary("Fetch available reports")
-      .ACTION(AuditAction.GET_AVAILABLE_REPORTS)
+      .action(AuditAction.GET_AVAILABLE_REPORTS)
       .resource("Report", "all")
       .metadata({ search: search || null });
 
@@ -40,7 +40,7 @@ export class ReportController {
   getDashboardStats = async (req: Request, res: Response) => {
     const auditLog = audit(req)
       .summary("Fetch dashboard statistics")
-      .ACTION(AuditAction.GET_DASHBOARD_STATS)
+      .action(AuditAction.GET_DASHBOARD_STATS)
       .resource("Dashboard", "overall")
       .metadata({ query: req.query });
 
@@ -83,7 +83,7 @@ export class ReportController {
   generateReportById = async (req: Request, res: Response) => {
     const auditLog = audit(req)
       .summary("Generate report by ID")
-      .ACTION(AuditAction.GENERATE_REPORT)
+      .action(AuditAction.GENERATE_REPORT)
       .resource("Report", req.params.reportId)
       .metadata({ query: req.query });
 
@@ -191,7 +191,7 @@ export class ReportController {
     const auditLog = audit(req);
     auditLog
       .summary("Report generation failed")
-      .ACTION(AuditAction.GENERATE_REPORT)
+      .action(AuditAction.GENERATE_REPORT)
       .metadata({ error: error.message })
       .step("Report generation error");
 

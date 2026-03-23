@@ -27,7 +27,7 @@ export const createTechnician = async (
 ) => {
   const auditLog = audit(req as any)
     .summary("Create technician")
-    .ACTION(AuditAction.CREATE_TECHNICIAN);
+    .action(AuditAction.CREATE_TECHNICIAN);
 
   const technicianDto = mapCreateTechnician(req);
 
@@ -57,7 +57,7 @@ export const getTechniciansPaged = async (req, res) => {
 
   const auditLog = audit(req)
     .summary("Fetch technicians list")
-    .ACTION(AuditAction.GET_TECHNICIANS)
+    .action(AuditAction.GET_TECHNICIANS)
     .resource("User", "technicians")
     .metadata({ query });
 
@@ -81,7 +81,7 @@ export const getTechnicianById = async (req, res) => {
 
   const auditLog = audit(req)
     .summary("Fetch technician by ID")
-    .ACTION(AuditAction.GET_TECHNICIAN)
+    .action(AuditAction.GET_TECHNICIAN)
     .resource("User", id);
 
   const isValid = uuidValidationSchema.safeParse(id);
@@ -113,7 +113,7 @@ export const EditTechnician = async (req, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Edit technician")
-    .ACTION(AuditAction.EDIT_TECHNICIAN)
+    .action(AuditAction.EDIT_TECHNICIAN)
     .resource("User", id);
 
   if (!id) {
@@ -145,7 +145,7 @@ export const deleteTechnician = async (req, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Delete technician")
-    .ACTION(AuditAction.DELETE_TECHNICIAN)
+    .action(AuditAction.DELETE_TECHNICIAN)
     .resource("User", id);
 
   if (!id || !isValid.success) {

@@ -227,7 +227,7 @@ export class ReportService {
 
     const auditLog = req ? audit(req)
     .summary("Stream report ZIP")
-    .ACTION(AuditAction.DOWNLOAD_REPORT)
+    .action(AuditAction.DOWNLOAD_REPORT)
     .resource("Report", report.id)
     .metadata({ userId: user.id, filters, types, language: currentLang }) : null;
 

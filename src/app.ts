@@ -13,11 +13,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { csrfMiddleware } from "./config/csrf.js";
 import { socketIoMiddleware } from "./middleware/socketIo.js";
 import { io as socketIoInstance } from "./config/socket.js";
-import {
-  notificationMessage,
-  notificationUser,
-  ticket,
-} from "./services/socket.service.js";
+
 import { requestContextMiddleware } from "./middleware/requestContextMiddleware.js";
 import { auditMiddleware } from "./middleware/audit-middleware.js";
 import { authMiddleware } from "./middleware/auth.js";
@@ -100,32 +96,28 @@ if (process.env.NODE_ENV === "production") app.use(csrfMiddleware);
 app.use("/api/v1/auth", authRouter);
 
 app.use(authMiddleware);
+
+app.use("/api/v1/work-hours", workHourRouter);
+app.use("/api/v1/chat", chatRouter);
+app.use("/api/v1/notifications", notificationRouter);
+app.use("/api/v1/audit-logs", auditActionRouter);
+app.use("/api/v1/lockups", lockupsRouter);
+app.use("/api/v1/trusted-devices", trustedDevicesRouter);
+
 app.use(auditMiddleware);
 
-app.use("/api/v1/trusted-devices", trustedDevicesRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/groups", groupsRouter);
-app.use("/api/v1/lockups", lockupsRouter);
 app.use("/api/v1/universities", universitiesRouter);
 app.use("/api/v1/domains", domainsRouter);
 app.use("/api/v1/departments", departmentsRouter);
 app.use("/api/v1/specializations", specializationsRouter);
-app.use("/api/v1/work-hours", workHourRouter);
 app.use("/api/v1/knowledge-base", knowlegeBaseRouter);
 app.use("/api/v1/problems", ProblemRouter);
 app.use("/api/v1/permissions/profile", permissionProfileRouter);
-
-app.use("/api/v1/universities", universitiesRouter);
-app.use("/api/v1/domains", domainsRouter);
-app.use("/api/v1/departments", departmentsRouter);
-app.use("/api/v1/specializations", specializationsRouter);
-app.use("/api/v1/work-hours", workHourRouter);
 app.use("/api/v1/tickets", ticketsRouter);
-app.use("/api/v1/chat", chatRouter);
-app.use("/api/v1/notifications", notificationRouter);
-
 app.use("/api/v1/reports", reportRoutes);
-app.use("/api/v1/audit-logs", auditActionRouter);
+
 
 app.use(errorHandler);
 

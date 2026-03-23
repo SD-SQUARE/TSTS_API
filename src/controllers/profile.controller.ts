@@ -24,7 +24,7 @@ export const getUserProfileById = async (req: Request, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Fetch user profile by ID")
-    .ACTION(AuditAction.GET_USER_PROFILE)
+    .action(AuditAction.GET_USER_PROFILE)
     .resource("User", id);
 
   if (!id || !isValid.success) {
@@ -57,7 +57,7 @@ export const resetUserPassword = async (req: Request, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Reset user password")
-    .ACTION(AuditAction.RESET_USER_PASSWORD)
+    .action(AuditAction.RESET_USER_PASSWORD)
     .resource("User", id);
 
   const isValid = uuidValidationSchema.safeParse(id);
@@ -104,7 +104,7 @@ export const getMyProfileById = async (req: Request, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Get my profile by ID")
-    .ACTION(AuditAction.GET_MY_PROFILE)
+    .action(AuditAction.GET_MY_PROFILE)
     .resource("User", id);
 
   const isValid = uuidValidationSchema.safeParse(id);
@@ -139,7 +139,7 @@ export const getUserGroups = async (req: Request, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Fetch user groups by user ID")
-    .ACTION(AuditAction.GET_USER_GROUPS)
+    .action(AuditAction.GET_USER_GROUPS)
     .resource("User", id);
 
   const pagination: IPagination = req.query;
@@ -170,7 +170,7 @@ export const getUserSpecializations = async (req: Request, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Fetch user specializations by user ID")
-    .ACTION(AuditAction.GET_USER_SPECIALIZATIONS)
+    .action(AuditAction.GET_USER_SPECIALIZATIONS)
     .resource("User", id);
 
   const pagination: IPagination = req.query;
