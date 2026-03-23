@@ -166,5 +166,19 @@
     "filter_from": "من",
     "filter_to": "إلى",
     "showing_records": "عرض {{filtered}} من {{total}} سجل"
+  },
+  "common": {
+    "not_available": "غير متاح",
+    "domains": "المجالات",
+    "departments": "الأقسام",
+    "specializations": "التخصصات",
+    "problems": "المشاكل",
+    "requesters": "مقدمو الطلبات",
+    "requester_name": "اسم مقدم الطلب",
+    "ids": "معرّفات",
+    "invalid_uuid": "صيغة UUID غير صالحة لـ {{entityName}}: {{invalidIds}}",
+    "invalid_date_format_start": "صيغة تاريخ البداية غير صالحة",
+    "invalid_date_format_end": "صيغة تاريخ النهاية غير صالحة",
+    "date_range_error": "يجب أن يكون تاريخ البداية قبل أو يساوي تاريخ النهاية"
   }
 }

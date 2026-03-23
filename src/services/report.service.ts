@@ -297,9 +297,9 @@ export class ReportService {
       language: currentLang,
     };
 
-    archive.append(JSON.stringify(metadata, null, 2), {
-      name: "report_metadata.json",
-    });
+    // archive.append(JSON.stringify(metadata, null, 2), {
+    //   name: "report_metadata.json",
+    // });
 
     await archive.finalize();
     logger.info(

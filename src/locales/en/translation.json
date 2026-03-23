@@ -171,5 +171,19 @@
     "filter_selected": "selected",
     "filter_all_specializations": "All Specializations",
     "showing_records": "Showing {{filtered}} of {{total}} records"
+  },
+  "common": {
+    "not_available": "Not available",
+    "domains": "Domains",
+    "departments": "Departments",
+    "specializations": "Specializations",
+    "problems": "Problems",
+    "requesters": "Requesters",
+    "requester_name": "Requester Name",
+    "ids": "IDs",
+    "invalid_uuid": "Invalid UUID format for {{entityName}}: {{invalidIds}}",
+    "invalid_date_format_start": "Invalid start date format",
+    "invalid_date_format_end": "Invalid end date format",
+    "date_range_error": "Start date must be before or equal to end date"
   }
 }
