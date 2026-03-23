@@ -93,7 +93,7 @@ export const getSingleTicketController = async (
 
   const auditLog = audit()
     .summary("Get Single Ticket")
-    .ACTION(AuditAction.GET_TICKET)
+    .action(AuditAction.GET_TICKET)
     .metadata({ userId, userName, ticketId: id })
     .step("Start fetching ticket");
 
@@ -121,7 +121,7 @@ export const getTicketActivitiesController = async (
 
   const auditLog = audit(req)
     .summary("Get Ticket Activities")
-    .ACTION(AuditAction.GET_TICKET_ACTIVITIES)
+    .action(AuditAction.GET_TICKET_ACTIVITIES)
     .resource("Ticket", ticketId);
 
   auditLog.step("Start fetching ticket activities");
@@ -145,7 +145,7 @@ export const editTicketForAdminsAndTechniciansController = async (
 
   const auditLog = audit(req)
     .summary("Edit Ticket (Admin/Technician)")
-    .ACTION(AuditAction.EDIT_TICKET)
+    .action(AuditAction.EDIT_TICKET)
     .resource("Ticket", ticketId)
     .metadata({ userId: userData.id })
     .step("Start ticket edit request");
@@ -197,7 +197,7 @@ export const editTicketForRequesterController = async (
   const ticketId = req.params.id;
   const auditLog = audit(req)
     .summary("Edit Ticket (Requester)")
-    .ACTION(AuditAction.EDIT_TICKET_REQUESTER)
+    .action(AuditAction.EDIT_TICKET_REQUESTER)
     .resource("Ticket", ticketId)
     .metadata({ userId: userData.id })
     .step("Start requester ticket edit");
@@ -245,7 +245,7 @@ export const deleteTicketController = async (req: Request, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Delete Ticket")
-    .ACTION(AuditAction.DELETE_TICKET)
+    .action(AuditAction.DELETE_TICKET)
     .resource("Ticket", id)
     .metadata({ userId })
     .step("Start ticket deletion");
@@ -283,7 +283,7 @@ export const uploadTicketAssetController = async (req: any, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Upload ticket assets")
-    .ACTION(AuditAction.UPLOAD_TICKET_ASSETS)
+    .action(AuditAction.UPLOAD_TICKET_ASSETS)
     .resource("Ticket", ticketId);
 
   // Validate ticket ID
@@ -352,7 +352,7 @@ export const getAllTicketAssetsController = async (req: any, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Fetch ticket assets")
-    .ACTION(AuditAction.GET_TICKET_ASSETS)
+    .action(AuditAction.GET_TICKET_ASSETS)
     .resource("Ticket", ticketId);
 
   // Validate ticket ID
@@ -399,7 +399,7 @@ export const getSingleTicketAssetController = async (
 
   const auditLog = audit(req)
     .summary("Fetch single ticket asset")
-    .ACTION(AuditAction.GET_SINGLE_TICKET_ASSET)
+    .action(AuditAction.GET_SINGLE_TICKET_ASSET)
     .resource("Ticket", ticketId)
     .metadata({ assetId: aid });
 
@@ -458,7 +458,7 @@ export const deleteTicketAssetController = async (req: any, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Delete ticket asset")
-    .ACTION(AuditAction.DELETE_TICKET_ASSET)
+    .action(AuditAction.DELETE_TICKET_ASSET)
     .resource("Ticket", ticketId)
     .metadata({ assetId: aid });
 
@@ -630,7 +630,7 @@ export const createTicketReviewController = async (req: any, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Create ticket review")
-    .ACTION(AuditAction.CREATE_TICKET_REVIEW)
+    .action(AuditAction.CREATE_TICKET_REVIEW)
     .resource("Ticket", ticketId)
     .metadata({ reviewerId: user.id, rating });
 
@@ -650,7 +650,7 @@ export const getTicketReviewsController = async (req: any, res: any) => {
 
   const auditLog = audit(req)
     .summary("Fetch ticket reviews")
-    .ACTION(AuditAction.GET_TICKET_REVIEWS)
+    .action(AuditAction.GET_TICKET_REVIEWS)
     .resource("Ticket", ticketId)
     .metadata({ userId: user.id });
 
@@ -667,7 +667,7 @@ export const changeTicketStatusController = async (req: any, res: Response) => {
 
   const auditLog = audit(req)
     .summary("Change ticket status")
-    .ACTION(AuditAction.CHANGE_TICKET_STATUS)
+    .action(AuditAction.CHANGE_TICKET_STATUS)
     .resource("Ticket", ticketId)
     .metadata({ userId: user.id, requestedStatus: status });
 

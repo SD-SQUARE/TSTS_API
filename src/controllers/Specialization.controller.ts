@@ -13,7 +13,7 @@ export async function getSpecializationById(req: Request, res: Response) {
 
     const auditLog = audit(req)
     .summary("Fetch specialization by ID")
-    .ACTION(AuditAction.GET_SPECIALIZATION)
+    .action(AuditAction.GET_SPECIALIZATION)
     .resource("Specialization", id);
 
     const specializationRepo = new SpecializationRepo().getRepository();
@@ -42,7 +42,7 @@ export async function getAllSpecializations(req: Request, res: Response) {
 
     const auditLog = audit(req)
     .summary("Fetch all specializations")
-    .ACTION(AuditAction.GET_ALL_SPECIALIZATIONS)
+    .action(AuditAction.GET_ALL_SPECIALIZATIONS)
     .metadata({
       page: pageNum,
       limit: limitNum,
@@ -66,7 +66,7 @@ export async function createSpecialization(req: Request, res: Response) {
     
     const auditLog = audit(req)
     .summary("Create specialization")
-    .ACTION(AuditAction.CREATE_SPECIALIZATION);
+    .action(AuditAction.CREATE_SPECIALIZATION);
 
     const specializationRepo = new SpecializationRepo().getRepository();
     const name = { en: name_en, ar: name_ar };
@@ -121,7 +121,7 @@ export async function updateSpecialization(req: Request, res: Response) {
     
     const auditLog = audit(req)
     .summary("Update specialization")
-    .ACTION(AuditAction.UPDATE_SPECIALIZATION)
+    .action(AuditAction.UPDATE_SPECIALIZATION)
     .resource("Specialization", id);
     
     const specializationRepo = new SpecializationRepo().getRepository();
@@ -197,7 +197,7 @@ export async function deleteSpecialization(req: Request, res: Response) {
 
     const auditLog = audit(req)
     .summary("Delete specialization")
-    .ACTION(AuditAction.DELETE_SPECIALIZATION)
+    .action(AuditAction.DELETE_SPECIALIZATION)
     .resource("Specialization", id);
 
     const specializationRepo = new SpecializationRepo().getRepository();

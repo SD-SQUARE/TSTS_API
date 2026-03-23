@@ -15,7 +15,7 @@ export async function getProblemById(req: Request, res: Response) {
 
     const auditLog = audit(req)
     .summary("Fetch problem by ID")
-    .ACTION(AuditAction.GET_PROBLEM_BY_ID)
+    .action(AuditAction.GET_PROBLEM_BY_ID)
     .metadata({ id });
 
 
@@ -49,7 +49,7 @@ export async function getProblems(req: Request, res: Response) {
 
     const auditLog = audit(req)
     .summary("Fetch paginated problems")
-    .ACTION(AuditAction.GET_PROBLEMS)
+    .action(AuditAction.GET_PROBLEMS)
     .metadata({
       page: pageNum,
       limit: limitNum,
@@ -78,7 +78,7 @@ export async function createProblem(req: Request, res: Response) {
 
     const auditLog = audit(req)
     .summary("Create new problem")
-    .ACTION(AuditAction.CREATE_PROBLEM)
+    .action(AuditAction.CREATE_PROBLEM)
     .metadata({
       name: { en: name_en, ar: name_ar },
       specialization,
@@ -152,7 +152,7 @@ export async function updateProblem(req: Request, res: Response) {
 
     const auditLog = audit(req)
     .summary("Update problem")
-    .ACTION(AuditAction.UPDATE_PROBLEM);
+    .action(AuditAction.UPDATE_PROBLEM);
 
     const problemRepo = new ProblemRepo().getRepository();
     const problem = await problemRepo.findOne({ where: { id }, relations: ["specialization"] });
@@ -233,7 +233,7 @@ export async function deleteProblem(req: Request, res: Response) {
 
     const auditLog = audit(req)
     .summary("Delete problem")
-    .ACTION(AuditAction.DELETE_PROBLEM)
+    .action(AuditAction.DELETE_PROBLEM)
 
     if (!problem) {
         auditLog.step("Problem not found");
