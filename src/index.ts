@@ -23,11 +23,17 @@ const BUCKET = process.env.MINIO_BUCKET!;
 let server;
 
 if(PROTOCOL === "https") {
-  const HTTPS_OPTIONS = {
+  const caPath = process.env.NODE_EXTRA_CA_CERTS?.trim();
+  const HTTPS_OPTIONS: https.ServerOptions = {
     key: fs.readFileSync("/certs/staging.myapp.local-key.pem"),
     cert: fs.readFileSync("/certs/staging.myapp.local.pem"),
-    ca: fs.readFileSync("/certs/rootCA.pem"), // optional for client trust
   };
+
+  if (caPath && fs.existsSync(caPath)) {
+    HTTPS_OPTIONS.ca = fs.readFileSync(caPath);
+  } else if (caPath) {
+    logger.warn(`[https] Optional CA file not found: ${caPath}`);
+  }
   
   server = https.createServer(HTTPS_OPTIONS,app);
 }
