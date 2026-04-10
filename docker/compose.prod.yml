@@ -65,7 +65,7 @@ services:
       - tsts-network
 
   mongodb:
-    image: mongo:7
+    image: mongo:4.4
     container_name: mongodb
     restart: unless-stopped
     ports:
