@@ -51,9 +51,9 @@ else
  */
 async function main() {
   try {
-    initDataSource();
-    initMongoDataSource();
-    connectRedis();
+    await initDataSource();
+    await initMongoDataSource();
+    await connectRedis();
     await ensureBucketExists(BUCKET);
 
     // Pre-warm Puppeteer browser for faster PDF generation

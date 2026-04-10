@@ -23,6 +23,7 @@ export class KnowledgeItem extends BaseEntity {
   content?: string;
 
   @Column({
+    name: "search_vector",
     type: "tsvector",
     nullable: true,
     select: false,

@@ -36,6 +36,7 @@ export class Report {
    * Full-text search vector for title and description
    */
   @Column({
+    name: "search_vector",
     type: "tsvector",
     nullable: true,
     select: false,
