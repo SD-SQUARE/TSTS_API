@@ -35,6 +35,8 @@ RUN npm ci --omit=dev --no-audit --no-fund \
     && npm cache clean --force
 
 COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/src/database/seeding/domains ./dist/database/seeding/domains
+COPY --from=builder --chown=node:node /app/src/database/seeding/reports/reports-data.json ./dist/database/seeding/reports/reports-data.json
 COPY --from=builder --chown=node:node /app/src/locales ./dist/locales
 COPY --from=builder --chown=node:node /app/assets ./assets
 
