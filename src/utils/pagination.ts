@@ -1,6 +1,6 @@
 export interface PaginationQuery {
   page?: number;
-  limit?: number;
+  page_size?: number;
 }
 
 export interface PaginationMeta {
@@ -14,7 +14,7 @@ export const buildPagination = (
 ): { skip: number; take: number; meta: PaginationMeta } => {
   const page = pagination.page && pagination.page > 0 ? pagination.page : 1;
   const limit =
-    pagination.limit && pagination.limit > 0 ? pagination.limit : 10;
+    pagination.page_size && pagination.page_size > 0 ? pagination.page_size : 10;
 
   const skip = (page - 1) * limit;
 

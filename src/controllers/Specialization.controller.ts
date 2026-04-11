@@ -34,7 +34,7 @@ export async function getSpecializationById(req: Request, res: Response) {
     return res.json(result);
 }
 export async function getAllSpecializations(req: Request, res: Response) {
-    const { page, limit, name } = req.query;
+    const { page, page_size: limit, name } = req.query;
     const specializationRepo = new SpecializationRepo().getRepository();
     const pageNum = page ? parseInt(page as string, 10) : 1;
     const limitNum = limit ? parseInt(limit as string, 10) : 20;

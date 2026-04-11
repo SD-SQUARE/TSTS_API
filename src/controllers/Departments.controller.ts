@@ -150,7 +150,7 @@ export async function deleteDepartment(req: Request, res: Response) {
     return res.status(ResponseStatus.SUCCESS).json({is_deleted:true, message:req.t?req.t("department_deleted"): "Department deleted" });
 }
 export async function getAllDepartments(req: Request, res: Response) {
-    const { page, limit, name, domain, university } = req.query;
+    const { page, page_size: limit, name, domain, university } = req.query;
     const departmentRepo = new DepartmentRepo().getRepository();
 
   audit(req)
