@@ -17,9 +17,9 @@ const permissionRepository = new PermissionRepo().getRepository();
 
 
 export async function getPermissionProfiles(req: Request, res: Response) {
-  const { page, limit, name } = req.query;
+  const { page, page_size, name } = req.query;
   const pageNum = page ? parseInt(page as string, 10) : 1;
-  const limitNum = limit ? parseInt(limit as string, 10) : 20;
+  const limitNum = page_size ? parseInt(page_size as string, 10) : 20;
   const result = await PermissionProfile.paginate(
     pageNum,
     limitNum,

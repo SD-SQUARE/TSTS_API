@@ -42,7 +42,7 @@ export async function getProblemById(req: Request, res: Response) {
 }
 
 export async function getProblems(req: Request, res: Response) {
-    const { page, limit, name, specialization } = req.query;
+    const { page, page_size: limit, name, specialization } = req.query;
     const problemRepo = new ProblemRepo().getRepository();
     const pageNum = page ? parseInt(page as string, 10) : 1;
     const limitNum = limit ? parseInt(limit as string, 10) : 20;

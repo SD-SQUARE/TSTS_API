@@ -16,7 +16,7 @@ export async function getAllDomains(req: Request, res: Response) {
 
         const domainRepoInstance = domainRepo.returnRepo();
         const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
-        const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+        const limit = req.query.page_size ? parseInt(req.query.page_size as string, 10) : 20;
         const domainSearch = (req.query.name) as string | undefined;
         const universitySearch = req.query.university as string | undefined;
 
