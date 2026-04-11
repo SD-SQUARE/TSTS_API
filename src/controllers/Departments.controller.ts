@@ -118,12 +118,12 @@ export async function deleteDepartment(req: Request, res: Response) {
     return res.status(ResponseStatus.SUCCESS).json({is_deleted:true, message:req.t?req.t("department_deleted"): "Department deleted" });
 }
 export async function getAllDepartments(req: Request, res: Response) {
-    const { page, limit, name, domain, university } = req.query;
+    const { page, page_size, name, domain, university } = req.query;
     const departmentRepo = new DepartmentRepo().getRepository();
 
     const filters: any = {
         page: page ? parseInt(page as string, 10) : 1,
-        limit: limit ? parseInt(limit as string, 10) : 20,
+        page_size: page_size ? parseInt(page_size as string, 10) : 20,
     };
     if (name) {
         filters.departmentName = name;
@@ -135,7 +135,7 @@ export async function getAllDepartments(req: Request, res: Response) {
         filters.university = university;
     }
         const result = await Department.paginate(filters, departmentRepo);
-    logger.info(`Fetched departments - Page: ${filters.page}, Limit: ${filters.limit}, Department filter: ${name || "None"}, Domain filter: ${domain || "None"}, University filter: ${university || "None"}`);
+    logger.info(`Fetched departments - Page: ${filters.page}, Limit: ${filters.page_size}, Department filter: ${name || "None"}, Domain filter: ${domain || "None"}, University filter: ${university || "None"}`);
         return res.json(result);
 }
 export async function getDepartmentUsers(req: Request, res: Response) {

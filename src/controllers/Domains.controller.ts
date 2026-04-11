@@ -12,12 +12,12 @@ const universityRepo = new UniversityRepo();
 export async function getAllDomains(req: Request, res: Response) {
         const domainRepoInstance = domainRepo.returnRepo();
         const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
-        const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+        const page_size = req.query.page_size ? parseInt(req.query.page_size as string, 10) : 20;
         const domainSearch = (req.query.name) as string | undefined;
         const universitySearch = req.query.university as string | undefined;
 
         const safePage = isNaN(page) || page < 1 ? 1 : page;
-        const safeLimit = isNaN(limit) || limit < 1 ? 20 : limit;
+        const safeLimit = isNaN(page_size) || page_size < 1 ? 20 : page_size;
 
         const result = await Domain.paginate(
         safePage,

@@ -5,7 +5,6 @@ import {
   Index,
 } from "typeorm";
 import { BaseEntity } from "./BaseEntity.js";
-import logger from "../utils/logger.js";
 
 @Entity({ name: "knowledge_items" })
 @Index(["specialization"])
@@ -36,11 +35,11 @@ export class KnowledgeItem extends BaseEntity {
     options: {
       search?: string;
       page?: number;
-      limit?: number;
+      page_size?: number;
     }
   ) {
     const page = Math.max(options.page || 1, 1);
-    const limit = Math.min(options.limit || 10, 100);
+    const limit = Math.min(options.page_size || 10, 100);
     const offset = (page - 1) * limit;
 
 
@@ -76,7 +75,7 @@ export class KnowledgeItem extends BaseEntity {
 
     
 
-    // qb.skip(offset).take(limit);
+     qb.skip(offset).take(limit);
 
     const [items, total] = await qb.getManyAndCount();
 
@@ -85,7 +84,7 @@ export class KnowledgeItem extends BaseEntity {
       meta: {
         total,
         page,
-        limit,
+        page_size: limit,
       },
     };
   }

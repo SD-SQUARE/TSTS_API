@@ -7,10 +7,10 @@ const workHourRepo = new WorkHourRepo();
 
 
 export async function getWorkHours(req:Request,res:Response){
-        const { page, limit, startTime, endTime, status, sortBy, order } = req.query;
+        const { page, page_size, startTime, endTime, status, sortBy, order } = req.query;
         const paginateOptions = {
             page: page ? parseInt(page as string, 10) : undefined,
-            limit: limit ? parseInt(limit as string, 10) : undefined,
+            limit: page_size ? parseInt(page_size as string, 10) : undefined,
             startTime: startTime as string | undefined,
             endTime: endTime as string | undefined,
             status: status as string | undefined,

@@ -22,7 +22,7 @@ type PaginatedResult<T> = {
 
 interface DepartmentFilter {
   page?: number;
-  limit?: number;
+  page_size?: number;
   departmentName?: string;
   domainName?: string;
   universityName?: string;
@@ -61,7 +61,7 @@ export class Department extends BaseEntity {
     if (!repo) throw new Error("Repository not provided.");
 
     const page = Math.max(1, Math.floor(filters.page || 1));
-    const limit = Math.max(1, Math.min(200, Math.floor(filters.limit || 20)));
+    const limit = Math.max(1, Math.min(200, Math.floor(filters.page_size || 20)));
 
     const qb: SelectQueryBuilder<Department> = repo.createQueryBuilder("dep");
 

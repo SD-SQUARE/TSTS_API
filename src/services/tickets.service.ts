@@ -23,6 +23,7 @@ import { Problem } from "../entities/problem.js";
 import { getPresignedUrl } from "../utils/storage.js";
 import { formatTicketStatus } from "../helpers/ticketsHelper.js";
 import { Group } from "../entities/Group.js";
+import {notificationTicket} from "./socket.service.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
@@ -329,7 +330,7 @@ export const getAllTicketsService = async (
 
   const { skip, take, meta } = buildPagination({
     page: query.page_index,
-    limit: query.page_size,
+    page_size: query.page_size,
   });
 
   logger.info("[server][tickets] getAllTickets | pagination resolved", {
@@ -459,24 +460,24 @@ export const getAllTicketsService = async (
 
     requester: ticket.requester
       ? {
-          id: ticket.requester.id,
-          name: buildLocalizedName(ticket.requester, lang),
-          image: ticket.requester.image,
-        }
+        id: ticket.requester.id,
+        name: buildLocalizedName(ticket.requester, lang),
+        image: ticket.requester.image,
+      }
       : null,
 
     specialization: ticket.specialization
       ? {
-          id: ticket.specialization.id,
-          name: ticket.specialization.name?.[lang],
-        }
+        id: ticket.specialization.id,
+        name: ticket.specialization.name?.[lang],
+      }
       : null,
 
     problem: ticket.problem
       ? {
-          id: ticket.problem.id,
-          name: ticket.problem.name?.[lang],
-        }
+        id: ticket.problem.id,
+        name: ticket.problem.name?.[lang],
+      }
       : null,
 
     status: formatTicketStatus(ticket.status),
@@ -544,24 +545,24 @@ export const getSingleTicketService = async (
     description: ticket.description,
     requester: ticket.requester
       ? {
-          id: ticket.requester.id,
-          name: buildLocalizedName(ticket.requester, lang),
-          image: ticket.requester.image,
-        }
+        id: ticket.requester.id,
+        name: buildLocalizedName(ticket.requester, lang),
+        image: ticket.requester.image,
+      }
       : null,
     specialization: ticket.specialization
       ? {
-          id: ticket.specialization.id,
-          name: ticket.specialization.name?.[lang] || "",
-          review_required: ticket.specialization.review_required,
-        }
+        id: ticket.specialization.id,
+        name: ticket.specialization.name?.[lang] || "",
+        review_required: ticket.specialization.review_required,
+      }
       : null,
     problem: ticket.problem
       ? {
-          id: ticket.problem.id,
-          name: ticket.problem.name?.[lang] || "",
-          review_required: ticket.problem.review_required,
-        }
+        id: ticket.problem.id,
+        name: ticket.problem.name?.[lang] || "",
+        review_required: ticket.problem.review_required,
+      }
       : null,
     // FIXME: status mapping should be result in remove `_` ex: `in_progress` => `in Progress`
     status: formatTicketStatus(ticket.status),
@@ -882,10 +883,10 @@ export const getTicketReviewsService = async (
         lastName: review.reviewer.lastName,
         image: review.reviewer.image
           ? await getPresignedUrl(
-              process.env.MINIO_BUCKET!,
-              review.reviewer.image,
-              600,
-            )
+            process.env.MINIO_BUCKET!,
+            review.reviewer.image,
+            600,
+          )
           : null,
       },
     })),
@@ -935,12 +936,12 @@ export const changeTicketStatusService = async (
     requestedStatus: dto.status,
   });
 
-  const ticket = await ticketRepo.findOne({
+  const ticketExists = await ticketRepo.findOne({
     where: { id: ticketId },
     relations: ["requester", "assigneeList", "specialization", "problem"],
   });
 
-  if (!ticket) {
+  if (!ticketExists) {
     logger.warn("[server][tickets] ticket not found", {
       ticketId,
       requestedBy: user.id,
@@ -954,9 +955,9 @@ export const changeTicketStatusService = async (
     };
   }
 
-  const isRequester = ticket.requester?.id === user.id;
+  const isRequester = ticketExists.requester?.id === user.id;
 
-  const isAssignee = ticket.assigneeList?.some(
+  const isAssignee = ticketExists.assigneeList?.some(
     (assignee) => assignee.id === user.id,
   );
 
@@ -993,48 +994,52 @@ export const changeTicketStatusService = async (
     };
   }
 
-  const previousStatus = ticket.status;
+  const previousStatus = ticketExists.status;
 
   let newStatus = dto.status;
 
   if (dto.status === TicketStatus.CLOSED) {
     const reviewRequired =
-      ticket.specialization?.review_required || ticket.problem?.review_required;
+      ticketExists.specialization?.review_required || ticketExists.problem?.review_required;
 
     if (reviewRequired) {
       const existingReview = await ticketReviewRepo.findOne({
         where: {
-          ticket: { id: ticket.id },
-          closeCycle: ticket.closeCount + 1,
+          ticket: { id: ticketExists.id },
+          closeCycle: ticketExists.closeCount + 1,
         },
       });
 
       if (!existingReview) {
         logger.info(
           "[tickets] review required but not found → switching to PENDING",
-          { ticketId: ticket.id },
+          { ticketId: ticketExists.id },
         );
 
         newStatus = TicketStatus.PENDING;
       } else {
-        ticket.closeCount += 1;
+        ticketExists.closeCount += 1;
       }
     } else {
-      ticket.closeCount += 1;
+      ticketExists.closeCount += 1;
     }
   }
-
+  notificationTicket("ticketStatusChanged", {
+    ticketId: ticketExists.id,
+    previousStatus,
+    newStatus,
+  });
   logger.info("[server][tickets] updating ticket status", {
     ticketId,
     previousStatus,
     newStatus,
   });
 
-  ticket.status = newStatus;
-  await ticketRepo.save(ticket);
+  ticketExists.status = newStatus;
+  await ticketRepo.save(ticketExists);
 
   await logTicketActivity(
-    ticket,
+    ticketExists,
     "Ticket Status Changed",
     TicketActivityType.INFO,
     `Ticket status changed from ${previousStatus} to ${newStatus} by user ${user.id}`,
@@ -1042,17 +1047,17 @@ export const changeTicketStatusService = async (
     {
       previousStatus,
       newStatus,
-      closeCycle: ticket.closeCount,
+      closeCycle: ticketExists.closeCount,
       old: previousStatus,
-      new : newStatus
+      new: newStatus
     },
   );
 
   logger.info("[server][tickets] ticket status updated successfully", {
-    ticketId,
+    ticketId: ticketExists.id,
     previousStatus,
     newStatus,
-    closeCycle: ticket.closeCount,
+    closeCycle: ticketExists.closeCount,
   });
 
   return {

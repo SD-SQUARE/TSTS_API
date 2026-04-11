@@ -48,7 +48,7 @@ export class Domain extends BaseEntity {
   }
   static async paginate(
     page = 1,
-    limit = 20,
+    page_size = 20,
     search?: string,
     repo?: Repository<Domain>,
     universityName?: string,
@@ -60,7 +60,7 @@ export class Domain extends BaseEntity {
     }
 
     page = Math.max(1, Math.floor(page));
-    limit = Math.max(1, Math.min(200, Math.floor(limit)));
+    const limit = Math.max(1, Math.min(200, Math.floor(page_size)));
 
     const qb: SelectQueryBuilder<Domain> = repo.createQueryBuilder("d");
     qb.leftJoinAndSelect("d.university", "u");

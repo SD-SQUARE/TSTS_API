@@ -175,7 +175,7 @@ export const getPermissionsLockup = async (
   const permissionProfiles = await getPermissionProfilesLockupService({
     name: name as string | undefined,
     page: page_index ? Number(page_index) : undefined,
-    limit: page_size ? Number(page_size) : undefined,
+    page_size: page_size ? Number(page_size) : undefined,
   });
 
   return res.status(200).json(permissionProfiles);

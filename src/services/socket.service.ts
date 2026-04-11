@@ -29,7 +29,7 @@ export function notificationUser(eventName: string, data: any): void {
     console.log(`[Socket.IO] Notification sent to ${userRoom}`);
 }
 
-export function ticket(eventName: string, data: any): void {
+export function notificationTicket(eventName: string, data: any): void {
     const ticketId = data?.ticketId;
     if (!ticketId) {
       console.error("ticket() error: data.ticketId is required");

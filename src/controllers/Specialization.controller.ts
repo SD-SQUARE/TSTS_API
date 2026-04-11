@@ -21,10 +21,10 @@ export async function getSpecializationById(req: Request, res: Response) {
     return res.json(result);
 }
 export async function getAllSpecializations(req: Request, res: Response) {
-    const { page, limit, name } = req.query;
+    const { page, page_size, name } = req.query;
     const specializationRepo = new SpecializationRepo().getRepository();
     const pageNum = page ? parseInt(page as string, 10) : 1;
-    const limitNum = limit ? parseInt(limit as string, 10) : 20;
+    const limitNum = page_size ? parseInt(page_size as string, 10) : 20;
     const search = name ? name as string : undefined;
     const result = await Specialization.paginate(
         pageNum,

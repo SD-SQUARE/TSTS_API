@@ -24,10 +24,12 @@ interface UsersLockupQuery {
   last_name?: string;
   user_type?: string;
   page?: number;
-  limit?: number;
-}
+  page_size?: number;
+} 
+
 
 interface UniversitiesLockupQuery extends PaginationMeta, PaginationQuery {
+  page_size: number;
   name?: string;
 }
 
@@ -80,7 +82,7 @@ const PermissionProfileRepo = PostgresDataSource.getRepository(PermissionProfile
 export const getUsersLockupService = async (query: UsersLockupQuery) => {
   const { skip, take } = buildPagination({
     page: query.page,
-    limit: query.limit,
+    page_size: query.page_size,
   });
 
   // Build query
@@ -136,7 +138,7 @@ export const getUsersLockupService = async (query: UsersLockupQuery) => {
 interface PermissionsLockupQuery {
   name?: string;
   page?: number;
-  limit?: number;
+  page_size?: number;
 }
 
 export const getPermissionsLockupService = async (
@@ -144,7 +146,7 @@ export const getPermissionsLockupService = async (
 ) => {
   const { skip, take } = buildPagination({
     page: query.page,
-    limit: query.limit,
+    page_size: query.page_size,
   });
 
   const qb = permissionsRepository.createQueryBuilder("permission");
@@ -175,7 +177,7 @@ export const getPermissionsLockupService = async (
 export const getUniversitiesLockupService = async (query) => {
   const { skip, take } = buildPagination({
     page: query.page,
-    limit: query.limit,
+    page_size: query.page_size,
   });
 
   const qb = universitiesRepository.createQueryBuilder("university");
@@ -199,7 +201,7 @@ export const getUniversitiesLockupService = async (query) => {
 export const getDomainsLockupService = async (query: DomainsLockupQuery) => {
   const { skip, take } = buildPagination({
     page: query.page,
-    limit: query.limit,
+    page_size: query.page_size,
   });
 
   const qb = domainsRepository
@@ -233,7 +235,7 @@ export const getDepartmentsLockupService = async (
 ) => {
   const { skip, take } = buildPagination({
     page: query.page,
-    limit: query.limit,
+    page_size: query.page_size,
   });
 
   const qb = departmentsRepository
@@ -272,7 +274,7 @@ export const getSpecializationsLockupService = async (
 ) => {
   const { skip, take } = buildPagination({
     page: query.page,
-    limit: query.limit,
+    page_size: query.page_size,
   });
 
   const qb = specializationsRepository.createQueryBuilder("specialization");
@@ -296,7 +298,7 @@ export const getSpecializationsLockupService = async (
 export const getGroupsLockupService = async (query: GroupsLockupQuery) => {
   const { skip, take } = buildPagination({
     page: query.page,
-    limit: query.limit,
+    page_size: query.page_size,
   });
 
   const qb = groupsRepository.createQueryBuilder("group");
@@ -325,7 +327,7 @@ export const getUniversityDomainsLockupService = async (
 ) => {
   const { skip, take } = buildPagination({
     page: query.page,
-    limit: query.limit,
+    page_size: query.page_size,
   });
 
   const qb = domainsRepository
@@ -354,7 +356,7 @@ export const getDomainDepartmentsLockupService = async (
 ) => {
   const { skip, take } = buildPagination({
     page: query.page,
-    limit: query.limit,
+    page_size: query.page_size,
   });
 
   const qb = departmentsRepository
@@ -599,7 +601,7 @@ export const getTicketProblemsService = async (
 export const getPermissionProfilesLockupService = async (query: PermissionsLockupQuery) => {
   const { skip, take } = buildPagination({
     page: query.page,
-    limit: query.limit,
+    page_size: query.page_size,
   });
 
   const qb = PermissionProfileRepo
