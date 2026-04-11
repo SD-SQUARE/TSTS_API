@@ -14,6 +14,7 @@ export const auditMiddleware = (
     "/chat",
     "/notifications",
     "/trusted-devices",
+    "/permissions/profile",
   ];
 
   if (excludedRoutes.some((route) => req.path.startsWith(`/api/v1${route}`))) {
