@@ -7,6 +7,7 @@ import { PostgresDataSource } from "../database/postgres-data-source.js";
 import { TrustedDevice } from "../entities/TrustedDevice.js";
 import { audit } from "../helpers/auditBuilder.js";
 import { AuditAction } from "../enums/AuditAction.enum.js";
+import { t } from "i18next";
 
 
 
@@ -26,7 +27,7 @@ export const loginV2 = async (req: Request, res: Response) => {
   if (!user) {
     audit(req).step('user not found').metadata({ reason: 'invalid_email' });
 
-    throw new AppError('Invalid credentials', 400);
+    throw new AppError(t('invalid_input'), 400);
   }
 
   audit(req).resource('USER', user.id).step('user found');
