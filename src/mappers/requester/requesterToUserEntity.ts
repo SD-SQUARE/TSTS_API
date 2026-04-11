@@ -10,7 +10,9 @@ export const mapRequesterToUserEntity = async (
   const user = new User();
 
   user.email = dto.email;
-  user.password = await hashPassword(dto.password);
+  if (dto.password) {
+    user.password = await hashPassword(dto.password);
+  }
 
   user.user_type = dto.userType as UserType;
 
