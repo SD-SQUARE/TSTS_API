@@ -1,3 +1,4 @@
+import { Request } from "express";
 import { PostgresDataSource } from "../../database/postgres-data-source.js";
 import { Problem, Specialization } from "../../entities/index.js";
 import { Ticket } from "../../entities/Ticket.js";
@@ -186,7 +187,8 @@ export const buildActivityContent = (changes: ChangeMap) => {
 export const logGeneralUpdateActivity = async (
   updatedTicket: Ticket,
   changes: ChangeMap,
-  userData: UserData
+  userData: UserData,
+  req?: Request
 ) => {
   const activityContent = buildActivityContent(changes);
 
@@ -198,14 +200,16 @@ export const logGeneralUpdateActivity = async (
     TicketActivityType.INFO,
     `Ticket "${updatedTicket.title}" was updated by ${actorText}: ${activityContent}`,
     actor.id,
-    { actor, changes, updatedFields: Object.keys(changes) }
+    { actor, changes, updatedFields: Object.keys(changes) },
+    req,
   );
 };
 
 export const logSpecificActivities = async (
   updatedTicket: Ticket,
   changes: ChangeMap,
-  userdata: UserData
+  userdata: UserData,
+  req?: Request,
 ) => {
   const { actor, actorText } = formatActor(userdata);
 
@@ -221,7 +225,8 @@ export const logSpecificActivities = async (
       { actor, statusChange: changes.status,
         new: changes.status.to,
         old: changes.status.from
-       }
+       },
+       req
     );
   }
 
@@ -232,7 +237,8 @@ export const logSpecificActivities = async (
       TicketActivityType.ASSIGNEE,
       `Ticket assignees updated by ${actorText}`,
       actor.id,
-      { actor, assigneeChange: changes.assigneeList }
+      { actor, assigneeChange: changes.assigneeList },
+      req,
     );
   }
 
@@ -248,7 +254,8 @@ export const logSpecificActivities = async (
       { actor, serviceStatusChange: changes.isOutOfService,
         new: changes.isOutOfService.to,
         old: changes.isOutOfService.from
-       }
+       },
+       req,
     );
   }
 };
