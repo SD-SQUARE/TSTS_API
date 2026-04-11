@@ -17,7 +17,7 @@ export async function getAllUniversities(req: Request, res: Response) {
     .metadata({ query: req.query });  
   
     const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+    const limit = req.query.page_size ? parseInt(req.query.page_size as string, 10) : 20;
     const name = req.query.name ? (req.query.name as string) : undefined;
     const safePage = isNaN(page) || page < 1 ? 1 : page;
     const safeLimit = isNaN(limit) || limit < 1 ? 20 : limit;

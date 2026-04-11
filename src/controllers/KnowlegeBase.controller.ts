@@ -18,7 +18,7 @@ export const getKnowledgeBaseItems = async (req: Request, res: Response) => {
     (req.query.specialization as string | undefined) ||
     (req.query.content as string | undefined);
     const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const limit = req.query.page_size ? parseInt(req.query.page_size as string, 10) : undefined;
 
   const auditLog = audit(req)
     .summary("Fetch knowledge base items")
