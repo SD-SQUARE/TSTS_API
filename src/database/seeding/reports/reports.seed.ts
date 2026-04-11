@@ -99,4 +99,5 @@ async function runReportSeeding() {
 }
 
 // Run the seeding
-runReportSeeding();
+const isMain = process.argv[1]?.endsWith("reports.seed.ts") || process.argv[1]?.endsWith("reports.seed.js");
+if (isMain) runReportSeeding();
