@@ -364,7 +364,7 @@ export const getAllTicketsService = async (
 
   const { skip, take, meta } = buildPagination({
     page: query.page_index,
-    limit: query.page_size,
+    page_size: query.page_size,
   });
 
   logger.info("[server][tickets] getAllTickets | pagination resolved", {
