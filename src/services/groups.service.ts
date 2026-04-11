@@ -581,7 +581,7 @@ export const editGroup = async (
     name: { ...group.name },
     descriptions: { ...group.descriptions },
     color: group.color,
-    teamLeaderId: group.teamLeader?.id ?? null,
+    teamLeaderId: (await group.teamLeader)?.id ?? null,
     heads: (group as any).heads?.map((h) => h.user.id) || [],
     specializations:
       (group as any).specializations?.map((s) => s.specialization.id) || [],
@@ -670,15 +670,14 @@ export const editGroup = async (
       "teamLeader",
     ],
   });
-
   const newValue: any = {
-    name: { ...group.name },
-    descriptions: { ...group.descriptions },
-    color: group.color,
-    teamLeaderId: group.teamLeader?.id ?? null,
-    heads: (group as any).heads?.map((h) => h.user.id) || [],
+    name: { ...updatedGroup!.name },
+    descriptions: { ...updatedGroup!.descriptions },
+    color: updatedGroup!.color,
+    teamLeaderId: (await updatedGroup!.teamLeader)?.id ?? null,
+    heads: updatedGroup!.heads?.map((h: any) => h.user.id) || [],
     specializations:
-      (group as any).specializations?.map((s) => s.specialization.id) || [],
+      updatedGroup!.specializations?.map((s: any) => s.specialization.id) || [],
   };
 
   auditLog
