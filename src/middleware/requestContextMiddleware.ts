@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { setRequestContext } from "../utils/requestContext.js";
+import { runWithContext } from "../utils/requestContext.js";
 
 /**
  * Middleware to populate AsyncLocalStorage context with userId and IP
@@ -14,7 +14,9 @@ export const requestContextMiddleware = (
     req.socket.remoteAddress ||
     "unknown";
 
-  setRequestContext({ ip });
-
-  next();
+  const context = { ip };
+  
+  // Store in both places for maximum compatibility
+  (req as any).context = context; // Fallback for multer and similar middleware
+  runWithContext(context, next); // Primary method using AsyncLocalStorage
 };
