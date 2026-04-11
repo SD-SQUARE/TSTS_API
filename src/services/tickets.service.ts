@@ -803,7 +803,7 @@ export const createTicketReviewService = async (
 
   let closeCycle = ticket.closeCount;
 
-  if (![TicketStatus.CLOSED, TicketStatus.RESOLVED].includes(ticket.status)) {
+  if ([TicketStatus.PENDING].includes(ticket.status)) {
     logger.info("[server][tickets][review] closing ticket before review", {
       ticketId,
       previousStatus: ticket.status,
