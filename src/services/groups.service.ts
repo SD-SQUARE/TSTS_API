@@ -595,13 +595,13 @@ export const editGroup = async (
   group.color = data.color ?? group.color;
 
   // --- Update team leader ---
-  if (data.team_leader) {
+  if (data.team_leader_id) {
     const leader = await usersRepository.findOne({
-      where: { id: data.team_leader, deletedAt: null },
+      where: { id: data.team_leader_id, deletedAt: null },
     });
     if (!leader) {
       logger.info("[server][groups][service] Team leader not found", {
-        team_leader: data.team_leader,
+        team_leader: data.team_leader_id,
       });
       throw new AppError(t("team_leader_not_found"), 404);
     }
