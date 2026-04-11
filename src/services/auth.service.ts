@@ -53,6 +53,8 @@ export const loginUser = async (
   password: string,
   req?: Request,
 ): Promise<LoginResult> => {
+  const t = req.t.bind(req);
+
   logger.info(`[server][auth] Login request received for email: ${email}`);
   audit(req)?.step('validating login input');
 
@@ -93,7 +95,7 @@ export const loginUser = async (
   if (!isPasswordValid) {
     logger.info(`[server][auth] Invalid password attempt for ${email}`);
     audit(req)?.step('password validation failed');
-    await handleFailedAttempt(email);
+    await handleFailedAttempt(email, t);
   }
 
   logger.info(`[server][auth] Password validated successfully for ${email}`);
@@ -163,7 +165,7 @@ export const findByEmail = async (email: string): Promise<User | null> => {
   return user;
 };
 
-export const handleFailedAttempt = async (email: string): Promise<void> => {
+export const handleFailedAttempt = async (email: string, t: (key: string) => string): Promise<void> => {
   logger.info(`[server][auth] Handling failed attempt for ${email}`);
 
   const attemptsKey = redisKeys.loginAttempts(email);
