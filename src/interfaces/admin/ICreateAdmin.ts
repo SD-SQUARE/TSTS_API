@@ -42,7 +42,7 @@ export interface CreateAdminMapped {
   image?: Express.Multer.File | undefined;
 
   email: string;
-  password: string;
+  password?: string;
   userType: string;
 
   firstNameEn: string;

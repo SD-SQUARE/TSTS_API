@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { upload } from "../middleware/upload.js";
-import { createRequesterSchema } from "../validation/requester/createRequester.schema.js";
+import { createRequesterSchema, editRequesterSchema } from "../validation/requester/createRequester.schema.js";
 import { validate } from "../validation/zod-middleware.js";
 import {
   createRequester,
@@ -14,7 +14,7 @@ import {
 } from "../controllers/requesters.controller.js";
 import { validateEmailAndSsnMiddleware } from "../middleware/users/conflictForAdd.js";
 import { validateEmailEditSsnMiddleware } from "../middleware/users/conflictForEdit.js";
-import { createTechnicianSchema } from "../validation/technician/createTechnician.schema.js";
+import { createTechnicianSchema, editTechnicianSchema } from "../validation/technician/createTechnician.schema.js";
 import {
   createTechnician,
   deleteTechnician,
@@ -29,7 +29,7 @@ import {
   getAdminById,
   getAdminsPaged,
 } from "../controllers/admins.controller.js";
-import { createAdminSchema } from "../validation/admin/createAdmin.schema.js";
+import { createAdminSchema, editAdminSchema } from "../validation/admin/createAdmin.schema.js";
 import {
   resetUserPassword,
   getMyProfileById,
@@ -103,21 +103,21 @@ router
   .put(
     "/requesters/:id",
     upload.single("image"),
-    validate(createRequesterSchema),
+    validate(editRequesterSchema),
     validateEmailEditSsnMiddleware,
     asyncHandler(EditRequester),
   )
   .put(
     "/technicians/:id",
     upload.single("image"),
-    validate(createTechnicianSchema),
+    validate(editTechnicianSchema),
     validateEmailEditSsnMiddleware,
     asyncHandler(EditTechnician),
   )
   .put(
     "/admins/:id",
     upload.single("image"),
-    validate(createAdminSchema),
+    validate(editAdminSchema),
     validateEmailEditSsnMiddleware,
     asyncHandler(EditAdmin),
   );

@@ -11,7 +11,7 @@ import {
 import { zStringArray } from "../../utils/zodHelper.js";
 import { UserType } from "../../enums/UserType.enum.js";
 
-export const createAdminSchema = (t: Request["t"]) =>
+export const editAdminSchema = (t: Request["t"]) =>
   z.object({
     image: z
       .any()
@@ -36,19 +36,7 @@ export const createAdminSchema = (t: Request["t"]) =>
 
     email: z.string().email({ message: t("invalid_mail") }),
 
-    password: z
-      .string()
-      .min(8, { message: t("password_too_short") })
-      .max(200)
-      .regex(PASSWORD_UPPERCASE_REGEX, {
-        message: t("password_must_contain_uppercase"),
-      })
-      .regex(PASSWORD_NUMBER_REGEX, {
-        message: t("password_must_contain_number"),
-      })
-      .regex(PASSWORD_SPECIAL_CHAR_REGEX, {
-        message: t("password_must_contain_special_char"),
-      }),
+    user_type: z.nativeEnum(UserType),
 
     // English names
     first_name_en: z
@@ -210,4 +198,21 @@ export const createAdminSchema = (t: Request["t"]) =>
       .nonempty({ message: t("job_ar_required") })
       .max(255)
       .regex(ARABIC_REGEX, { message: t("job_ar_must_be_arabic") }),
+  });
+
+export const createAdminSchema = (t: Request["t"]) =>
+  editAdminSchema(t).extend({
+    password: z
+      .string()
+      .min(8, { message: t("password_too_short") })
+      .max(200)
+      .regex(PASSWORD_UPPERCASE_REGEX, {
+        message: t("password_must_contain_uppercase"),
+      })
+      .regex(PASSWORD_NUMBER_REGEX, {
+        message: t("password_must_contain_number"),
+      })
+      .regex(PASSWORD_SPECIAL_CHAR_REGEX, {
+        message: t("password_must_contain_special_char"),
+      }),
   });
