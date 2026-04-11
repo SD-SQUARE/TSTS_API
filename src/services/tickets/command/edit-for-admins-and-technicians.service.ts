@@ -152,8 +152,8 @@ export const editTicketForAdminAndTechniciansService = async (
     })
     .step("Ticket updated in database");
 
-  await logGeneralUpdateActivity(updatedTicket, changes, userData);
-  await logSpecificActivities(updatedTicket, changes, userData);
+  await logGeneralUpdateActivity(updatedTicket, changes, userData, req);
+  await logSpecificActivities(updatedTicket, changes, userData, req);
 
   auditLog.step("Activities logged");
 
