@@ -43,8 +43,9 @@ export const logTicketActivity = async (
   content: string,
   userId: string,
   meta: any = {},
+  req?: Request,
 ) => {
-  const context = getRequestContext();
+  const context = getRequestContext(req);
 
   const finalMeta = {
     userId: userId || null,
@@ -64,7 +65,9 @@ export const logTicketActivity = async (
 };
 
 export const createTicket = async (dto, files, req?: Request) => {
-  const auditLog = audit(req).summary("Create Ticket").action(AuditAction.CREATE_TICKET);
+  const auditLog = audit(req)
+    .summary("Create Ticket")
+    .action(AuditAction.CREATE_TICKET);
   // FIXME: Take Problem From body and update ticket entity
   const { title, description, requester, specialization, problem } = dto;
 
@@ -248,6 +251,7 @@ export const createTicket = async (dto, files, req?: Request) => {
       problemId: assignedProblem?.id || null,
       assignees: assignedUsers.map((u) => ({ id: u.id })),
     },
+    req,
   );
 
   logger.info("[tickets] createTicket | activity logged", {
@@ -292,6 +296,7 @@ export const createTicket = async (dto, files, req?: Request) => {
         `Media file "${file.originalname}" uploaded`,
         requesterUser.id,
         { fileName: file.originalname, url: key },
+        req,
       );
     }
   }
@@ -798,7 +803,7 @@ export const createTicketReviewService = async (
 
   let closeCycle = ticket.closeCount;
 
-  if (ticket.status !== TicketStatus.CLOSED) {
+  if (![TicketStatus.CLOSED, TicketStatus.RESOLVED].includes(ticket.status)) {
     logger.info("[server][tickets][review] closing ticket before review", {
       ticketId,
       previousStatus: ticket.status,
@@ -1060,6 +1065,7 @@ export const changeTicketStatusService = async (
   user: any,
   t: any,
   auditLog?: ReturnType<typeof audit>,
+  req?: Request,
 ) => {
   logger.info("[server][tickets] changeTicketStatus | start", {
     ticketId,
@@ -1198,6 +1204,7 @@ export const changeTicketStatusService = async (
       old: previousStatus,
       new: newStatus,
     },
+    req,
   );
 
   auditLog

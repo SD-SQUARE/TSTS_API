@@ -677,6 +677,7 @@ export const changeTicketStatusController = async (req: any, res: Response) => {
     user,
     req.t,
     auditLog,
+    req,
   );
   
   return res.status(result.status).json(result.payload);
