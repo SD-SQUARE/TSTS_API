@@ -187,7 +187,7 @@ export const getUniversitiesLockupService = async (query) => {
   }
 
   // const [universities] = await qb.skip(skip).take(take).getManyAndCount();
-  const [universities] = await qb.getManyAndCount();
+  const universities = await qb.getMany();
 
   return universities.map((u) => ({
     id: u.id,
@@ -220,7 +220,7 @@ export const getDomainsLockupService = async (query: DomainsLockupQuery) => {
   }
 
   // const [domains] = await qb.skip(skip).take(take).getManyAndCount();
-  const [domains] = await qb.getMany();
+  const domains = await qb.getMany();
 
   return domains.map((d) => ({
     id: d.id,
@@ -260,7 +260,7 @@ export const getDepartmentsLockupService = async (
   }
 
   // const [departments] = await qb.skip(skip).take(take).getManyAndCount();
-  const [departments] = await qb.getMany();
+  const departments = await qb.getMany();
 
   return departments.map((d) => ({
     id: d.id,
@@ -287,7 +287,7 @@ export const getSpecializationsLockupService = async (
   }
 
   // const [specializations] = await qb.skip(skip).take(take).getManyAndCount();
-  const [specializations] = await qb.getMany();
+  const specializations = await qb.getMany();
 
   return specializations.map((s) => ({
     id: s.id,
@@ -312,7 +312,7 @@ export const getGroupsLockupService = async (query: GroupsLockupQuery) => {
   }
 
   // const [groups] = await qb.skip(skip).take(take).getManyAndCount();
-  const [groups] = await qb.getMany();
+  const groups = await qb.getMany();
 
   return groups.map((g) => ({
     id: g.id,
@@ -372,7 +372,7 @@ export const getDomainDepartmentsLockupService = async (
   }
 
   // const [departments] = await qb.skip(skip).take(take).getManyAndCount();
-  const [departments] = await qb.getMany();
+  const departments = await qb.getMany();
 
   return departments.map((d) => ({
     id: d.id,
