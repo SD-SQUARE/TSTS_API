@@ -342,7 +342,7 @@ export const getUniversityDomainsLockupService = async (
     );
   }
 
-  const [domains] = await qb.getMany();
+  const domains = await qb.getMany();
 
   return domains.map((d) => ({
     id: d.id,
