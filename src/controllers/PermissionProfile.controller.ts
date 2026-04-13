@@ -59,66 +59,67 @@ export async function getPermissionProfileById(req: Request, res: Response) {
 }
 
 export async function addPermissionProfile(req: Request, res: Response) {
-  const { name_en, name_ar, description_ar, description_en, permissions } = req.body;
+  const { name_en, name_ar, description_ar, description_en, permissionIds } = req.body;
   const name = buildName({ en: name_en, ar: name_ar });
   const description = buildDescription({ en: description_en, ar: description_ar });
   if (!name) {
     return res.status(ResponseStatus.BAD_REQUEST).json({
-      message: req.t ? req.t("name_invalid") : "Name in both languages is required",
+      message: req.t
+        ? req.t("name_invalid")
+        : "Name in both languages is required",
     });
   }
-  if (!Array.isArray(permissions) || permissions.length === 0) {
+  if (!Array.isArray(permissionIds) || permissionIds.length === 0) {
     return res.status(ResponseStatus.BAD_REQUEST).json({
       message: req.t
-        ? req.t("permissions_required")
-        : "Permissions array is required",
+        ? req.t("permissionIds_required")
+        : "PermissionIds is required",
     });
   }
-  for (const perm of permissions) {
-    if (!perm.name_en || !perm.name_ar) {
-      return res.status(ResponseStatus.BAD_REQUEST).json({
-        message: req.t
-          ? req.t("permission_name_invalid")
-          : "Each permission must have name_en and name_ar",
-      });
-    }
+  const isValidIds = permissionIds.every(
+    (id: any) => typeof id === "number" && id > 0
+  );
+
+  if (!isValidIds) {
+    return res.status(ResponseStatus.BAD_REQUEST).json({
+      message: req.t
+        ? req.t("permissionIds_invalid")
+        : "Each permission must have a valid ID",
+    });
   }
-
-  const permissionProfileExists = await permissionProfileRepo
+  const existing = await permissionProfileRepo
     .createQueryBuilder("p")
-    .where("p.name->>'en' = :name_en", { name_en })
-    .orWhere("p.name->>'ar' = :name_ar", { name_ar })
+    .where("LOWER(p.name->>'en') = LOWER(:name_en)", { name_en })
+    .orWhere("LOWER(p.name->>'ar') = LOWER(:name_ar)", { name_ar })
     .getOne();
-
-  if (permissionProfileExists) {
+  if (existing) {
     return res.status(ResponseStatus.BAD_REQUEST).json({
       message: req.t
         ? req.t("permission_profile_exists")
         : "Permission profile already exists",
     });
   }
-
+  const permissions = await permissionRepository.find({
+    where: { id: In(permissionIds) },
+  });
+  if (permissions.length !== permissionIds.length) {
+    return res.status(ResponseStatus.BAD_REQUEST).json({
+      message: req.t
+        ? req.t("permissions_invalid")
+        : "Invalid permissions provided",
+    });
+  }
+  for (const perm of permissions) {
+    perm.key = `perm-${String(perm.id).padStart(3, "0")}`;
+  }
   const newProfile = permissionProfileRepo.create({
     name,
     descriptions: description,
-    permissions: permissions.map((perm: any) => ({
-      name: {
-        en: perm.name_en,
-        ar: perm.name_ar,
-      },
-    })),
+    permissions,
   });
-
   await permissionProfileRepo.save(newProfile);
-
-  for (const perm of newProfile.permissions) {
-    perm.key = `perm-${String(perm.id).padStart(3, "0")}`;
-  }
-
-await permissionRepository.save(newProfile.permissions);
-
+  await permissionRepository.save(permissions);
   logger.info(`Created permission profile with ID: ${newProfile.id}`);
-
   return res.status(ResponseStatus.CREATED).json({
     is_added: true,
     message: req.t
