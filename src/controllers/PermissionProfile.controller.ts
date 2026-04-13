@@ -109,16 +109,12 @@ export async function addPermissionProfile(req: Request, res: Response) {
         : "Invalid permissions provided",
     });
   }
-  for (const perm of permissions) {
-    perm.key = `perm-${String(perm.id).padStart(3, "0")}`;
-  }
   const newProfile = permissionProfileRepo.create({
     name,
     descriptions: description,
     permissions,
   });
   await permissionProfileRepo.save(newProfile);
-  await permissionRepository.save(permissions);
   logger.info(`Created permission profile with ID: ${newProfile.id}`);
   return res.status(ResponseStatus.CREATED).json({
     is_added: true,
