@@ -10,6 +10,8 @@ export interface ITicketChatMessageResponseDto {
   sender: {
     id: string;
     name: string;
+    job: string | null;
+    user_type: string | null;
     image: string | null;
   };
   ticketId: string;
