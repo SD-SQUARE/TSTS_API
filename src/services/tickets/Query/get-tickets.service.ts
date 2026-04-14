@@ -105,46 +105,56 @@ export const getAllTicketsService = async (
   }
 
   if (query.specialization) {
-    qb.andWhere("specialization.id = :specialization", {
-      specialization: query.specialization,
+    const values = Array.isArray(query.specialization)
+      ? query.specialization
+      : [query.specialization];
+    qb.andWhere("specialization.id IN (:...specializations)", {
+      specializations: values,
     });
 
     logger.info("[server][tickets] getAllTickets | filter applied", {
       filter: "specialization",
-      specializationId: query.specialization,
+      specializationIds: values,
     });
   }
 
   if (query.problem) {
-    qb.andWhere("problem.id = :problem", {
-      problem: query.problem,
+    const values = Array.isArray(query.problem)
+      ? query.problem
+      : [query.problem];
+    qb.andWhere("problem.id IN (:...problems)", {
+      problems: values,
     });
 
     logger.info("[server][tickets] getAllTickets | filter applied", {
       filter: "problem",
-      problemId: query.problem,
+      problemIds: values,
     });
   }
 
   if (query.status) {
-    qb.andWhere("ticket.status = :status", {
-      status: query.status,
+    const values = Array.isArray(query.status) ? query.status : [query.status];
+    qb.andWhere("ticket.status IN (:...statuses)", {
+      statuses: values,
     });
 
     logger.info("[server][tickets] getAllTickets | filter applied", {
       filter: "status",
-      status: query.status,
+      statuses: values,
     });
   }
 
   if (query.priority) {
-    qb.andWhere("ticket.priority = :priority", {
-      priority: query.priority,
+    const values = Array.isArray(query.priority)
+      ? query.priority
+      : [query.priority];
+    qb.andWhere("ticket.priority IN (:...priorities)", {
+      priorities: values,
     });
 
     logger.info("[server][tickets] getAllTickets | filter applied", {
       filter: "priority",
-      priority: query.priority,
+      priorities: values,
     });
   }
 
