@@ -35,7 +35,9 @@ export const listAuditLogsService = async (
   }
 
   if (filters.actorId) {
-    query['actor.id'] = new ObjectId(filters.actorId);
+    query['actor.id'] = ObjectId.isValid(filters.actorId)
+      ? { $in: [filters.actorId, new ObjectId(filters.actorId)] }
+      : filters.actorId;
   }
 
   if (filters.action) {
@@ -47,7 +49,6 @@ export const listAuditLogsService = async (
   }
 
   const total = await auditRepository.count(query);
-  console.log('total', total);
 
   const logs = await auditRepository.find({
     where: query,

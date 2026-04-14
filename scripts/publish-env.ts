@@ -9,7 +9,11 @@ async function main() {
   // const HOST_IP = "172.1.50.91";
   const FROM = `./secrets/.env.stagging`;
 
-  const TARGETS = [`./docker/.env`, `./.env`, `./tests/.env.test`];
+  const TARGETS = [
+    `./docker/.env`, 
+    `./.env`, 
+    // `./tests/.env.test`
+  ];
 
   try {
     // 1. Read the original content
