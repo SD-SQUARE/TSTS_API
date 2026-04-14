@@ -399,7 +399,7 @@ export const forgetPassword = async (
     logger.warn(`[server] [auth] couldn't send email, skipping... ${err}`),
   );
 
-  req.step('password reset email sent');
+  audit(req).step("password reset email sent");
 
   return { oid, otp };
 };
@@ -421,7 +421,7 @@ export const verifyOtp = async (
   const data = JSON.parse(dataStr as string);
 
   if (data.otp !== otp) {
-    req.step('otp mismatch');
+    audit(req).step('otp mismatch');
     throw new AppError(t('otp_invalid'), 400);
   }
 
@@ -453,7 +453,7 @@ export const resetPassword = async (
   if (!resetToken || !newPassword) throw new AppError(t('invalid_input'), 400);
 
   if (!PASSWORD_REGEX.test(newPassword)) {
-    req.step('password validation failed');
+    audit(req).step("password validation failed");
     return { is_updated: false, error: t('invalid_password') };
   }
 

@@ -15,7 +15,7 @@ const deviceRepo = PostgresDataSource.getRepository(TrustedDevice);
 
 export const loginV2 = async (req: Request, res: Response) => {
   const { email, password } = req.body;
-
+  
   audit(req)
     .summary('User login attempt')
     .action(AuditAction.USER_LOGIN)
