@@ -36,6 +36,18 @@ const ticketReviewRepo = PostgresDataSource.getRepository(TicketReview);
 const problemRepo = PostgresDataSource.getRepository(Problem);
 const groupRepo = PostgresDataSource.getRepository(Group);
 
+/**
+ * Determines if a ticket requires review before closing
+ * @param ticket - The ticket to check
+ * @returns boolean indicating if review is required
+ */
+export const isTicketReviewRequired = (ticket: Ticket): boolean => {
+  return (
+    ticket.specialization?.review_required === true ||
+    ticket.problem?.review_required === true
+  );
+};
+
 export const logTicketActivity = async (
   ticket: Ticket,
   title: string,
@@ -528,6 +540,7 @@ export const getAllTicketsService = async (
     status: formatTicketStatus(ticket.status),
     priority: ticket.priority,
     isOutOfService: ticket.isOutOfService,
+    review_required: isTicketReviewRequired(ticket),
 
     assignee:
       ticket.assigneeList?.map((user) => ({
@@ -629,6 +642,7 @@ export const getSingleTicketService = async (
     status: formatTicketStatus(ticket.status),
     priority: ticket.priority,
     isOutOfService: ticket.isOutOfService,
+    review_required: isTicketReviewRequired(ticket),
     assignee:
       ticket.assigneeList?.map((user) => ({
         id: user.id,
@@ -783,7 +797,7 @@ export const createTicketReviewService = async (
 
   const ticket = await ticketRepo.findOne({
     where: { id: ticketId },
-    relations: ["requester"],
+    relations: ["requester", "specialization", "problem"],
   });
 
   if (!ticket) {
@@ -805,6 +819,7 @@ export const createTicketReviewService = async (
     status: ticket.status,
     closeCount: ticket.closeCount,
     requesterId: ticket.requester?.id,
+    review_required: isTicketReviewRequired(ticket),
   });
 
   logger.info("[server][tickets][review] ticket fetched", {
@@ -812,6 +827,7 @@ export const createTicketReviewService = async (
     status: ticket.status,
     closeCount: ticket.closeCount,
     requesterId: ticket.requester?.id,
+    review_required: isTicketReviewRequired(ticket),
   });
 
   if (ticket.requester.id !== user.id) {
@@ -837,56 +853,33 @@ export const createTicketReviewService = async (
 
   let closeCycle = ticket.closeCount;
 
-  if ([TicketStatus.PENDING].includes(ticket.status)) {
-    logger.info("[server][tickets][review] closing ticket before review", {
+  const reviewRequired = isTicketReviewRequired(ticket);
+
+  if (ticket.status === TicketStatus.PENDING && reviewRequired) {
+    logger.info("[server][tickets][review] resolving ticket after review", {
       ticketId,
       previousStatus: ticket.status,
       previousCloseCount: ticket.closeCount,
     });
 
-    auditLog?.step("Ticket closed before review").metadata({
+    auditLog?.step("Ticket resolved after review").metadata({
       previousStatus: ticket.status,
       newCloseCount: closeCycle,
     });
 
     closeCycle += 1;
-    ticket.status = TicketStatus.CLOSED;
+    ticket.status = TicketStatus.RESOLVED;
     ticket.closeCount = closeCycle;
 
     await ticketRepo.save(ticket);
 
-    logger.info("[server][tickets][review] ticket closed successfully", {
+    logger.info("[server][tickets][review] ticket resolved successfully", {
       ticketId,
       newStatus: ticket.status,
       newCloseCount: ticket.closeCount,
     });
   }
-
-  const existingReview = await ticketReviewRepo.findOne({
-    where: {
-      ticket: { id: ticket.id },
-      closeCycle: closeCycle,
-    },
-  });
-
-  if (existingReview) {
-    logger.warn("[server][tickets][review] duplicate review detected", {
-      ticketId,
-      closeCycle,
-      reviewerId: user.id,
-    });
-
-    auditLog?.step("Duplicate review detected").metadata({ closeCycle });
-
-    return {
-      status: 409,
-      payload: {
-        message: "Review already exists for this close cycle",
-        code: "REVIEW_ALREADY_EXISTS",
-      },
-    };
-  }
-
+  
   const review = ticketReviewRepo.create({
     rating: dto.rating,
     note: dto.note,
@@ -1132,6 +1125,7 @@ export const changeTicketStatusService = async (
     requesterId: ticket.requester?.id,
     assigneeCount: ticket.assigneeList?.length || 0,
     previousStatus: ticket.status,
+    review_required: isTicketReviewRequired(ticket),
   });
 
   const isRequester = ticket.requester?.id === user.id;
@@ -1186,8 +1180,7 @@ export const changeTicketStatusService = async (
   let newStatus = dto.status;
 
   if (dto.status === TicketStatus.CLOSED) {
-    const reviewRequired =
-      ticket.specialization?.review_required || ticket.problem?.review_required;
+    const reviewRequired = isTicketReviewRequired(ticket);
 
     if (reviewRequired) {
       const existingReview = await ticketReviewRepo.findOne({
