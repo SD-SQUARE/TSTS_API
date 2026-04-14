@@ -663,17 +663,51 @@ export const getSingleTicketService = async (
 
 export const getTicketActivitiesService = async (
   ticketId: string,
+  query,
   req?: Request,
 ) => {
   const auditLog = audit(req);
 
   try {
-    const auditLog = audit(req);
+    const qb = ticketActivityRepo
+      .createQueryBuilder("activity")
+      .where("activity.ticket_id = :ticketId", { ticketId });
 
-    const activities = await ticketActivityRepo.find({
-      where: { ticket: { id: ticketId } },
-      order: { createdAt: "DESC" },
-    });
+    if (query.userId) {
+      qb.andWhere(`activity.meta->>'userId' = :userId`, {
+        userId: query.userId,
+      });
+    }
+
+    if (query.type) {
+      qb.andWhere("activity.type = :type", {
+        type: query.type,
+      });
+    }
+
+    if (query.from) {
+      const fromDate = new Date(query.from);
+
+      qb.andWhere("activity.createdAt >= :from", {
+        from: fromDate,
+      });
+    }
+
+    if (query.to) {
+      const toDate = new Date(query.to);
+
+      if (!query.to.includes("T") && !query.to.includes(":")) {
+        toDate.setHours(23, 59, 59, 999);
+      }
+
+      qb.andWhere("activity.createdAt <= :to", {
+        to: toDate,
+      });
+    }
+
+    qb.orderBy("activity.createdAt", "DESC");
+
+    const activities = await qb.getMany();
 
     logger.info(
       `Fetched ${activities.length} activities for ticket ${ticketId}`,

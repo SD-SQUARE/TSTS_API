@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { Request } from "express";
 import { TicketStatus } from "../enums/TicketStatus.enum.js";
+import { TicketActivityType } from "../enums/TicketActivity.enum.js";
 
 export const createTicketSchema = (t: Request["t"]) =>
   z.object({
@@ -67,3 +68,30 @@ export const changeTicketStatusSchema = (t: Request["t"]) =>
         message: t("status_invalid"),
       }),
   });
+
+export const getTicketActivitiesSchema = (t: Request["t"]) =>
+  z
+    .object({
+      userId: z
+        .string()
+        .uuid({ message: t("invalid_user_id") })
+        .optional(),
+
+      type: z.enum(TicketActivityType).optional(),
+
+      from: z.coerce.date().optional(),
+
+      to: z.coerce.date().optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.from && data.to) {
+          return data.from <= data.to;
+        }
+        return true;
+      },
+      {
+        message: t("invalid_date_range"),
+        path: ["from"],
+      },
+    );

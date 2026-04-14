@@ -22,6 +22,7 @@ import {
 import { validate } from "../validation/zod-middleware.js";
 import {
   changeTicketStatusSchema,
+  getTicketActivitiesSchema,
   getTicketsSchema,
 } from "../validation/ticket.schema.js";
 import { authMiddleware } from "../middleware/auth.js";
@@ -35,8 +36,8 @@ import { createTicketReviewSchema } from "../validation/tickets/review.schema.js
 
 const router = Router();
 
-router.post("/",authMiddleware, upload.array("media"), (req, res) =>
-  createTicketController(req, res)
+router.post("/", authMiddleware, upload.array("media"), (req, res) =>
+  createTicketController(req, res),
 );
 
 router
@@ -44,13 +45,13 @@ router
     "/:id/media",
     authMiddleware,
     upload.array("files"),
-    asyncHandler(uploadTicketAssetController)
+    asyncHandler(uploadTicketAssetController),
   )
   .post(
     "/:id/chat/media",
     authMiddleware,
     upload.array("files"),
-    asyncHandler(uploadTicketChatMediaController)
+    asyncHandler(uploadTicketChatMediaController),
   )
   .post(
     "/:id/chat",
@@ -60,7 +61,7 @@ router
   )
   .post(
     "/:id/reviews",
-    authMiddleware, 
+    authMiddleware,
     validate(createTicketReviewSchema),
     createTicketReviewController,
   );
@@ -72,21 +73,24 @@ router.get(
   getAllTicketsController,
 );
 router.get("/:id", authMiddleware, getSingleTicketController);
-router.get("/:id/activities", getTicketActivitiesController);
+router.get(
+  "/:id/activities",
+  validate(getTicketActivitiesSchema),
+  getTicketActivitiesController,
+);
 router.get("/:id/reviews", authMiddleware, getTicketReviewsController);
-
 
 router
   .get("/:id/media", authMiddleware, asyncHandler(getAllTicketAssetsController))
   .get(
     "/:id/media/:aid",
     authMiddleware,
-    asyncHandler(getSingleTicketAssetController)
+    asyncHandler(getSingleTicketAssetController),
   )
   .get(
     "/:id/chat",
     authMiddleware,
-    asyncHandler(getChatMessagesForTicketController)
+    asyncHandler(getChatMessagesForTicketController),
   );
 
 router
@@ -114,7 +118,7 @@ router
     authMiddleware,
     typeBasedAuthMiddleware([UserType.REQUESTER]),
     validate(editTicketForRequesterSchema),
-    asyncHandler(editTicketForRequesterController)
+    asyncHandler(editTicketForRequesterController),
   );
 
 router
@@ -122,7 +126,7 @@ router
     "/:id",
     authMiddleware,
     typeBasedAuthMiddleware([UserType.ADMIN, UserType.SUPER_ADMIN]),
-    deleteTicketController
+    deleteTicketController,
   )
   .delete("/:id/media/:aid", authMiddleware, deleteTicketAssetController);
 
