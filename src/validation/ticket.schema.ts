@@ -38,13 +38,27 @@ export const getTicketsSchema = (t: Request["t"]) =>
 
     title: z.string().optional(),
 
-    specialization: z.string().uuid(t("invalid_specialization_id")).optional(),
+    specialization: z
+      .union([
+        z.string().uuid(t("invalid_specialization_id")),
+        z.array(z.string().uuid(t("invalid_specialization_id"))),
+      ])
+      .optional(),
 
-    problem: z.string().uuid(t("invalid_problem")).optional(),
+    problem: z
+      .union([
+        z.string().uuid(t("invalid_problem")),
+        z.array(z.string().uuid(t("invalid_problem"))),
+      ])
+      .optional(),
 
-    status: z.string().optional(),
+    status: z
+      .union([z.string(), z.array(z.string())])
+      .optional(),
 
-    priority: z.string().optional(),
+    priority: z
+      .union([z.string(), z.array(z.string())])
+      .optional(),
 
     page_index: z.coerce.number().int().min(1).optional(),
 
