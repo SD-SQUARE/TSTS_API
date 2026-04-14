@@ -17,7 +17,7 @@ import { ProblemRepo } from "../repositories/ProblemRepo.js";
 import { MongoDataSource } from "../database/mongo-data-source.js";
 import { AuditAction } from "../entities/mongo-entities/AuditAction.js";
 import logger from "../utils/logger.js";
-
+import { TicketActivity } from "../entities/TicketActivity.js";
 
 interface UsersLockupQuery {
   first_name?: string;
@@ -72,8 +72,10 @@ const specializationsRepository =
 const groupsRepository = PostgresDataSource.getRepository(Group);
 const ticketsRepository = PostgresDataSource.getRepository(Ticket);
 const problemRepo = new ProblemRepo().getRepository();
-const PermissionProfileRepo = PostgresDataSource.getRepository(PermissionProfile);
+const PermissionProfileRepo =
+  PostgresDataSource.getRepository(PermissionProfile);
 const auditActionRepo = MongoDataSource.getMongoRepository(AuditAction);
+const ticketsActivityRepo = PostgresDataSource.getRepository(TicketActivity);
 
 export const getUsersLockupService = async (query: UsersLockupQuery) => {
   const { skip, take } = buildPagination({
@@ -90,21 +92,21 @@ export const getUsersLockupService = async (query: UsersLockupQuery) => {
   if (query.first_name) {
     qb.andWhere(
       `("user"."firstName"->>'en' ILIKE :first_name OR "user"."firstName"->>'ar' ILIKE :first_name)`,
-      { first_name: `%${query.first_name}%` }
+      { first_name: `%${query.first_name}%` },
     );
   }
 
   if (query.mid_name) {
     qb.andWhere(
       `("user"."midName"->>'en' ILIKE :mid_name OR "user"."midName"->>'ar' ILIKE :mid_name)`,
-      { mid_name: `%${query.mid_name}%` }
+      { mid_name: `%${query.mid_name}%` },
     );
   }
 
   if (query.last_name) {
     qb.andWhere(
       `("user"."lastName"->>'en' ILIKE :last_name OR "user"."lastName"->>'ar' ILIKE :last_name)`,
-      { last_name: `%${query.last_name}%` }
+      { last_name: `%${query.last_name}%` },
     );
   }
 
@@ -138,7 +140,7 @@ interface PermissionsLockupQuery {
 }
 
 export const getPermissionsLockupService = async (
-  query: PermissionsLockupQuery
+  query: PermissionsLockupQuery,
 ) => {
   const { skip, take } = buildPagination({
     page: query.page,
@@ -150,11 +152,9 @@ export const getPermissionsLockupService = async (
   if (query.name) {
     qb.andWhere(
       `permission.name->>'en' ILIKE :name OR permission.name->>'ar' ILIKE :name`,
-      { name: `%${query.name}%` }
+      { name: `%${query.name}%` },
     );
   }
-
-  
 
   const total = await qb.getCount();
   // const permissions = await qb.skip(skip).take(take).getMany();
@@ -182,7 +182,7 @@ export const getUniversitiesLockupService = async (query) => {
   if (query.name) {
     qb.andWhere(
       `university.name->>'en' ILIKE :name OR university.name->>'ar' ILIKE :name`,
-      { name: `%${query.name}%` }
+      { name: `%${query.name}%` },
     );
   }
 
@@ -209,7 +209,7 @@ export const getDomainsLockupService = async (query: DomainsLockupQuery) => {
   if (query.name) {
     qb.andWhere(
       `domain.name->>'en' ILIKE :name OR domain.name->>'ar' ILIKE :name`,
-      { name: `%${query.name}%` }
+      { name: `%${query.name}%` },
     );
   }
 
@@ -230,7 +230,7 @@ export const getDomainsLockupService = async (query: DomainsLockupQuery) => {
 };
 
 export const getDepartmentsLockupService = async (
-  query: DepartmentsLockupQuery
+  query: DepartmentsLockupQuery,
 ) => {
   const { skip, take } = buildPagination({
     page: query.page,
@@ -245,7 +245,7 @@ export const getDepartmentsLockupService = async (
   if (query.name) {
     qb.andWhere(
       `department.name->>'en' ILIKE :name OR department.name->>'ar' ILIKE :name`,
-      { name: `%${query.name}%` }
+      { name: `%${query.name}%` },
     );
   }
 
@@ -270,7 +270,7 @@ export const getDepartmentsLockupService = async (
 };
 
 export const getSpecializationsLockupService = async (
-  query: SpecializationsLockupQuery
+  query: SpecializationsLockupQuery,
 ) => {
   const { skip, take } = buildPagination({
     page: query.page,
@@ -282,7 +282,7 @@ export const getSpecializationsLockupService = async (
   if (query.name) {
     qb.andWhere(
       `specialization.name->>'en' ILIKE :name OR specialization.name->>'ar' ILIKE :name`,
-      { name: `%${query.name}%` }
+      { name: `%${query.name}%` },
     );
   }
 
@@ -307,7 +307,7 @@ export const getGroupsLockupService = async (query: GroupsLockupQuery) => {
   if (query.name) {
     qb.andWhere(
       `group.name->>'en' ILIKE :name OR group.name->>'ar' ILIKE :name`,
-      { name: `%${query.name}%` }
+      { name: `%${query.name}%` },
     );
   }
 
@@ -324,7 +324,7 @@ export const getGroupsLockupService = async (query: GroupsLockupQuery) => {
 
 export const getUniversityDomainsLockupService = async (
   universityId: string,
-  query
+  query,
 ) => {
   const { skip, take } = buildPagination({
     page: query.page,
@@ -338,7 +338,7 @@ export const getUniversityDomainsLockupService = async (
   if (query.name) {
     qb.andWhere(
       `domain.name->>'en' ILIKE :name OR domain.name->>'ar' ILIKE :name`,
-      { name: `%${query.name}%` }
+      { name: `%${query.name}%` },
     );
   }
 
@@ -353,7 +353,7 @@ export const getUniversityDomainsLockupService = async (
 
 export const getDomainDepartmentsLockupService = async (
   domainId: string,
-  query
+  query,
 ) => {
   const { skip, take } = buildPagination({
     page: query.page,
@@ -367,7 +367,7 @@ export const getDomainDepartmentsLockupService = async (
   if (query.name) {
     qb.andWhere(
       `department.name->>'en' ILIKE :name OR department.name->>'ar' ILIKE :name`,
-      { name: `%${query.name}%` }
+      { name: `%${query.name}%` },
     );
   }
 
@@ -383,7 +383,7 @@ export const getDomainDepartmentsLockupService = async (
 
 export const getGroupTechniciansLockupService = async (
   groupId: string,
-  query: GroupTechniciansQuery
+  query: GroupTechniciansQuery,
 ) => {
   const qb = groupsRepository
     .createQueryBuilder("group")
@@ -405,7 +405,7 @@ export const getGroupTechniciansLockupService = async (
           user."midName"->>'en' ILIKE :name OR user."midName"->>'ar' ILIKE :name OR
           user."lastName"->>'en' ILIKE :name OR user."lastName"->>'ar' ILIKE :name
       )`,
-      { name: `%${query.name}%` }
+      { name: `%${query.name}%` },
     );
   }
 
@@ -415,7 +415,7 @@ export const getGroupTechniciansLockupService = async (
           user."job"->>'en' ILIKE :job OR
           user."job"->>'ar' ILIKE :job
       )`,
-      { job: `%${query.job}%` }
+      { job: `%${query.job}%` },
     );
   }
 
@@ -432,7 +432,7 @@ export const getGroupTechniciansLockupService = async (
 
 export const getGroupNonTechniciansLockupService = async (
   groupId: string,
-  query: GroupTechniciansQuery
+  query: GroupTechniciansQuery,
 ) => {
   const qb = usersRepository
     .createQueryBuilder("user")
@@ -445,7 +445,7 @@ export const getGroupNonTechniciansLockupService = async (
         WHERE tg."groupId" = :groupId
       )
     `,
-      { groupId }
+      { groupId },
     )
     .select([
       "user.id AS id",
@@ -462,14 +462,14 @@ export const getGroupNonTechniciansLockupService = async (
         user."midName"->>'en' ILIKE :name OR user."midName"->>'ar' ILIKE :name OR
         user."lastName"->>'en' ILIKE :name OR user."lastName"->>'ar' ILIKE :name
       )`,
-      { name: `%${query.name}%` }
+      { name: `%${query.name}%` },
     );
   }
 
   if (query.job) {
     qb.andWhere(
       `(user."job"->>'en' ILIKE :job OR user."job"->>'ar' ILIKE :job)`,
-      { job: `%${query.job}%` }
+      { job: `%${query.job}%` },
     );
   }
 
@@ -521,7 +521,7 @@ export const getUserTicketsLockupService = async (
 export const getProblemsLockUpService = async (
   name: string | undefined,
   lang: "en" | "ar",
-  specializationId: string
+  specializationId: string,
 ) => {
   const qb = problemRepo
     .createQueryBuilder("problem")
@@ -530,20 +530,14 @@ export const getProblemsLockUpService = async (
 
   const searchTerm = name?.trim();
   if (searchTerm) {
-    qb.andWhere(
-      `problem.name->>:lang ILIKE :name`,
-      {
-        lang,
-        name: `%${searchTerm}%`,
-      }
-    );
+    qb.andWhere(`problem.name->>:lang ILIKE :name`, {
+      lang,
+      name: `%${searchTerm}%`,
+    });
   }
 
   const problems = await qb
-    .select([
-      "problem.id AS problem_id",
-      `problem.name->>:lang AS name`,
-    ])
+    .select(["problem.id AS problem_id", `problem.name->>:lang AS name`])
     .setParameter("lang", lang)
     .getRawMany();
 
@@ -557,15 +551,15 @@ export const getProblemsLockUpService = async (
 export const getTicketProblemsService = async (
   specializationId: string | undefined,
   specializationName: string | undefined,
-  lang: "en" | "ar"
+  lang: "en" | "ar",
 ) => {
   if (!["en", "ar"].includes(lang)) throw new Error("Invalid language");
 
   const key = lang;
   const qb = specializationsRepository
     .createQueryBuilder("specialization")
-    .leftJoin("specialization.problems", "problem")  
-    .where("specialization.deletedAt IS NULL");     
+    .leftJoin("specialization.problems", "problem")
+    .where("specialization.deletedAt IS NULL");
 
   if (specializationId) {
     qb.andWhere("specialization.id = :id", { id: specializationId });
@@ -590,13 +584,20 @@ export const getTicketProblemsService = async (
       rows.reduce((map: any, row: any) => {
         const specId = row.specialization_id;
         if (!map[specId]) {
-          map[specId] = { id: specId, name: row.specialization_name || 'No name', problems: [] };
+          map[specId] = {
+            id: specId,
+            name: row.specialization_name || "No name",
+            problems: [],
+          };
         }
         if (row.problem_id) {
-          map[specId].problems.push({ id: row.problem_id, name: row.problem_name || 'No name' });
+          map[specId].problems.push({
+            id: row.problem_id,
+            name: row.problem_name || "No name",
+          });
         }
         return map;
-      }, {})
+      }, {}),
     ),
   };
 };
@@ -611,21 +612,22 @@ export const getAuditActionsLockupService = async (lang: "en" | "ar") => {
   }));
 };
 
-export const getPermissionProfilesLockupService = async (query: PermissionsLockupQuery) =>
-  {
+export const getPermissionProfilesLockupService = async (
+  query: PermissionsLockupQuery,
+) => {
   const { skip, take } = buildPagination({
     page: query.page,
     page_size: query.page_size,
   });
 
-  const qb = PermissionProfileRepo
-    .createQueryBuilder("permission_profile")
-    .leftJoinAndSelect("permission_profile.permissions", "permission");
+  const qb = PermissionProfileRepo.createQueryBuilder(
+    "permission_profile",
+  ).leftJoinAndSelect("permission_profile.permissions", "permission");
 
   if (query.name) {
     qb.andWhere(
       `permission_profile.name->>'en' ILIKE :name OR permission_profile.name->>'ar' ILIKE :name`,
-      { name: `%${query.name}%` }
+      { name: `%${query.name}%` },
     );
   }
 
@@ -634,8 +636,7 @@ export const getPermissionProfilesLockupService = async (query: PermissionsLocku
   //   .skip(skip)
   //   .take(take)
   //   .getMany();
-  const profiles = await qb
-    .getMany();
+  const profiles = await qb.getMany();
   const mappedProfiles = profiles.map((p) => ({
     id: p.id,
     name_en: p.name?.en || "",
@@ -651,4 +652,16 @@ export const getPermissionProfilesLockupService = async (query: PermissionsLocku
 
   return mappedProfiles;
 };
-   
+
+export const getTicketActivityActionsService = async (ticketId: string) => {
+  const rows = await ticketsActivityRepo
+    .createQueryBuilder("activity")
+    .select("DISTINCT activity.type", "type")
+    .where("activity.ticket_id = :ticketId", { ticketId })
+    .orderBy("activity.type", "ASC")
+    .getRawMany();
+
+  return rows.map((r) => ({
+    type: r.type,
+  }));
+};
