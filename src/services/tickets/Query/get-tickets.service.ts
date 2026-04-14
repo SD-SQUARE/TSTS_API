@@ -1,5 +1,5 @@
 import { PostgresDataSource } from "../../../database/postgres-data-source.js";
-import { Ticket } from "../../../entities/index.js";
+import { GroupHead, Ticket } from "../../../entities/index.js";
 import { AuditAction } from "../../../enums/AuditAction.enum.js";
 import { TicketActivityType } from "../../../enums/TicketActivity.enum.js";
 import { UserType } from "../../../enums/UserType.enum.js";
@@ -61,12 +61,42 @@ export const getAllTicketsService = async (
     logger.info("[tickets] requester access applied", { userId: user.id });
   }
 
-  if (user.role === UserType.TECHNICIAN || user.role === UserType.ADMIN) {
+  if (user.role === UserType.TECHNICIAN) {
     qb.andWhere("assignee.id = :userId", {
       userId: user.id,
     });
 
     logger.info("[tickets] technician access applied", { userId: user.id });
+  }
+
+  if (user.role === UserType.ADMIN || user.role === UserType.SUPER_ADMIN) {
+    const groupHeadRows = await PostgresDataSource.getRepository(GroupHead)
+      .createQueryBuilder("gh")
+      .innerJoin("gh.group", "g")
+      .innerJoin("g.specializations", "gs")
+      .innerJoin("gs.specialization", "s")
+      .select("s.id", "specializationId")
+      .where("gh.user = :userId", { userId: user.id })
+      .getRawMany();
+
+    const specializationIds: string[] = [
+      ...new Set(groupHeadRows.map((row: any) => row.specializationId)),
+    ];
+
+    logger.info("[tickets] admin specializations resolved", {
+      userId: user.id,
+      userRole: user.role,
+      specializationIds,
+    });
+
+    if (specializationIds.length === 0) {
+      qb.andWhere("1 = 0");
+    } else {
+      console.log(specializationIds);
+      qb.andWhere("specialization.id IN (:...adminSpecializations)", {
+        adminSpecializations: specializationIds,
+      });
+    }
   }
 
   logger.info("[server][tickets] getAllTickets | base query initialized");
