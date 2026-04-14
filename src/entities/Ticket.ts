@@ -9,6 +9,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
+  Generated,
+  Index,
 } from "typeorm";
 import { User } from "./User.js";
 import { Specialization } from "./Specialization.js";
@@ -25,6 +27,11 @@ import { Problem } from "./problem.js";
 export class Ticket {
   @PrimaryGeneratedColumn("uuid")
   id: string;
+
+  @Index()
+  @Column({ type: "int", generated: "increment", unique: true })
+  @Generated("increment")
+  ticket_number: number;
 
   @Column({ type: "varchar", length: 100 })
   title: string;

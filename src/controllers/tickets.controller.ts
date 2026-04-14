@@ -6,8 +6,6 @@ import {
   changeTicketStatusService,
   createTicket,
   createTicketReviewService,
-  getAllTicketsService,
-  getSingleTicketService,
   getTicketActivitiesService,
   getTicketReviewsService,
 } from "../services/tickets.service.js";
@@ -34,6 +32,11 @@ import { ICreateResponse } from "../interfaces/response/ICreateResponse.js";
 import { getChatMessagesForTicketServices } from "../services/tickets/tickets-chat/get-chat-messages-for-ticket.service.js";
 import { audit } from "../helpers/auditBuilder.js";
 import { AuditAction } from "../enums/AuditAction.enum.js";
+import {
+  getAllTicketsService,
+  getSingleTicketService,
+} from "../services/tickets/Query/get-tickets.service.js";
+import { Lang } from "../types/lang.types.js";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -57,7 +60,7 @@ export const createTicketController = async (req: Request, res: Response) => {
 };
 
 export const getAllTicketsController = async (req: Request, res: Response) => {
-  const lang = (req.language || "en") as "ar" | "en";
+  const lang = (req.language || "en") as Lang;
   const user = (req as any).user;
 
   const result = await getAllTicketsService(req.query, lang, user, req);
@@ -70,7 +73,10 @@ export const getSingleTicketController = async (
   res: Response,
 ) => {
   const { id } = req.params;
-  const lang = (req.language || "en") as "ar" | "en";
+  const ticket_number = req.query.ticket_number
+    ? Number(req.query.ticket_number)
+    : undefined;
+  const lang = (req.language || "en") as Lang;
   const userId = (req as any).user.id;
   const userFullName = (req as any).user.name;
   logger.info(`[server][tickets] getSingleTicket | user: ${userFullName}`, {
@@ -94,10 +100,17 @@ export const getSingleTicketController = async (
   const auditLog = audit()
     .summary("Get Single Ticket")
     .action(AuditAction.GET_TICKET)
-    .metadata({ userId, userName, ticketId: id })
+    .metadata({ userId, userName, ticketId: id, ticket_number })
     .step("Start fetching ticket");
 
-  const ticket = await getSingleTicketService(id, lang, userId, userName, req);
+  const ticket = await getSingleTicketService(
+    id,
+    ticket_number,
+    lang,
+    userId,
+    userName,
+    req,
+  );
 
   if (!ticket) {
     auditLog.step("Ticket not found").metadata({ ticketId: id });
@@ -679,6 +692,6 @@ export const changeTicketStatusController = async (req: any, res: Response) => {
     auditLog,
     req,
   );
-  
+
   return res.status(result.status).json(result.payload);
 };
