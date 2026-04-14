@@ -13,7 +13,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { csrfMiddleware } from "./config/csrf.js";
 import { socketIoMiddleware } from "./middleware/socketIo.js";
 import { io as socketIoInstance } from "./config/socket.js";
-import { notificationMessage, notificationUser, ticket } from "./services/socket.service.js";
+import { notificationMessage, notificationUser, notificationTicket } from "./services/socket.service.js";
 import { requestContextMiddleware } from "./middleware/requestContextMiddleware.js";
 
 
@@ -97,7 +97,7 @@ app.post("/debug/send-events", (_req, res) => {
     ticketId: "ticket111",
     info: "New comment",
   });
-  ticket("ticket_update", { ticketId: "ticket111", status: "In Progress" });
+  notificationTicket("ticket_update", { ticketId: "ticket111", status: "In Progress" });
   res.sendStatus(204);
 });
 

@@ -9,17 +9,30 @@ import { BaseEntity } from "./BaseEntity.js";
 @Entity({ name: "knowledge_items" })
 @Index(["specialization"])
 export class KnowledgeItem extends BaseEntity {
-  @Column({ type: "varchar", length: 255 })
-  title: string;
 
-  @Column({ type: "varchar", length: 1000 })
-  description: string;
+  @Column({ type: "jsonb" })
+  title!: {
+    en: string;
+    ar: string;
+  };
 
-  @Column({ type: "varchar", length: 100 })
-  specialization: string;
+  @Column({ type: "jsonb" })
+  description!: {
+    en: string;
+    ar: string;
+  };
 
-  @Column({ type: "varchar", nullable: true, length: 200000 })
-  content?: string;
+  @Column({ type: "jsonb" })
+  specialization!: {
+    en: string;
+    ar: string;
+  };
+
+  @Column({ type: "jsonb", nullable: true })
+  content?: {
+    en?: string;
+    ar?: string;
+  };
 
   @Column({
     type: "tsvector",
@@ -42,7 +55,6 @@ export class KnowledgeItem extends BaseEntity {
     const limit = Math.min(options.page_size || 10, 100);
     const offset = (page - 1) * limit;
 
-
     const qb = repo
       .createQueryBuilder("item")
       .select([
@@ -56,16 +68,19 @@ export class KnowledgeItem extends BaseEntity {
       ])
       .where("item.deletedAt IS NULL");
 
-    // 🔍 Search across ALL fields
     if (options.search?.trim()) {
       qb.andWhere(
         `(
-        item.searchVector @@ websearch_to_tsquery('english', :search)
-        OR item.title ILIKE :like
-        OR item.description ILIKE :like
-        OR item.specialization ILIKE :like
-        OR item.content ILIKE :like
-      )`,
+      item.searchVector @@ websearch_to_tsquery('simple', :search)
+
+      OR ((item.title::jsonb ->> 'en') || ' ' || (item.title::jsonb ->> 'ar')) ILIKE :like
+
+      OR ((item.description::jsonb ->> 'en') || ' ' || (item.description::jsonb ->> 'ar')) ILIKE :like
+
+      OR ((item.specialization::jsonb ->> 'en') || ' ' || (item.specialization::jsonb ->> 'ar')) ILIKE :like
+
+      OR ((item.content::jsonb ->> 'en') || ' ' || (item.content::jsonb ->> 'ar')) ILIKE :like
+    )`,
         {
           search: options.search,
           like: `%${options.search}%`,
@@ -73,9 +88,7 @@ export class KnowledgeItem extends BaseEntity {
       );
     }
 
-    
-
-     qb.skip(offset).take(limit);
+    qb.skip(offset).take(limit);
 
     const [items, total] = await qb.getManyAndCount();
 
