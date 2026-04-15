@@ -16,6 +16,7 @@ import {
   getTicketProblemsService,
   getPermissionProfilesLockupService,
   getAuditActionsLockupService,
+  getTicketActivityActionsService,
 } from "../services/lockups.service.js";
 import { UserType } from "../enums/UserType.enum.js";
 
@@ -203,3 +204,15 @@ export const getAuditActionsLockupController = async (
     res.status(500).json({ message: "Failed to fetch audit actions" });
   }
 };
+
+export const getTicketActivityActionsController = async (req:Request,res: Response) => {
+  try {
+      const { id } = req.params;
+    const data = await getTicketActivityActionsService(id);
+
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Failed to fetch ticket activities action", err);
+    res.status(500).json({ message: "Failed to fetch ticket activities action" });
+  }
+}

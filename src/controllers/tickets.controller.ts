@@ -139,7 +139,7 @@ export const getTicketActivitiesController = async (
 
   auditLog.step("Start fetching ticket activities");
 
-  const activities = await getTicketActivitiesService(ticketId, req);
+  const activities = await getTicketActivitiesService(ticketId, req.query, req);
 
   auditLog
     .metadata({ activitiesCount: activities.length })
