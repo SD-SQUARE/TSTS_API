@@ -14,7 +14,7 @@ import { UserData } from "../../types/UserData.js";
 import logger from "../../utils/logger.js";
 import { logTicketActivity } from "../tickets.service.js";
 
-export type ChangeMap = Record<string, { from: any; to: any }>;
+export type ChangeMap = Record<string, { oldStatus: any; newStatus: any }>;
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
@@ -40,7 +40,7 @@ export const applyPrimitiveUpdate = (
   if (isEqualShallow(oldValue, newValue)) return;
 
   updates[field] = newValue;
-  changes[field] = { from: oldValue, to: newValue };
+  changes[field] = { oldStatus: oldValue, newStatus: newValue };
 
   if (shouldEmitForThisField) {
     wsFlag.value = true;
@@ -93,7 +93,7 @@ export const handleSpecializationUpdate = async (
     updates.specialization = null;
   }
 
-  changes.specialization = { from: oldId, to: newId };
+  changes.specialization = { oldStatus: oldId, newStatus: newId };
 
   return null;
 };
@@ -125,7 +125,7 @@ export const handleProblemUpdate = async (
     updates.problem = null;
   }
 
-  changes.problem = { from: oldId, to: newId };
+  changes.problem = { oldStatus: oldId, newStatus: newId };
 
   return null;
 };
@@ -159,7 +159,7 @@ export const handleAssigneeListUpdate = async (
   }
 
   updates.assigneeList = assigneeUsers;
-  changes.assigneeList = { from: oldList, to: newList };
+  changes.assigneeList = { oldStatus: oldList, newStatus: newList };
   wsFlag.value = true;
 
   return null;
@@ -177,8 +177,8 @@ export const buildActivityContent = (changes: ChangeMap) => {
   return Object.keys(changes)
     .map(
       (key) =>
-        `${key}: ${JSON.stringify(changes[key].from)} → ${JSON.stringify(
-          changes[key].to
+        `${key}: ${JSON.stringify(changes[key].oldStatus)} → ${JSON.stringify(
+          changes[key].newStatus
         )}`
     )
     .join(", ");
@@ -214,17 +214,17 @@ export const logSpecificActivities = async (
   const { actor, actorText } = formatActor(userdata);
 
   if (changes.status) {
-    const activityType = mapStatusToActivityType(changes.status.to);
+    const activityType = mapStatusToActivityType(changes.status.newStatus);
 
     await logTicketActivity(
       updatedTicket,
       "Status Changed",
       activityType,
-      `Ticket status changed by ${actorText} from ${changes.status.from} to ${changes.status.to}`,
+      `Ticket status changed by ${actorText} from ${changes.status.oldStatus} to ${changes.status.newStatus}`,
       actor.id,
       { actor, statusChange: changes.status,
-        new: changes.status.to,
-        old: changes.status.from
+        newStatus: changes.status.newStatus,
+        oldStatus: changes.status.oldStatus
        },
        req
     );
@@ -248,12 +248,12 @@ export const logSpecificActivities = async (
       "Service Status Changed",
       TicketActivityType.OUT_OF_SERVICE,
       `Ticket service status changed by ${actorText} to ${
-        changes.isOutOfService.to ? "out of service" : "in service"
+        changes.isOutOfService.newStatus ? "out of service" : "in service"
       }`,
       actor.id,
       { actor, serviceStatusChange: changes.isOutOfService,
-        new: changes.isOutOfService.to,
-        old: changes.isOutOfService.from
+        newStatus: changes.isOutOfService.newStatus,
+        oldStatus: changes.isOutOfService.oldStatus
        },
        req,
     );
