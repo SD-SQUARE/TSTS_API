@@ -150,6 +150,7 @@
   "problem_existing": "problem is existing",
   "action_not_allowed": "Action not allowed",
   "review_added": "Review added successfully",
+  "ticket_review_already_exists": "A review has already been submitted for this close cycle",
   "rating_min": "Rating must be at least 1",
   "rating_max": "Rating must not exceed 5",
   "note_too_long": "Note is too long (maximum 2000 characters)",

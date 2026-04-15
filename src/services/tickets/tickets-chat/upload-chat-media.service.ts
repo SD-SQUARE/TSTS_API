@@ -121,8 +121,8 @@ export const uploadTicketChatMediaService = async (
 
     // Activity logging
     changes.media = {
-      from: { count: 0 },
-      to: { count: addedCount, urls: createdMediaKeys },
+      oldStatus: { count: 0 },
+      newStatus: { count: addedCount, urls: createdMediaKeys },
     };
 
     const { actor, actorText } = formatActor(userData);

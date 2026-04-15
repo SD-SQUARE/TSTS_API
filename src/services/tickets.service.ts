@@ -180,37 +180,35 @@ export const createTicket = async (dto, files, req?: Request) => {
     });
   }
 
-  auditLog.step("Assigning users");
-  if (assignedSpecialization) {
-    assignedUsers = await assignUsersFromSpecialization(assignedSpecialization);
+  auditLog.step("Skipping auto assignment");
+  logger.info("[tickets] createTicket | auto assignment disabled", {
+    specializationId: assignedSpecialization?.id || null,
+    problemId: assignedProblem?.id || null,
+  });
 
-    logger.info("[tickets] assigned from specialization", {
-      specializationId: assignedSpecialization.id,
-      assignedCount: assignedUsers.length,
-    });
-  } else {
-    assignedUsers = await assignAllGroupHeadsAndLeaders();
-
-    logger.info("[tickets] assigned from all groups", {
-      assignedCount: assignedUsers.length,
-    });
-  }
+  // Auto assignment is intentionally disabled for now.
   // if (assignedSpecialization) {
   //   assignedUsers = await assignUsersFromSpecialization(assignedSpecialization);
-
-  //   logger.info("[tickets] createTicket | users assigned from specialization", {
+  //
+  //   logger.info("[tickets] assigned from specialization", {
   //     specializationId: assignedSpecialization.id,
   //     assignedCount: assignedUsers.length,
   //   });
+  // } else {
+  //   assignedUsers = await assignAllGroupHeadsAndLeaders();
+  //
+  //   logger.info("[tickets] assigned from all groups", {
+  //     assignedCount: assignedUsers.length,
+  //   });
   // }
-
+  //
   // if (!assignedUsers.length) {
   //   logger.info("[tickets] createTicket | fallback to admin assignment");
-
+  //
   //   assignedUsers = await userRepo.find({
   //     where: { user_type: UserType.ADMIN },
   //   });
-
+  //
   //   logger.info("[tickets] createTicket | admins assigned", {
   //     adminCount: assignedUsers.length,
   //   });
@@ -534,11 +532,15 @@ export const createTicketReviewService = async (
     };
   }
 
-  let closeCycle = ticket.closeCount;
-
   const reviewRequired = isTicketReviewRequired(ticket);
+  const hasReviewRequired =
+    ticket.status === TicketStatus.PENDING && reviewRequired;
 
-  if (ticket.status === TicketStatus.PENDING && reviewRequired) {
+  let closeCycle = hasReviewRequired
+    ? ticket.closeCount + 1
+    : ticket.closeCount;
+
+  if (hasReviewRequired) {
     logger.info("[server][tickets][review] resolving ticket after review", {
       ticketId,
       previousStatus: ticket.status,
@@ -550,7 +552,6 @@ export const createTicketReviewService = async (
       newCloseCount: closeCycle,
     });
 
-    closeCycle += 1;
     ticket.status = TicketStatus.RESOLVED;
     ticket.closeCount = closeCycle;
 
@@ -573,13 +574,18 @@ export const createTicketReviewService = async (
 
   await ticketReviewRepo.save(review);
 
-  auditLog?.step("Review saved").metadata({ reviewId: review.id, closeCycle });
+  auditLog?.step("Review saved").metadata({
+    reviewId: review.id,
+    closeCycle,
+    hasReviewRequired,
+  });
 
   logger.info("[server][tickets][review] review saved", {
     ticketId,
     reviewId: review.id,
     rating: dto.rating,
     closeCycle,
+    hasReviewRequired,
   });
 
   // Log ticket activity
@@ -592,6 +598,7 @@ export const createTicketReviewService = async (
     {
       rating: dto.rating,
       closeCycle: closeCycle,
+      hasReviewRequired,
     },
   );
 
@@ -606,6 +613,7 @@ export const createTicketReviewService = async (
     ticketId,
     reviewerId: user.id,
     closeCycle,
+    hasReviewRequired,
   });
 
   return {
@@ -613,6 +621,10 @@ export const createTicketReviewService = async (
     payload: {
       is_added: true,
       message: "review_created_successfully",
+      meta: {
+        closeCycle,
+        hasReviewRequired,
+      },
       errors: [],
     },
   };
