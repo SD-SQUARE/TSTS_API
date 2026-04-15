@@ -9,7 +9,6 @@ import {
   PASSWORD_UPPERCASE_REGEX,
 } from "../../config/validations.js";
 import { zStringArray } from "../../utils/zodHelper.js";
-import { UserType } from "../../enums/UserType.enum.js";
 
 export const editAdminSchema = (t: Request["t"]) =>
   z.object({
@@ -35,8 +34,6 @@ export const editAdminSchema = (t: Request["t"]) =>
       ),
 
     email: z.string().email({ message: t("invalid_mail") }),
-
-    user_type: z.nativeEnum(UserType),
 
     // English names
     first_name_en: z
