@@ -123,8 +123,8 @@ export const uploadTicketAssetsService = async (
 
     // Build changes map to make activity content consistent
     changes.media = {
-      from: { count: 0 },
-      to: { count: addedCount, urls: createdMediaUrls },
+      oldStatus: { count: 0 },
+      newStatus: { count: addedCount, urls: createdMediaUrls },
     };
 
     const { actor, actorText } = formatActor(userData);
