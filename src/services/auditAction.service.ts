@@ -15,6 +15,71 @@ interface AuditLogFilters {
   status?: string;
 }
 
+const parseAuditLogDate = (value: string | undefined): Date | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+
+  const nativeDate = new Date(normalized);
+  if (!Number.isNaN(nativeDate.getTime())) {
+    return nativeDate;
+  }
+
+  const match = normalized.match(
+    /^(\d{1,2}):(\d{2})\s*(AM|PM)\s*\/\s*(\d{1,2})-(\d{1,2})-(\d{4})$/i,
+  );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const [, rawHours, rawMinutes, meridiem, rawDay, rawMonth, rawYear] = match;
+  let hours = Number(rawHours);
+  const minutes = Number(rawMinutes);
+  const day = Number(rawDay);
+  const rawMonthNumber = Number(rawMonth);
+  const year = Number(rawYear);
+
+  if (
+    [hours, minutes, day, rawMonthNumber, year].some((part) =>
+      Number.isNaN(part),
+    )
+  ) {
+    return undefined;
+  }
+
+  if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59 || day < 1) {
+    return undefined;
+  }
+
+  if (meridiem.toUpperCase() === 'PM' && hours !== 12) {
+    hours += 12;
+  } else if (meridiem.toUpperCase() === 'AM' && hours === 12) {
+    hours = 0;
+  }
+
+  const month =
+    rawMonthNumber >= 1 && rawMonthNumber <= 12 ? rawMonthNumber - 1 : rawMonthNumber;
+
+  if (month < 0 || month > 11) {
+    return undefined;
+  }
+
+  const parsedDate = new Date(year, month, day, hours, minutes, 0, 0);
+
+  if (
+    parsedDate.getFullYear() !== year ||
+    parsedDate.getMonth() !== month ||
+    parsedDate.getDate() !== day
+  ) {
+    return undefined;
+  }
+
+  return parsedDate;
+};
+
 export const listAuditLogsService = async (
   pagination: PaginationQuery,
   filters: AuditLogFilters,
@@ -29,9 +94,22 @@ export const listAuditLogsService = async (
   const query: any = {};
 
   if (filters.from || filters.to) {
+    const fromDate = parseAuditLogDate(filters.from);
+    const toDate = parseAuditLogDate(filters.to);
+
     query.createdAt = {};
-    if (filters.from) query.createdAt.$gte = new Date(filters.from);
-    if (filters.to) query.createdAt.$lte = new Date(filters.to);
+
+    if (fromDate) {
+      query.createdAt.$gte = fromDate;
+    }
+
+    if (toDate) {
+      query.createdAt.$lte = toDate;
+    }
+
+    if (Object.keys(query.createdAt).length === 0) {
+      delete query.createdAt;
+    }
   }
 
   if (filters.actorId) {
