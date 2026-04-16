@@ -93,7 +93,7 @@ export const getTicketActivitiesSchema = (t: Request["t"]) =>
         .uuid({ message: t("invalid_user_id") })
         .optional(),
 
-      type: z.enum(TicketActivityType).optional(),
+      type: z.string().optional(),
 
       from: z.coerce.date().optional(),
 

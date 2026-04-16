@@ -18,6 +18,10 @@ import { MongoDataSource } from "../database/mongo-data-source.js";
 import { AuditAction } from "../entities/mongo-entities/AuditAction.js";
 import logger from "../utils/logger.js";
 import { TicketActivity } from "../entities/TicketActivity.js";
+import { Lang } from "../types/lang.types.js";
+import { getFullNameByLang } from "../helpers/UserPersonalData.helper.js";
+import { In } from "typeorm";
+import { getPresignedUrl } from "../utils/storage.js";
 
 interface UsersLockupQuery {
   first_name?: string;
@@ -656,12 +660,46 @@ export const getPermissionProfilesLockupService = async (
 export const getTicketActivityActionsService = async (ticketId: string) => {
   const rows = await ticketsActivityRepo
     .createQueryBuilder("activity")
-    .select("DISTINCT activity.title", "type")
+    .select("DISTINCT activity.title", "title")
     .where("activity.ticket_id = :ticketId", { ticketId })
-    .orderBy("activity.type", "ASC")
+    .orderBy("activity.title", "ASC")
     .getRawMany();
 
   return rows.map((r) => ({
-    type: r.type,
+    type: r.title,
   }));
+};
+
+export const getTicketActivityUsersService = async (
+  ticketId: string,
+  lang: Lang,
+) => {
+  const activities = await ticketsActivityRepo
+    .createQueryBuilder("activity")
+    .select(`DISTINCT activity.meta->>'userId'`, "userId")
+    .where("activity.ticket_id = :ticketId", { ticketId })
+    .andWhere(`activity.meta->>'userId' IS NOT NULL`)
+    .getRawMany();
+
+  const userIds = activities
+    .map((row) => row.userId as string | null)
+    .filter((id): id is string => Boolean(id));
+
+  if (!userIds.length) {
+    return [];
+  }
+
+  const users = await usersRepository.findBy({ id: In(userIds) });
+
+  const localizedUsers = await Promise.all(
+    users.map(async (user) => ({
+      id: user.id,
+      name: getFullNameByLang(user, lang),
+      image: user.image
+        ? await getPresignedUrl(process.env.MINIO_BUCKET!, user.image, 600)
+        : "",
+    })),
+  );
+
+  return localizedUsers.sort((a, b) => a.name.localeCompare(b.name, lang));
 };
