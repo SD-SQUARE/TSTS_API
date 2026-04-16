@@ -375,8 +375,8 @@ export const getTicketActivitiesService = async (
     }
 
     if (query.type) {
-      qb.andWhere("activity.type = :type", {
-        type: query.type,
+      qb.andWhere("activity.title = :title", {
+        title: query.type,
       });
     }
 
@@ -923,10 +923,10 @@ export const changeTicketStatusService = async (
       previousStatus,
       newStatus,
       closeCycle: ticket.closeCount,
-      old: previousStatus,
-      new: newStatus,
+      oldValue: previousStatus,
+      newValue: newStatus,
     },
-    req,
+    req
   );
 
   auditLog
