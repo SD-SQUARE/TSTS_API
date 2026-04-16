@@ -656,7 +656,7 @@ export const getPermissionProfilesLockupService = async (
 export const getTicketActivityActionsService = async (ticketId: string) => {
   const rows = await ticketsActivityRepo
     .createQueryBuilder("activity")
-    .select("DISTINCT activity.type", "type")
+    .select("DISTINCT activity.title", "type")
     .where("activity.ticket_id = :ticketId", { ticketId })
     .orderBy("activity.type", "ASC")
     .getRawMany();
