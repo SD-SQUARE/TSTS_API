@@ -9,11 +9,11 @@ export const listAuditLogsController = async (req: Request, res: Response) => {
     { query: req.query },
   );
 
-  const { page, page_size: limit, from, to, actorId, action, status } = req.query;
+  const { page, limit, from, to, actorId, action, status } = req.query;
 
   const pagination = {
     page: page ? parseInt(page as string) : undefined,
-    limit: limit ? parseInt(limit as string) : undefined,
+    page_size: limit ? parseInt(limit as string) : undefined,
   };
 
   const filters = {
