@@ -24,6 +24,7 @@ export * from "./TicketChat.js";
 export * from "./TicketListener.js";
 export * from "./ChatMessage.js";
 export * from "./TicketChatMessage.js";
+export * from "./TicketQuickMessage.js";
 export * from "./TrustedDevice.js";
 export * from "./TicketReview.js";
 export * from "./problem.js";
