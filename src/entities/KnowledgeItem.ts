@@ -5,22 +5,33 @@ import {
   Index,
 } from "typeorm";
 import { BaseEntity } from "./BaseEntity.js";
-import logger from "../utils/logger.js";
 
 @Entity({ name: "knowledge_items" })
-@Index(["specialization"])
+@Index(["specialization_en"])
 export class KnowledgeItem extends BaseEntity {
   @Column({ type: "varchar", length: 255 })
-  title: string;
+  title_en: string;
+
+  @Column({ type: "varchar", length: 255 })
+  title_ar: string;
 
   @Column({ type: "varchar", length: 1000 })
-  description: string;
+  description_en: string;
+
+  @Column({ type: "varchar", length: 1000 })
+  description_ar: string;
 
   @Column({ type: "varchar", length: 100 })
-  specialization: string;
+  specialization_en: string;
+
+  @Column({ type: "varchar", length: 100 })
+  specialization_ar: string;
 
   @Column({ type: "varchar", nullable: true, length: 200000 })
-  content?: string;
+  content_en?: string;
+
+  @Column({ type: "varchar", nullable: true, length: 200000 })
+  content_ar?: string;
 
   @Column({
     name: "search_vector",
@@ -44,30 +55,36 @@ export class KnowledgeItem extends BaseEntity {
     const limit = Math.min(options.limit || 10, 100);
     const offset = (page - 1) * limit;
 
-
     const qb = repo
       .createQueryBuilder("item")
       .select([
         "item.id",
-        "item.title",
-        "item.description",
-        "item.specialization",
-        "item.content",
+        "item.title_en",
+        "item.title_ar",
+        "item.description_en",
+        "item.description_ar",
+        "item.specialization_en",
+        "item.specialization_ar",
+        "item.content_en",
+        "item.content_ar",
         "item.createdAt",
         "item.updatedAt",
       ])
       .where("item.deletedAt IS NULL");
 
-    // 🔍 Search across ALL fields
     if (options.search?.trim()) {
       qb.andWhere(
         `(
-        item.searchVector @@ websearch_to_tsquery('english', :search)
-        OR item.title ILIKE :like
-        OR item.description ILIKE :like
-        OR item.specialization ILIKE :like
-        OR item.content ILIKE :like
-      )`,
+          item.searchVector @@ websearch_to_tsquery('simple', :search)
+          OR item.title_en ILIKE :like
+          OR item.title_ar ILIKE :like
+          OR item.description_en ILIKE :like
+          OR item.description_ar ILIKE :like
+          OR item.specialization_en ILIKE :like
+          OR item.specialization_ar ILIKE :like
+          OR item.content_en ILIKE :like
+          OR item.content_ar ILIKE :like
+        )`,
         {
           search: options.search,
           like: `%${options.search}%`,
@@ -75,9 +92,10 @@ export class KnowledgeItem extends BaseEntity {
       );
     }
 
-    
-
-    // qb.skip(offset).take(limit);
+    qb
+      .orderBy("item.updatedAt", "DESC")
+      .skip(offset)
+      .take(limit);
 
     const [items, total] = await qb.getManyAndCount();
 
