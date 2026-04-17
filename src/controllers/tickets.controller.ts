@@ -37,6 +37,8 @@ import {
   getSingleTicketService,
 } from "../services/tickets/Query/get-tickets.service.js";
 import { Lang } from "../types/lang.types.js";
+import { PostgresDataSource } from "../database/postgres-data-source.js";
+import { TicketQuickMessage } from "../entities/TicketQuickMessage.js";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
@@ -633,6 +635,68 @@ export const getChatMessagesForTicketController = async (
 
   const result = await getChatMessagesForTicketServices(ticketId, lang);
   return res.status(ResponseStatus.SUCCESS).json(result.data);
+};
+
+export const getQuickMessagesController = async (req: any, res: Response) => {
+  const userId = req.user?.id;
+
+  const quickMessageRepo = PostgresDataSource.getRepository(TicketQuickMessage);
+  const quickMessages = await quickMessageRepo.find({
+    where: {
+      user: { id: userId } as any,
+    } as any,
+    order: {
+      updatedAt: "DESC",
+      createdAt: "DESC",
+    },
+  });
+
+  return res.status(ResponseStatus.SUCCESS).json(
+    quickMessages.map((item) => ({
+      id: item.id,
+      title_en: item.title_en,
+      title_ar: item.title_ar,
+      content_en: item.content_en,
+      content_ar: item.content_ar,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    })),
+  );
+};
+
+export const createQuickMessageController = async (
+  req: any,
+  res: Response,
+) => {
+  const userId = req.user?.id;
+  const { title_en, title_ar, content_en, content_ar } = req.body;
+
+  const quickMessageRepo = PostgresDataSource.getRepository(TicketQuickMessage);
+  const quickMessage = quickMessageRepo.create({
+    title_en:
+      typeof title_en === "string" && title_en.trim().length > 0
+        ? title_en.trim()
+        : content_en.trim().slice(0, 60),
+    title_ar:
+      typeof title_ar === "string" && title_ar.trim().length > 0
+        ? title_ar.trim()
+        : content_ar.trim().slice(0, 60),
+    content_en: content_en.trim(),
+    content_ar: content_ar.trim(),
+    user: { id: userId } as any,
+  });
+
+  const savedQuickMessage = await quickMessageRepo.save(quickMessage);
+
+  return res.status(ResponseStatus.CREATED).json({
+    id: savedQuickMessage.id,
+    title_en: savedQuickMessage.title_en,
+    title_ar: savedQuickMessage.title_ar,
+    content_en: savedQuickMessage.content_en,
+    content_ar: savedQuickMessage.content_ar,
+    createdAt: savedQuickMessage.createdAt,
+    updatedAt: savedQuickMessage.updatedAt,
+  });
 };
 
 export const createTicketReviewController = async (req: any, res: Response) => {

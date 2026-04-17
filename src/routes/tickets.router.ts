@@ -15,6 +15,8 @@ import {
   uploadTicketChatMediaController,
   sendChatMessageController,
   getChatMessagesForTicketController,
+  getQuickMessagesController,
+  createQuickMessageController,
   createTicketReviewController,
   getTicketReviewsController,
   changeTicketStatusController,
@@ -33,12 +35,22 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { editTicketForRequesterSchema } from "../validation/tickets/edit-for-requester.js";
 import { createMessageSchema } from "../validation/tickets/chat/send-chat-message.schema.js";
 import { createTicketReviewSchema } from "../validation/tickets/review.schema.js";
+import { createQuickMessageSchema } from "../validation/tickets/chat/create-quick-message.schema.js";
 
 const router = Router();
 
 router.post("/", authMiddleware, upload.array("media"), (req, res) =>
   createTicketController(req, res),
 );
+
+router
+  .get("/quick-messages", authMiddleware, asyncHandler(getQuickMessagesController))
+  .post(
+    "/quick-messages",
+    authMiddleware,
+    validate(createQuickMessageSchema),
+    asyncHandler(createQuickMessageController),
+  );
 
 router
   .post(
