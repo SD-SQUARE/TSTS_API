@@ -286,65 +286,88 @@ export const getAllTicketsService = async (
     lang,
   });
 
+
+
   auditLog
     .step("Mapping tickets to DTO")
     .metadata({ returnedCount: tickets.length });
 
-  const mappedTickets = tickets.map((ticket) => ({
-    id: ticket.id,
-    ticket_number: ticket.ticket_number,
-    title: ticket.title,
-    description: ticket.description,
+  const mappedTickets = await Promise.all(tickets.map(async (ticket) => {
+    let university = null;
+    let domain = null;
+    let userDepartments: any[] = [];
 
-    requester: ticket.requester
-      ? {
-          id: ticket.requester.id,
-          name: buildLocalizedName(ticket.requester, lang),
-          image: ticket.requester.image,
-          university: ticket.requester.university
-            ? {
-                id: ticket.requester.university.id,
-                name: ticket.requester.university.name?.[lang] || "",
-              }
-            : null,
-          domain: ticket.requester.domain
-            ? {
-                id: ticket.requester.domain.id,
-                name: ticket.requester.domain.name?.[lang] || "",
-              }
-            : null,
-          departments:
-            ticket.requester.userDepartments?.map((departmentLink) => ({
-              id: departmentLink.department?.id,
-              name: departmentLink.department?.name?.[lang] || "",
-            }))?.filter((department) => department.id) || [],
-        }
-      : null,
+    let resolvedDepartments: any[] = [];
 
-    specialization: ticket.specialization
-      ? {
-          id: ticket.specialization.id,
-          name: ticket.specialization.name?.[lang],
-        }
-      : null,
+    if (ticket.requester) {
+      university = await ticket.requester.university;
+      domain = await ticket.requester.domain;
+      userDepartments = await ticket.requester.userDepartments;
 
-    problem: ticket.problem
-      ? {
-          id: ticket.problem.id,
-          name: ticket.problem.name?.[lang],
-        }
-      : null,
+      if (Array.isArray(userDepartments)) {
+        resolvedDepartments = await Promise.all(
+          userDepartments.map(async (link: any) => await link.department)
+        );
+      }
+    }
 
-    status: formatTicketStatus(ticket.status),
-    priority: ticket.priority,
-    isOutOfService: ticket.isOutOfService,
+    return {
+      id: ticket.id,
+      ticket_number: ticket.ticket_number,
+      title: ticket.title,
+      description: ticket.description,
 
-    assignee:
-      ticket.assigneeList?.map((user) => ({
-        id: user.id,
-        name: buildLocalizedName(user, lang),
-        image: user.image,
-      })) || [],
+      requester: ticket.requester
+        ? {
+            id: ticket.requester.id,
+            name: buildLocalizedName(ticket.requester, lang),
+            image: ticket.requester.image,
+            university: university
+              ? {
+                  id: university.id,
+                  name: university.name?.[lang] || "",
+                }
+              : null,
+            domain: domain
+              ? {
+                  id: domain.id,
+                  name: domain.name?.[lang] || "",
+                }
+              : null,
+            departments: resolvedDepartments
+              .filter((dept: any) => dept && dept.id)
+              .map((dept: any) => ({
+                id: dept.id,
+                name: dept.name?.[lang] || "",
+              })),
+          }
+        : null,
+
+      specialization: ticket.specialization
+        ? {
+            id: ticket.specialization.id,
+            name: ticket.specialization.name?.[lang],
+          }
+        : null,
+
+      problem: ticket.problem
+        ? {
+            id: ticket.problem.id,
+            name: ticket.problem.name?.[lang],
+          }
+        : null,
+
+      status: formatTicketStatus(ticket.status),
+      priority: ticket.priority,
+      isOutOfService: ticket.isOutOfService,
+
+      assignee:
+        ticket.assigneeList?.map((user) => ({
+          id: user.id,
+          name: buildLocalizedName(user, lang),
+          image: user.image,
+        })) || [],
+    };
   }));
 
   logger.info("[server][tickets] getAllTickets | completed", {
@@ -431,6 +454,24 @@ export const getSingleTicketService = async (
     assigneeCount: ticket.assigneeList?.length ?? 0,
   });
 
+  let university = null;
+  let domain = null;
+  let userDepartments: any[] = [];
+
+  let resolvedDepartments: any[] = [];
+
+  if (ticket.requester) {
+    university = await ticket.requester.university;
+    domain = await ticket.requester.domain;
+    userDepartments = await ticket.requester.userDepartments;
+
+    if (Array.isArray(userDepartments)) {
+      resolvedDepartments = await Promise.all(
+        userDepartments.map(async (link: any) => await link.department)
+      );
+    }
+  }
+
   const mappedTicket = {
     id: ticket.id,
     ticket_number: ticket.ticket_number,
@@ -441,23 +482,24 @@ export const getSingleTicketService = async (
           id: ticket.requester.id,
           name: buildLocalizedName(ticket.requester, lang),
           image: ticket.requester.image,
-          university: ticket.requester.university
+          university: university
             ? {
-                id: ticket.requester.university.id,
-                name: ticket.requester.university.name?.[lang] || "",
+                id: university.id,
+                name: university.name?.[lang] || "",
               }
             : null,
-          domain: ticket.requester.domain
+          domain: domain
             ? {
-                id: ticket.requester.domain.id,
-                name: ticket.requester.domain.name?.[lang] || "",
+                id: domain.id,
+                name: domain.name?.[lang] || "",
               }
             : null,
-          departments:
-            ticket.requester.userDepartments?.map((departmentLink) => ({
-              id: departmentLink.department?.id,
-              name: departmentLink.department?.name?.[lang] || "",
-            }))?.filter((department) => department.id) || [],
+          departments: resolvedDepartments
+            .filter((dept: any) => dept && dept.id)
+            .map((dept: any) => ({
+              id: dept.id,
+              name: dept.name?.[lang] || "",
+            })),
         }
       : null,
     specialization: ticket.specialization
