@@ -25,8 +25,8 @@ let server;
 if(PROTOCOL === "https") {
   const caPath = process.env.NODE_EXTRA_CA_CERTS?.trim();
   const HTTPS_OPTIONS: https.ServerOptions = {
-    key: fs.readFileSync("/certs/staging.myapp.local-key.pem"),
-    cert: fs.readFileSync("/certs/staging.myapp.local.pem"),
+    key: fs.readFileSync(process.env.SSL_KEY_FILE || "/certs/staging.myapp.local-key.pem"),
+    cert: fs.readFileSync(process.env.SSL_CERT_FILE || "/certs/staging.myapp.local.pem"),
   };
 
   if (caPath && fs.existsSync(caPath)) {
