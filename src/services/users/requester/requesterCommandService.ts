@@ -200,14 +200,32 @@ export const editRequesterService = async (
     return { is_edited: false, message: t("user_not_found"), errors: [] };
   }
 
+  const userDepartments = await Promise.resolve(userEntity.userDepartments ?? []);
+  const usersPermissions = await Promise.resolve(
+    userEntity.usersPermissions ?? [],
+  );
+  const allowedSpecializations = await Promise.resolve(
+    userEntity.allowedSpecializations ?? [],
+  );
+
   const oldValues = {
     email: userEntity.email,
     university: userEntity.university?.id,
     domain: userEntity.domain?.id,
-    departments: userEntity.userDepartments?.map((d) => d.department.id),
-    permissions: userEntity.usersPermissions?.map((up) => up.permissionProfile?.id),
-    specializations: userEntity.allowedSpecializations?.map(
-      (s) => s.specialization.id
+    departments: await Promise.all(
+      (Array.isArray(userDepartments) ? userDepartments : []).map(
+        async (d) => (await d.department)?.id ?? null,
+      ),
+    ),
+    permissions: await Promise.all(
+      (Array.isArray(usersPermissions) ? usersPermissions : []).map(
+        async (up) => (await up.permissionProfile)?.id ?? null,
+      ),
+    ),
+    specializations: await Promise.all(
+      (Array.isArray(allowedSpecializations) ? allowedSpecializations : []).map(
+        async (s) => (await s.specialization)?.id ?? null,
+      ),
     ),
     hasImage: !!userEntity.image,
   };

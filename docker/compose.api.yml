@@ -14,8 +14,29 @@ services:
       - "${PORT}:${PORT}"
     networks:
       - tsts-network
+    environment:
+      HOST_METRICS_EXPORTER_URL: http://node-exporter:9100/metrics
     volumes:
       - /opt/tsts-project/certs:/certs:ro
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host/rootfs
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)
+    pid: host
+    ports:
+      - "9100:9100"
+    volumes:
+      - /:/host/rootfs:ro,rslave
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    networks:
+      - tsts-network
 
 networks:
   tsts-network:

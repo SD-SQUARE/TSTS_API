@@ -13,6 +13,8 @@ import { specializationNotFound } from "../../responses/specializations.js";
 import { UserData } from "../../types/UserData.js";
 import logger from "../../utils/logger.js";
 import { logTicketActivity } from "../tickets.service.js";
+import { createNotification } from "../notification.service.js";
+import { NotificationType } from "../../enums/NotificationType.enum.js";
 
 export type ChangeMap = Record<string, { oldStatus: any; newStatus: any }>;
 
@@ -281,6 +283,111 @@ export const maybeLogWebSocketIntent = (
 
   // WebSocket implementation would go here
   // Example: socketService.emitTicketUpdate(updatedTicket.id, changes);
+};
+
+const formatChangedField = (field: string) => {
+  switch (field) {
+    case "assigneeList":
+      return "assignees";
+    case "isOutOfService":
+      return "service status";
+    default:
+      return field;
+  }
+};
+
+const getTicketNotificationRecipients = (
+  ticket: Ticket,
+  excludedUserIds: string[] = [],
+) => {
+  const excluded = new Set(excludedUserIds.filter(Boolean));
+  const participantIds = [
+    ticket.requester?.id,
+    ...(ticket.assigneeList || []).map((user) => user?.id),
+  ].filter(Boolean) as string[];
+
+  return Array.from(new Set(participantIds)).filter((id) => !excluded.has(id));
+};
+
+export const notifyTicketParticipantsOfChanges = async (
+  ticket: Ticket,
+  changes: ChangeMap,
+  userData: UserData,
+) => {
+  const recipients = getTicketNotificationRecipients(ticket, [userData.id]);
+  const changedFields = Object.keys(changes);
+
+  if (!recipients.length || !changedFields.length) {
+    return;
+  }
+
+  const actorName = userData.fullNameEn || userData.fullNameAr || userData.email;
+  const changedSummary = changedFields.map(formatChangedField).join(", ");
+
+  await createNotification(
+    NotificationType.TICKET,
+    `Ticket #${ticket.ticket_number} updated`,
+    `${actorName} updated ${changedSummary} on "${ticket.title}".`,
+    recipients,
+    { ticketId: ticket.id },
+  );
+};
+
+export const notifyTicketParticipantsOfStatusChange = async (
+  ticket: Ticket,
+  previousStatus: string,
+  newStatus: string,
+  actor: {
+    id: string;
+    email?: string;
+    fullNameEn?: string;
+    fullNameAr?: string;
+  },
+) => {
+  const recipients = getTicketNotificationRecipients(ticket, [actor.id]);
+  if (!recipients.length) {
+    return;
+  }
+
+  const actorName = actor.fullNameEn || actor.fullNameAr || actor.email || "A user";
+
+  await createNotification(
+    NotificationType.TICKET,
+    `Ticket #${ticket.ticket_number} status changed`,
+    `${actorName} changed the status from ${previousStatus} to ${newStatus}.`,
+    recipients,
+    { ticketId: ticket.id },
+  );
+};
+
+export const notifyTicketParticipantsOfChatMessage = async (
+  ticket: Ticket,
+  sender: {
+    id: string;
+    email?: string;
+    fullNameEn?: string;
+    fullNameAr?: string;
+  },
+  message?: string | null,
+) => {
+  const recipients = getTicketNotificationRecipients(ticket, [sender.id]);
+  if (!recipients.length) {
+    return;
+  }
+
+  const senderName =
+    sender.fullNameEn || sender.fullNameAr || sender.email || "A user";
+  const contentPreview = (message || "").trim();
+
+  await createNotification(
+    NotificationType.TICKET,
+    `New ticket message on #${ticket.ticket_number}`,
+    contentPreview
+      ? `${senderName}: ${contentPreview}`
+      : `${senderName} added a new attachment or empty message.`,
+    recipients,
+    { ticketId: ticket.id },
+  );
 };
 
 export const getUserMetaById = async (userId: string) => {

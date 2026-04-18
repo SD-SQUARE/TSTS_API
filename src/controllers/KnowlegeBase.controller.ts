@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { In } from "typeorm";
 import { KPRepo } from "../repositories/KnowlegeBaseRepo.js";
 import { KnowledgeItem } from "../entities/KnowledgeItem.js";
 import logger from "../utils/logger.js";
@@ -6,9 +7,12 @@ import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 import { KnowledgeBaseItemResponse } from "../interfaces/response/KnowledgeBaseItemResponse.js";
 import { audit } from "../helpers/auditBuilder.js";
 import { AuditAction } from "../enums/AuditAction.enum.js";
+import { TicketFinalReport } from "../entities/TicketFinalReport.js";
+import { getPresignedUrl } from "../utils/storage.js";
 
 const kpRepo = new KPRepo();
 const repo = kpRepo.returnRepo();
+const finalReportRepo = kpRepo.returnRepo().manager.getRepository(TicketFinalReport);
 
 type KnowledgeBasePayload = {
   title_en?: string;
@@ -21,9 +25,41 @@ type KnowledgeBasePayload = {
   content_ar?: string;
 };
 
-const mapKnowledgeItemResponse = (
+const mapKnowledgeAttachment = async (item: any) => ({
+  id: item.id,
+  fileName: item.name,
+  mime: item.mime ?? null,
+  url: await getPresignedUrl(process.env.MINIO_BUCKET, item.url, 3600),
+});
+
+const loadKnowledgeAttachments = async (knowledgeItemIds: string[]) => {
+  if (!knowledgeItemIds.length) {
+    return new Map<string, KnowledgeBaseItemResponse["attachments"]>();
+  }
+
+  const reports = await finalReportRepo.find({
+    where: {
+      publishedKnowledgeItemId: In(knowledgeItemIds),
+    } as any,
+    relations: {
+      attachments: true,
+    } as any,
+  });
+
+  const attachmentEntries = await Promise.all(
+    reports.map(async (report) => [
+      report.publishedKnowledgeItemId as string,
+      await Promise.all((report.attachments || []).map(mapKnowledgeAttachment)),
+    ] as const),
+  );
+
+  return new Map<string, KnowledgeBaseItemResponse["attachments"]>(attachmentEntries);
+};
+
+const mapKnowledgeItemResponse = async (
   item: KnowledgeItem,
-): KnowledgeBaseItemResponse => ({
+  attachmentsMap?: Map<string, KnowledgeBaseItemResponse["attachments"]>,
+): Promise<KnowledgeBaseItemResponse> => ({
   id: item.id,
   title_en: item.title_en,
   title_ar: item.title_ar,
@@ -33,6 +69,7 @@ const mapKnowledgeItemResponse = (
   specialization_ar: item.specialization_ar,
   content_en: item.content_en,
   content_ar: item.content_ar,
+  attachments: attachmentsMap?.get(item.id) ?? [],
   createdAt: item.createdAt,
   updatedAt: item.updatedAt,
 });
@@ -96,6 +133,12 @@ export const getKnowledgeBaseItems = async (req: Request, res: Response) => {
     .metadata({ search, page, limit });
 
   const result = await KnowledgeItem.paginateAndSearch(repo, { search, page, limit });
+  const attachmentsMap = await loadKnowledgeAttachments(
+    result.items.map((item) => item.id),
+  );
+  const items = await Promise.all(
+    result.items.map((item) => mapKnowledgeItemResponse(item, attachmentsMap)),
+  );
 
   auditLog
     .step(`Knowledge base items fetched: ${result.items.length} items`)
@@ -105,7 +148,10 @@ export const getKnowledgeBaseItems = async (req: Request, res: Response) => {
     "[server][knowledgebase][controller] getKnowledgeItems request processed",
     { search, page, limit },
   );
-  return res.status(ResponseStatus.SUCCESS).json(result);
+  return res.status(ResponseStatus.SUCCESS).json({
+    ...result,
+    items,
+  });
 };
 
 export const createKnowledgeBaseItem = async (
@@ -171,7 +217,9 @@ export const createKnowledgeBaseItem = async (
     "[server][knowledgebase][controller] createKnowledgeItem request processed",
     { itemId: savedItem.id },
   );
-  return res.status(ResponseStatus.CREATED).json(mapKnowledgeItemResponse(savedItem));
+  return res
+    .status(ResponseStatus.CREATED)
+    .json(await mapKnowledgeItemResponse(savedItem));
 };
 
 export const getKnowledgeBaseItemById = async (
@@ -205,7 +253,10 @@ export const getKnowledgeBaseItemById = async (
     "[server][knowledgebase][controller] getKnowledgeItemById request processed",
     { itemId: id },
   );
-  return res.status(ResponseStatus.SUCCESS).json(mapKnowledgeItemResponse(item));
+  const attachmentsMap = await loadKnowledgeAttachments([item.id]);
+  return res
+    .status(ResponseStatus.SUCCESS)
+    .json(await mapKnowledgeItemResponse(item, attachmentsMap));
 };
 
 export const updateKnowledgeBaseItem = async (
@@ -303,7 +354,9 @@ export const updateKnowledgeBaseItem = async (
     "[server][knowledgebase][controller] updateKnowledgeItem request processed",
     { itemId: id },
   );
-  return res.status(ResponseStatus.SUCCESS).json(mapKnowledgeItemResponse(updatedItem));
+  return res
+    .status(ResponseStatus.SUCCESS)
+    .json(await mapKnowledgeItemResponse(updatedItem));
 };
 
 export const deleteKnowledgeBaseItem = async (req: Request, res: Response) => {

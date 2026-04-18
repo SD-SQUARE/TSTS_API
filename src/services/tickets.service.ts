@@ -13,7 +13,10 @@ import { TicketActivity } from "../entities/TicketActivity.js";
 import { TicketActivityType } from "../enums/TicketActivity.enum.js";
 import { TicketReview } from "../entities/TicketReview.js";
 import { getRequestContext } from "../utils/requestContext.js";
-import { getUserMetaById } from "./tickets/common.js";
+import {
+  getUserMetaById,
+  notifyTicketParticipantsOfStatusChange,
+} from "./tickets/common.js";
 import { In } from "typeorm";
 import { Problem } from "../entities/problem.js";
 import { getPresignedUrl } from "../utils/storage.js";
@@ -928,6 +931,23 @@ export const changeTicketStatusService = async (
     },
     req
   );
+
+  await notifyTicketParticipantsOfStatusChange(ticket, previousStatus, newStatus, {
+    id: user.id,
+    email: user.email,
+    fullNameEn: user.name
+      ? [user.name.first?.en, user.name.mid?.en, user.name.last?.en]
+          .filter(Boolean)
+          .join(" ")
+          .trim()
+      : "",
+    fullNameAr: user.name
+      ? [user.name.first?.ar, user.name.mid?.ar, user.name.last?.ar]
+          .filter(Boolean)
+          .join(" ")
+          .trim()
+      : "",
+  });
 
   auditLog
     ?.step("Ticket activity logged")

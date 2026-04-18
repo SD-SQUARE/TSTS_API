@@ -11,6 +11,7 @@ import {
   logGeneralUpdateActivity,
   logSpecificActivities,
   maybeLogWebSocketIntent,
+  notifyTicketParticipantsOfChanges,
   saveTicketUpdates,
 } from "../common.js";
 import { IEditResponse } from "../../../interfaces/response/IEditResponse.js";
@@ -111,6 +112,7 @@ export const editTicketForRequesterService = async (
 
   await logGeneralUpdateActivity(updatedTicket, changes, userData, req);
   await logSpecificActivities(updatedTicket, changes, userData,req);
+  await notifyTicketParticipantsOfChanges(updatedTicket, changes, userData);
 
   auditLog.step("Activities logged");
 

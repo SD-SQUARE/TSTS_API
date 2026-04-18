@@ -30,6 +30,7 @@ router.get("/requesters", getRequestersLockup);
 router.get("/admins", getAdminsLockup);
 router.get("/technicians", getTechniciansLockup);
 // router.get("/permissions", getPermissionsLockupController);
+router.get("/permissions/system", getPermissionsLockupController);
 router.get("/universities", getUniversitiesLockupController);
 router.get("/domains", getDomainsLockupController);
 router.get("/departments", getdepartmentsLockupController);

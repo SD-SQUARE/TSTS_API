@@ -25,6 +25,12 @@ type AdminDto = {
   ssn: string | null;
   university: { id: string; name: string } | null;
   domain: { id: string; name: string } | null;
+  permission_profile: {
+    id: string;
+    name: string;
+    name_en: string;
+    name_ar: string;
+  } | null;
   specializations: { id: string; name: string }[];
 
   contacts: {
@@ -42,9 +48,18 @@ type AdminDto = {
 export const toAdmin = async (entity: User, lang: Lang): Promise<AdminDto> => {
   const university = entity.university ? await entity.university : null;
   const domain = entity.domain ? await entity.domain : null;
+  const usersPermissions = entity.usersPermissions
+    ? await entity.usersPermissions
+    : [];
   const userspecializations = entity.allowedSpecializations
     ? await entity.allowedSpecializations
     : [];
+  const userPermission = Array.isArray(usersPermissions)
+    ? usersPermissions[0]
+    : null;
+  const permissionProfile = userPermission?.permissionProfile
+    ? await userPermission.permissionProfile
+    : null;
 
   const specializations = await Promise.all(
     userspecializations.map(async (us) => {
@@ -95,6 +110,15 @@ export const toAdmin = async (entity: User, lang: Lang): Promise<AdminDto> => {
       ? {
           id: domain.id,
           name: domain.name?.[lang],
+        }
+      : null,
+
+    permission_profile: permissionProfile
+      ? {
+          id: permissionProfile.id,
+          name: permissionProfile.name?.[lang] ?? "",
+          name_en: permissionProfile.name?.en ?? "",
+          name_ar: permissionProfile.name?.ar ?? "",
         }
       : null,
 

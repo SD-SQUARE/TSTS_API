@@ -11,10 +11,19 @@ import {
 } from "../controllers/chat.controller.js";
 import { upload } from "../middleware/upload.js";
 import { authMiddleware } from "../middleware/auth.js";
+import { typeBasedAuthMiddleware } from "../middleware/typeBasedAuthMiddleware.js";
+import { UserType } from "../enums/UserType.enum.js";
 
 const router = Router();
 
 router.use(authMiddleware);
+router.use(
+  typeBasedAuthMiddleware([
+    UserType.ADMIN,
+    UserType.TECHNICIAN,
+    UserType.SUPER_ADMIN,
+  ]),
+);
 
 router.post(
   "/personal/:userId/messages",

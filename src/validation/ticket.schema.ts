@@ -61,6 +61,41 @@ export const getTicketsSchema = (t: Request["t"]) =>
       .union([z.string(), z.array(z.string())])
       .optional(),
 
+    requester: z
+      .union([
+        z.string().uuid(t("invalid_requester")),
+        z.array(z.string().uuid(t("invalid_requester"))),
+      ])
+      .optional(),
+
+    assignee: z
+      .union([
+        z.string().uuid(t("invalid_user_id")),
+        z.array(z.string().uuid(t("invalid_user_id"))),
+      ])
+      .optional(),
+
+    university: z
+      .union([
+        z.string().uuid(t("invalid_university_id")),
+        z.array(z.string().uuid(t("invalid_university_id"))),
+      ])
+      .optional(),
+
+    domain: z
+      .union([
+        z.string().uuid(t("invalid_domain_id")),
+        z.array(z.string().uuid(t("invalid_domain_id"))),
+      ])
+      .optional(),
+
+    department: z
+      .union([
+        z.string().uuid(t("invalid_department_id")),
+        z.array(z.string().uuid(t("invalid_department_id"))),
+      ])
+      .optional(),
+
     page_index: z.coerce.number().int().min(1).optional(),
 
     page_size: z.coerce.number().int().min(1).max(100).optional(),

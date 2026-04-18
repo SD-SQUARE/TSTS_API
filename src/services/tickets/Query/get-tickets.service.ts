@@ -48,9 +48,14 @@ export const getAllTicketsService = async (
   const qb = ticketRepo
     .createQueryBuilder("ticket")
     .leftJoinAndSelect("ticket.requester", "requester")
+    .leftJoinAndSelect("requester.university", "requesterUniversity")
+    .leftJoinAndSelect("requester.domain", "requesterDomain")
+    .leftJoinAndSelect("requester.userDepartments", "requesterDepartmentLink")
+    .leftJoinAndSelect("requesterDepartmentLink.department", "requesterDepartment")
     .leftJoinAndSelect("ticket.specialization", "specialization")
     .leftJoinAndSelect("ticket.problem", "problem")
-    .leftJoinAndSelect("ticket.assigneeList", "assignee");
+    .leftJoinAndSelect("ticket.assigneeList", "assignee")
+    .distinct(true);
 
   auditLog.step("Applying role-based filters");
   if (user.role === UserType.REQUESTER) {
@@ -188,6 +193,76 @@ export const getAllTicketsService = async (
     });
   }
 
+  if (query.requester) {
+    const values = Array.isArray(query.requester)
+      ? query.requester
+      : [query.requester];
+    qb.andWhere("requester.id IN (:...requesterIds)", {
+      requesterIds: values,
+    });
+
+    logger.info("[server][tickets] getAllTickets | filter applied", {
+      filter: "requester",
+      requesterIds: values,
+    });
+  }
+
+  if (query.assignee) {
+    const values = Array.isArray(query.assignee)
+      ? query.assignee
+      : [query.assignee];
+    qb.andWhere("assignee.id IN (:...assigneeIds)", {
+      assigneeIds: values,
+    });
+
+    logger.info("[server][tickets] getAllTickets | filter applied", {
+      filter: "assignee",
+      assigneeIds: values,
+    });
+  }
+
+  if (query.university) {
+    const values = Array.isArray(query.university)
+      ? query.university
+      : [query.university];
+    qb.andWhere("requesterUniversity.id IN (:...universityIds)", {
+      universityIds: values,
+    });
+
+    logger.info("[server][tickets] getAllTickets | filter applied", {
+      filter: "university",
+      universityIds: values,
+    });
+  }
+
+  if (query.domain) {
+    const values = Array.isArray(query.domain)
+      ? query.domain
+      : [query.domain];
+    qb.andWhere("requesterDomain.id IN (:...domainIds)", {
+      domainIds: values,
+    });
+
+    logger.info("[server][tickets] getAllTickets | filter applied", {
+      filter: "domain",
+      domainIds: values,
+    });
+  }
+
+  if (query.department) {
+    const values = Array.isArray(query.department)
+      ? query.department
+      : [query.department];
+    qb.andWhere("requesterDepartment.id IN (:...departmentIds)", {
+      departmentIds: values,
+    });
+
+    logger.info("[server][tickets] getAllTickets | filter applied", {
+      filter: "department",
+      departmentIds: values,
+    });
+  }
+
   qb.skip(skip).take(take).orderBy("ticket.createdAt", "DESC");
 
   logger.info("[server][tickets] getAllTickets | query ready", {
@@ -226,6 +301,23 @@ export const getAllTicketsService = async (
           id: ticket.requester.id,
           name: buildLocalizedName(ticket.requester, lang),
           image: ticket.requester.image,
+          university: ticket.requester.university
+            ? {
+                id: ticket.requester.university.id,
+                name: ticket.requester.university.name?.[lang] || "",
+              }
+            : null,
+          domain: ticket.requester.domain
+            ? {
+                id: ticket.requester.domain.id,
+                name: ticket.requester.domain.name?.[lang] || "",
+              }
+            : null,
+          departments:
+            ticket.requester.userDepartments?.map((departmentLink) => ({
+              id: departmentLink.department?.id,
+              name: departmentLink.department?.name?.[lang] || "",
+            }))?.filter((department) => department.id) || [],
         }
       : null,
 
@@ -296,6 +388,10 @@ export const getSingleTicketService = async (
   const qb = ticketRepo
     .createQueryBuilder("ticket")
     .leftJoinAndSelect("ticket.requester", "requester")
+    .leftJoinAndSelect("requester.university", "requesterUniversity")
+    .leftJoinAndSelect("requester.domain", "requesterDomain")
+    .leftJoinAndSelect("requester.userDepartments", "requesterDepartmentLink")
+    .leftJoinAndSelect("requesterDepartmentLink.department", "requesterDepartment")
     .leftJoinAndSelect("ticket.specialization", "specialization")
     .leftJoinAndSelect("ticket.problem", "problem")
     .leftJoinAndSelect("ticket.assigneeList", "assignee");
@@ -345,6 +441,23 @@ export const getSingleTicketService = async (
           id: ticket.requester.id,
           name: buildLocalizedName(ticket.requester, lang),
           image: ticket.requester.image,
+          university: ticket.requester.university
+            ? {
+                id: ticket.requester.university.id,
+                name: ticket.requester.university.name?.[lang] || "",
+              }
+            : null,
+          domain: ticket.requester.domain
+            ? {
+                id: ticket.requester.domain.id,
+                name: ticket.requester.domain.name?.[lang] || "",
+              }
+            : null,
+          departments:
+            ticket.requester.userDepartments?.map((departmentLink) => ({
+              id: departmentLink.department?.id,
+              name: departmentLink.department?.name?.[lang] || "",
+            }))?.filter((department) => department.id) || [],
         }
       : null,
     specialization: ticket.specialization
