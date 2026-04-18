@@ -24,6 +24,7 @@ import { In } from "typeorm";
 import { getPresignedUrl } from "../utils/storage.js";
 
 interface UsersLockupQuery {
+  name?: string;
   first_name?: string;
   mid_name?: string;
   last_name?: string;
@@ -49,6 +50,7 @@ interface SpecializationsLockupQuery extends PaginationQuery {
 
 interface GroupsLockupQuery extends PaginationQuery {
   name?: string;
+  current_user_id?: string;
 }
 
 interface UniversityDomainsLockupQuery extends PaginationQuery {
@@ -93,6 +95,29 @@ export const getUsersLockupService = async (query: UsersLockupQuery) => {
     .where("user.user_type != :superAdmin", { superAdmin: "SuperAdmin" });
 
   // Filters
+  if (query.name) {
+    qb.andWhere(
+      `(
+        "user"."email" ILIKE :name
+        OR "user"."fullName"->>'en' ILIKE :name
+        OR "user"."fullName"->>'ar' ILIKE :name
+        OR CONCAT_WS(
+          ' ',
+          NULLIF(COALESCE("user"."firstName"->>'en', ''), ''),
+          NULLIF(COALESCE("user"."midName"->>'en', ''), ''),
+          NULLIF(COALESCE("user"."lastName"->>'en', ''), '')
+        ) ILIKE :name
+        OR CONCAT_WS(
+          ' ',
+          NULLIF(COALESCE("user"."firstName"->>'ar', ''), ''),
+          NULLIF(COALESCE("user"."midName"->>'ar', ''), ''),
+          NULLIF(COALESCE("user"."lastName"->>'ar', ''), '')
+        ) ILIKE :name
+      )`,
+      { name: `%${query.name}%` },
+    );
+  }
+
   if (query.first_name) {
     qb.andWhere(
       `("user"."firstName"->>'en' ILIKE :first_name OR "user"."firstName"->>'ar' ILIKE :first_name)`,
@@ -124,16 +149,25 @@ export const getUsersLockupService = async (query: UsersLockupQuery) => {
   const users = await qb.getMany();
 
   return {
-    users: users.map((u) => ({
-      id: u.id,
-      image: u.image || "",
-      email: u.email,
-      first_name: u.firstName?.en || "",
-      mid_name: u.midName?.en || "",
-      last_name: u.lastName?.en || "",
-      user_type: u.user_type || "",
-      status: u.status,
-    })),
+    users: await Promise.all(
+      users.map(async (u) => ({
+        id: u.id,
+        image: u.image
+          ? await getPresignedUrl(process.env.MINIO_BUCKET, u.image, 3600)
+          : "",
+        email: u.email,
+        first_name: u.firstName?.en || "",
+        first_name_ar: u.firstName?.ar || "",
+        mid_name: u.midName?.en || "",
+        mid_name_ar: u.midName?.ar || "",
+        last_name: u.lastName?.en || "",
+        last_name_ar: u.lastName?.ar || "",
+        name_en: getFullNameByLang(u, "en"),
+        name_ar: getFullNameByLang(u, "ar"),
+        user_type: u.user_type || "",
+        status: u.status,
+      })),
+    ),
   };
 };
 
@@ -166,6 +200,7 @@ export const getPermissionsLockupService = async (
 
   const mappedPermissions = permissions.map((p) => ({
     id: p.id,
+    key: p.key,
     name_en: p.name?.en || "",
     name_ar: p.name?.ar || "",
   }));
@@ -306,12 +341,28 @@ export const getGroupsLockupService = async (query: GroupsLockupQuery) => {
     page_size: query.page_size,
   });
 
-  const qb = groupsRepository.createQueryBuilder("group");
+  const qb = groupsRepository
+    .createQueryBuilder("group")
+    .leftJoin("group.teamLeader", "teamLeader")
+    .leftJoin("group.heads", "groupHead")
+    .leftJoin("groupHead.user", "headUser")
+    .leftJoin("group.technicians", "tg")
+    .leftJoin("tg.user", "technician")
+    .distinct(true);
 
   if (query.name) {
     qb.andWhere(
-      `group.name->>'en' ILIKE :name OR group.name->>'ar' ILIKE :name`,
+      `("group"."name"->>'en' ILIKE :name OR "group"."name"->>'ar' ILIKE :name)`,
       { name: `%${query.name}%` },
+    );
+  }
+
+  if (query.current_user_id) {
+    qb.andWhere(
+      "(teamLeader.id = :currentUserId OR headUser.id = :currentUserId OR technician.id = :currentUserId)",
+      {
+        currentUserId: query.current_user_id,
+      },
     );
   }
 
@@ -321,6 +372,8 @@ export const getGroupsLockupService = async (query: GroupsLockupQuery) => {
   return groups.map((g) => ({
     id: g.id,
     name: g.name?.en || "",
+    name_en: g.name?.en || "",
+    name_ar: g.name?.ar || "",
     description: g.descriptions?.en || "",
     color: g.color || "",
   }));

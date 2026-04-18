@@ -159,17 +159,23 @@ export const getGroupMessagesController = async (
   res: Response,
 ) => {
   const t = req.t;
+  const currentUserId = (req as any).user?.id;
   const groupId = req.params.groupId;
 
   logger.info("[server][chat][controller] getGroupMessages request received", {
+    currentUserId,
     groupId,
   });
+
+  if (!currentUserId) {
+    throw new AppError(t("unauthorized"), 401);
+  }
 
   if (!groupId) {
     throw new AppError(t("group_id_required"), 400);
   }
 
-  const messages = await getGroupMessages(groupId);
+  const messages = await getGroupMessages(currentUserId, groupId, t);
 
   return res.status(200).json(messages);
 };

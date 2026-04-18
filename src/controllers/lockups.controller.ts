@@ -86,7 +86,11 @@ export const getGroupsLockupController = async (
   req: Request,
   res: Response,
 ) => {
-  const groups = await getGroupsLockupService(req.query);
+  const groups = await getGroupsLockupService({
+    ...req.query,
+    current_user_id:
+      req.query.mine === "true" ? (req as any).user?.id : undefined,
+  });
   res.status(200).json({ groups });
 };
 

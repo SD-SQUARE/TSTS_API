@@ -2,21 +2,140 @@ import { AppError } from "../utils/AppError.js";
 import logger from "../utils/logger.js";
 import { PostgresDataSource } from "../database/postgres-data-source.js";
 import { ChatMessage } from "../entities/ChatMessage.js";
+import { ChatMessageRead } from "../entities/ChatMessageRead.js";
 import { User } from "../entities/User.js";
 import { Media } from "../entities/Media.js";
 import { v4 as uuid } from "uuid";
-import { uploadFile } from "../utils/storage.js";
+import { getPresignedUrl, uploadFile } from "../utils/storage.js";
 import { Group } from "../entities/Group.js";
 import { createNotification } from "./notification.service.js";
 import { NotificationType } from "../enums/NotificationType.enum.js";
-import { TechnicianGroup } from "../entities/TechnicianGroup.js";
-import { Not } from "typeorm";
+import { getFullNameByLang } from "../helpers/UserPersonalData.helper.js";
+import { notificationUser } from "./socket.service.js";
+import { UserType } from "../enums/UserType.enum.js";
 
 const chatRepository = PostgresDataSource.getRepository(ChatMessage);
+const chatMessageReadRepository = PostgresDataSource.getRepository(ChatMessageRead);
 const usersRepository = PostgresDataSource.getRepository(User);
 const mediaRepository = PostgresDataSource.getRepository(Media);
 const groupRepository = PostgresDataSource.getRepository(Group);
-const technicianGroupRepo = PostgresDataSource.getRepository(TechnicianGroup);
+
+const mapChatAttachment = async (item: Media) => ({
+  id: item.id,
+  name: item.name,
+  url: await getPresignedUrl(process.env.MINIO_BUCKET!, item.url, 3600),
+  mime: item.mime,
+});
+
+const mapChatUser = async (user?: User | null) => {
+  const nameEn = user ? getFullNameByLang(user, "en") || user.email : "";
+  const nameAr = user ? getFullNameByLang(user, "ar") || user.email : "";
+
+  return {
+    id: user?.id ?? "",
+    name: nameEn || nameAr,
+    name_en: nameEn || nameAr,
+    name_ar: nameAr || nameEn,
+    image:
+      user?.image
+        ? await getPresignedUrl(process.env.MINIO_BUCKET!, user.image, 3600)
+        : null,
+  };
+};
+
+const mapChatMessageResponse = async (message: ChatMessage) => ({
+  id: message.id,
+  senderId: message.sender?.id ?? null,
+  recipientId: message.recipient?.id ?? null,
+  groupId: message.group?.id ?? null,
+  content: message.content,
+  sender: await mapChatUser(message.sender),
+  attachments: await Promise.all((message.attachments || []).map(mapChatAttachment)),
+  createdAt: message.createdAt,
+});
+
+const buildPresignedImage = async (image?: string | null) =>
+  image ? getPresignedUrl(process.env.MINIO_BUCKET!, image, 3600) : null;
+
+const ensureStaffChatUser = (user: User | null, t: any) => {
+  if (!user) {
+    throw new AppError(t("user_not_found"), 404);
+  }
+
+  if (user.user_type === UserType.REQUESTER) {
+    throw new AppError(
+      t("auth.permissions_error") || "Chat is only available for staff users.",
+      403,
+    );
+  }
+
+  return user;
+};
+
+const ensureGroupChatAccess = async (
+  userId: string,
+  groupId: string,
+  t: any,
+) => {
+  const membershipCount = await groupRepository
+    .createQueryBuilder("group")
+    .leftJoin("group.teamLeader", "teamLeader")
+    .leftJoin("group.heads", "groupHead")
+    .leftJoin("groupHead.user", "headUser")
+    .leftJoin("group.technicians", "tg")
+    .leftJoin("tg.user", "technician")
+    .where("group.id = :groupId", { groupId })
+    .andWhere(
+      "(teamLeader.id = :userId OR headUser.id = :userId OR technician.id = :userId)",
+      {
+        userId,
+      },
+    )
+    .getCount();
+
+  if (!membershipCount) {
+    throw new AppError(
+      t("auth.permissions_error") || "You do not have access to this group chat.",
+      403,
+    );
+  }
+};
+
+const markGroupMessagesAsRead = async (
+  userId: string,
+  messages: ChatMessage[],
+) => {
+  const unreadMessageIds = messages
+    .filter((message) => message.sender?.id !== userId)
+    .map((message) => message.id);
+
+  if (!unreadMessageIds.length) {
+    return;
+  }
+
+  const existingRows = await chatMessageReadRepository
+    .createQueryBuilder("read")
+    .select('read."messageId"', "messageId")
+    .where('read."userId" = :userId', { userId })
+    .andWhere('read."messageId" IN (:...messageIds)', {
+      messageIds: unreadMessageIds,
+    })
+    .getRawMany<{ messageId: string }>();
+
+  const existingIds = new Set(existingRows.map((item) => item.messageId));
+  const missingReads = unreadMessageIds
+    .filter((messageId) => !existingIds.has(messageId))
+    .map((messageId) =>
+      chatMessageReadRepository.create({
+        message: { id: messageId } as ChatMessage,
+        user: { id: userId } as User,
+      }),
+    );
+
+  if (missingReads.length) {
+    await chatMessageReadRepository.save(missingReads);
+  }
+};
 
 export const sendPersonalMessage = async (
   senderId: string,
@@ -30,16 +149,25 @@ export const sendPersonalMessage = async (
     recipientId,
   });
 
-  const sender = await usersRepository.findOne({
-    where: { id: senderId, deletedAt: null },
-  });
+  const sender = ensureStaffChatUser(
+    await usersRepository.findOne({
+      where: { id: senderId, deletedAt: null },
+    }),
+    t,
+  );
 
-  const recipient = await usersRepository.findOne({
-    where: { id: recipientId, deletedAt: null },
-  });
+  const recipient = ensureStaffChatUser(
+    await usersRepository.findOne({
+      where: { id: recipientId, deletedAt: null },
+    }),
+    t,
+  );
 
-  if (!sender || !recipient) {
-    throw new AppError(t("user_not_found"), 404);
+  if (sender.id === recipient.id) {
+    throw new AppError(
+      t("auth.permissions_error") || "You cannot open a chat with yourself.",
+      400,
+    );
   }
 
   // Create message first
@@ -93,20 +221,27 @@ export const sendPersonalMessage = async (
     { chatMessageId: message.id },
   );
 
-  return {
-    id: message.id,
-    senderId: sender.id,
-    recipientId: recipient.id,
-    groupId: null,
-    content: message.content,
-    attachments: message.attachments.map((m) => ({
-      id: m.id,
-      name: m.name,
-      url: m.url,
-      mime: m.mime,
-    })),
-    createdAt: message.createdAt,
-  };
+  const fullMessage = await chatRepository.findOne({
+    where: { id: message.id },
+    relations: ["sender", "recipient", "attachments"],
+  });
+
+  const response = await mapChatMessageResponse((fullMessage ?? message) as ChatMessage);
+
+  notificationUser("chat:message", {
+    userId: recipient.id,
+    conversationType: "personal",
+    conversationId: sender.id,
+    message: response,
+  });
+  notificationUser("chat:message", {
+    userId: sender.id,
+    conversationType: "personal",
+    conversationId: recipient.id,
+    message: response,
+  });
+
+  return response;
 };
 
 export const getPersonalMessages = async (
@@ -118,11 +253,15 @@ export const getPersonalMessages = async (
     otherUserId,
   });
 
-  const usersCount = await usersRepository.count({
-    where: [{ id: currentUserId }, { id: otherUserId }],
+  if (currentUserId === otherUserId) {
+    throw new AppError("user_not_found", 404);
+  }
+
+  const otherUser = await usersRepository.findOne({
+    where: { id: otherUserId, deletedAt: null },
   });
 
-  if (usersCount !== 2) {
+  if (!otherUser) {
     throw new AppError("user_not_found", 404);
   }
 
@@ -157,21 +296,7 @@ export const getPersonalMessages = async (
       .execute();
   }
 
-  return messages.map((message) => ({
-    id: message.id,
-    senderId: message.sender.id,
-    recipientId: message.recipient?.id ?? null,
-    groupId: null,
-    content: message.content,
-    attachments:
-      message.attachments?.map((m) => ({
-        id: m.id,
-        name: m.name,
-        url: m.url,
-        mime: m.mime,
-      })) || [],
-    createdAt: message.createdAt,
-  }));
+  return Promise.all(messages.map((message) => mapChatMessageResponse(message)));
 };
 
 export const listPersonalConversations = async (currentUserId: string) => {
@@ -187,9 +312,53 @@ export const listPersonalConversations = async (currentUserId: string) => {
       m."senderId",
       m."recipientId",
       CASE 
-        WHEN m."senderId" = $1 THEN u."firstName"
-        ELSE s."firstName"
-      END as "otherUserName"
+        WHEN m."senderId" = $1 THEN u.id
+        ELSE s.id
+      END as "otherUserId",
+      CASE
+        WHEN m."senderId" = $1 THEN u.email
+        ELSE s.email
+      END as "otherUserEmail",
+      CASE
+        WHEN m."senderId" = $1 THEN u.image
+        ELSE s.image
+      END as "otherUserImage",
+      CASE 
+        WHEN m."senderId" = $1 THEN COALESCE(
+          NULLIF(TRIM(CONCAT_WS(' ',
+            NULLIF(COALESCE(u."firstName"->>'en', ''), ''),
+            NULLIF(COALESCE(u."midName"->>'en', ''), ''),
+            NULLIF(COALESCE(u."lastName"->>'en', ''), '')
+          )), ''),
+          u.email
+        )
+        ELSE COALESCE(
+          NULLIF(TRIM(CONCAT_WS(' ',
+            NULLIF(COALESCE(s."firstName"->>'en', ''), ''),
+            NULLIF(COALESCE(s."midName"->>'en', ''), ''),
+            NULLIF(COALESCE(s."lastName"->>'en', ''), '')
+          )), ''),
+          s.email
+        )
+      END as "otherUserNameEn",
+      CASE 
+        WHEN m."senderId" = $1 THEN COALESCE(
+          NULLIF(TRIM(CONCAT_WS(' ',
+            NULLIF(COALESCE(u."firstName"->>'ar', ''), ''),
+            NULLIF(COALESCE(u."midName"->>'ar', ''), ''),
+            NULLIF(COALESCE(u."lastName"->>'ar', ''), '')
+          )), ''),
+          u.email
+        )
+        ELSE COALESCE(
+          NULLIF(TRIM(CONCAT_WS(' ',
+            NULLIF(COALESCE(s."firstName"->>'ar', ''), ''),
+            NULLIF(COALESCE(s."midName"->>'ar', ''), ''),
+            NULLIF(COALESCE(s."lastName"->>'ar', ''), '')
+          )), ''),
+          s.email
+        )
+      END as "otherUserNameAr"
     FROM chat_messages m
     LEFT JOIN "users" s ON m."senderId" = s.id
     LEFT JOIN "users" u ON m."recipientId" = u.id
@@ -204,14 +373,37 @@ export const listPersonalConversations = async (currentUserId: string) => {
 
   const conversations = await Promise.all(
     lastMessages.map(async (msg: any) => {
-      const otherUserId =
-        msg.senderId === currentUserId ? msg.recipientId : msg.senderId;
+      const otherUserId = msg.otherUserId;
+      if (!otherUserId || otherUserId === currentUserId) {
+        return null;
+      }
 
-      const unreadCount = await getUnreadPersonalMessageCount(currentUserId);
+      const unreadCount = await chatRepository.count({
+        where: {
+          recipient: { id: currentUserId },
+          sender: { id: otherUserId },
+          isRead: false,
+        },
+      });
 
       return {
         userId: otherUserId,
-        name: msg.otherUserName ?? "",
+        name:
+          msg.otherUserNameEn ??
+          msg.otherUserNameAr ??
+          msg.otherUserEmail ??
+          "",
+        name_en:
+          msg.otherUserNameEn ??
+          msg.otherUserNameAr ??
+          msg.otherUserEmail ??
+          "",
+        name_ar:
+          msg.otherUserNameAr ??
+          msg.otherUserNameEn ??
+          msg.otherUserEmail ??
+          "",
+        image: await buildPresignedImage(msg.otherUserImage),
         lastMessage: msg.content,
         lastMessageAt: msg.createdAt,
         unreadCount,
@@ -219,7 +411,7 @@ export const listPersonalConversations = async (currentUserId: string) => {
     }),
   );
 
-  return conversations;
+  return conversations.filter(Boolean);
 };
 
 export const getUnreadPersonalMessageCount = async (
@@ -247,13 +439,12 @@ export const sendGroupMessage = async (
     groupId,
   });
 
-  const sender = await usersRepository.findOne({
-    where: { id: senderId, deletedAt: null },
-  });
-
-  if (!sender) {
-    throw new AppError(t("user_not_found"), 404);
-  }
+  const sender = ensureStaffChatUser(
+    await usersRepository.findOne({
+      where: { id: senderId, deletedAt: null },
+    }),
+    t,
+  );
 
   const group = await groupRepository.findOne({
     where: { id: groupId },
@@ -262,6 +453,8 @@ export const sendGroupMessage = async (
   if (!group) {
     throw new AppError(t("group_not_found"), 404);
   }
+
+  await ensureGroupChatAccess(senderId, groupId, t);
 
   // Create message
   const message = chatRepository.create({
@@ -301,19 +494,27 @@ export const sendGroupMessage = async (
     await chatRepository.save(message);
   }
 
-  // Fetch all active group members except sender
-  const groupUsers = await technicianGroupRepo.find({
-    where: {
-      group: { id: group.id },
-      user: {
-        deletedAt: null,
-        id: Not(sender.id),
-      },
-    },
-    relations: ["user"],
-  });
+  const groupWithMembers = await groupRepository
+    .createQueryBuilder("group")
+    .leftJoinAndSelect("group.teamLeader", "teamLeader")
+    .leftJoinAndSelect("group.heads", "groupHead")
+    .leftJoinAndSelect("groupHead.user", "headUser")
+    .leftJoinAndSelect("group.technicians", "tg")
+    .leftJoinAndSelect("tg.user", "technician")
+    .where("group.id = :groupId", { groupId: group.id })
+    .getOne();
 
-  const userIds = groupUsers.map((gu) => gu.user.id);
+  const userIds = Array.from(
+    new Set(
+      [
+        groupWithMembers?.teamLeader?.id,
+        ...(groupWithMembers?.heads || []).map((head: any) => head.user?.id),
+        ...(groupWithMembers?.technicians || []).map(
+          (member: any) => member.user?.id,
+        ),
+      ].filter((memberId): memberId is string => Boolean(memberId)),
+    ),
+  ).filter((memberId) => memberId !== sender.id);
 
   if (userIds.length > 0) {
     await createNotification(
@@ -330,26 +531,35 @@ export const sendGroupMessage = async (
     groupId,
   });
 
-  return {
-    id: message.id,
-    senderId: sender.id,
-    recipientId: null,
-    groupId: group.id,
-    content: message.content,
-    attachments: message.attachments.map((m) => ({
-      id: m.id,
-      name: m.name,
-      url: m.url,
-      mime: m.mime,
-    })),
-    createdAt: message.createdAt,
-  };
+  const fullMessage = await chatRepository.findOne({
+    where: { id: message.id },
+    relations: ["sender", "group", "attachments"],
+  });
+  const response = await mapChatMessageResponse((fullMessage ?? message) as ChatMessage);
+
+  for (const userId of [...userIds, sender.id]) {
+    notificationUser("chat:message", {
+      userId,
+      conversationType: "group",
+      conversationId: group.id,
+      message: response,
+    });
+  }
+
+  return response;
 };
 
-export const getGroupMessages = async (groupId: string) => {
+export const getGroupMessages = async (
+  currentUserId: string,
+  groupId: string,
+  t: any,
+) => {
   logger.info("[server][chat][service] getGroupMessages start", {
+    currentUserId,
     groupId,
   });
+
+  await ensureGroupChatAccess(currentUserId, groupId, t);
 
   const group = await groupRepository.findOne({
     where: { id: groupId },
@@ -373,21 +583,9 @@ export const getGroupMessages = async (groupId: string) => {
     count: messages.length,
   });
 
-  return messages.map((message) => ({
-    id: message.id,
-    senderId: message.sender.id,
-    recipientId: null,
-    groupId: message.group?.id ?? null,
-    content: message.content,
-    attachments:
-      message.attachments?.map((m) => ({
-        id: m.id,
-        name: m.name,
-        url: m.url,
-        mime: m.mime,
-      })) || [],
-    createdAt: message.createdAt,
-  }));
+  await markGroupMessagesAsRead(currentUserId, messages);
+
+  return Promise.all(messages.map((message) => mapChatMessageResponse(message)));
 };
 
 export const listGroupConversations = async (userId: string) => {
@@ -400,9 +598,15 @@ export const listGroupConversations = async (userId: string) => {
     .leftJoinAndSelect("group.chat", "chat") // all messages
     .leftJoinAndSelect("chat.sender", "sender") // message sender
     .leftJoinAndSelect("group.teamLeader", "teamLeader")
+    .leftJoinAndSelect("group.heads", "groupHead")
+    .leftJoinAndSelect("groupHead.user", "headUser")
     .leftJoinAndSelect("group.technicians", "tg")
     .leftJoinAndSelect("tg.user", "technician")
-    .where("teamLeader.id = :userId OR technician.id = :userId", { userId })
+    .where(
+      "teamLeader.id = :userId OR headUser.id = :userId OR technician.id = :userId",
+      { userId },
+    )
+    .distinct(true)
     .getMany();
 
   const conversations = groups.map((group) => {
@@ -414,25 +618,48 @@ export const listGroupConversations = async (userId: string) => {
     const lastMessage = sortedMessages?.[0];
 
     // Count unread messages where sender is not the current user
-    const unreadCount =
-      sortedMessages?.filter((msg) => msg.sender.id !== userId && !msg.isRead)
-        .length ?? 0;
-
     return {
       groupId: group.id,
-      name: group.name ?? { en: "", ar: "" },
+      name: group.name?.en ?? group.name?.ar ?? "",
+      name_en: group.name?.en ?? group.name?.ar ?? "",
+      name_ar: group.name?.ar ?? group.name?.en ?? "",
       lastMessage: lastMessage?.content ?? "",
       lastMessageAt: lastMessage?.createdAt ?? null,
-      unreadCount,
+      unreadCount: 0,
     };
   });
 
+  const conversationsWithUnread = await Promise.all(
+    conversations.map(async (conversation) => {
+      const unreadCount = await chatRepository
+        .createQueryBuilder("message")
+        .leftJoin("message.sender", "sender")
+        .leftJoin(
+          ChatMessageRead,
+          "read",
+          'read."messageId" = message.id AND read."userId" = :userId',
+          { userId },
+        )
+        .where('message."groupId" = :groupId', {
+          groupId: conversation.groupId,
+        })
+        .andWhere("sender.id != :userId", { userId })
+        .andWhere("read.id IS NULL")
+        .getCount();
+
+      return {
+        ...conversation,
+        unreadCount,
+      };
+    }),
+  );
+
   logger.info("[server][chat][service] listGroupConversations completed", {
     userId,
-    count: conversations.length,
+    count: conversationsWithUnread.length,
   });
 
-  return conversations;
+  return conversationsWithUnread;
 };
 
 export const getCombinedChatInbox = async (userId: string) => {
@@ -447,6 +674,9 @@ export const getCombinedChatInbox = async (userId: string) => {
     type: "personal",
     id: conv.userId,
     name: conv.name,
+    name_en: conv.name_en ?? conv.name_ar ?? conv.name,
+    name_ar: conv.name_ar ?? conv.name_en ?? conv.name,
+    image: conv.image ?? null,
     lastMessage: conv.lastMessage,
     lastMessageAt: conv.lastMessageAt,
     unreadCount: conv.unreadCount,
@@ -458,7 +688,10 @@ export const getCombinedChatInbox = async (userId: string) => {
   const groupMapped = groupConversations.map((conv) => ({
     type: "group",
     id: conv.groupId,
-    name: conv.name?.en ?? "",
+    name: conv.name_en ?? conv.name_ar ?? "",
+    name_en: conv.name_en ?? conv.name_ar ?? "",
+    name_ar: conv.name_ar ?? conv.name_en ?? "",
+    image: null,
     lastMessage: conv.lastMessage,
     lastMessageAt: conv.lastMessageAt,
     unreadCount: conv.unreadCount,

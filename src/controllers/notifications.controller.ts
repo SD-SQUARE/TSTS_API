@@ -6,6 +6,7 @@ import {
   countUnreadNotifications,
   getNotificationById,
   listNotifications,
+  markAllNotificationsAsRead,
   markNotificationAsRead,
 } from "../services/notification.service.js";
 import { getNotificationsSchema } from "../validation/notification.schema.js";
@@ -126,6 +127,29 @@ export const markNotificationAsReadController = async (
   }
 
   return res.status(200).json(updated);
+};
+
+export const markAllNotificationsAsReadController = async (
+  req: Request,
+  res: Response,
+) => {
+  const t = req.t;
+  const userId = (req as any).user?.id;
+
+  if (!userId) {
+    throw new AppError(t("unauthorized"), 401);
+  }
+
+  logger.info(
+    "[server][notification][controller] markAllNotificationsAsRead request received",
+    {
+      userId,
+    },
+  );
+
+  const result = await markAllNotificationsAsRead(userId);
+
+  return res.status(200).json(result);
 };
 
 export const broadcastNotificationController = async (

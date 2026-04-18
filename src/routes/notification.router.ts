@@ -4,6 +4,7 @@ import {
   getNotificationByIdController,
   getNotificationsController,
   getUnreadCountController,
+  markAllNotificationsAsReadController,
   markNotificationAsReadController,
 } from "../controllers/notifications.controller.js";
 import { authMiddleware } from "../middleware/auth.js";
@@ -14,6 +15,7 @@ router.use(authMiddleware);
 router.get("/", getNotificationsController);
 router.get("/unread-count", getUnreadCountController);
 router.post("/broadcast", broadcastNotificationController);
+router.patch("/read-all", markAllNotificationsAsReadController);
 router.get("/:id", getNotificationByIdController);
 router.patch("/:id/read", markNotificationAsReadController);
 

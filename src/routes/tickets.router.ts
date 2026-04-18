@@ -21,6 +21,11 @@ import {
   getTicketReviewsController,
   changeTicketStatusController,
 } from "../controllers/tickets.controller.js";
+import {
+  getTicketFinalReportController,
+  upsertTicketFinalReportController,
+  uploadTicketFinalReportMediaController,
+} from "../controllers/ticketFinalReport.controller.js";
 import { validate } from "../validation/zod-middleware.js";
 import {
   changeTicketStatusSchema,
@@ -76,6 +81,37 @@ router
     authMiddleware,
     validate(createTicketReviewSchema),
     createTicketReviewController,
+  )
+  .get(
+    "/:id/final-report",
+    authMiddleware,
+    typeBasedAuthMiddleware([
+      UserType.ADMIN,
+      UserType.SUPER_ADMIN,
+      UserType.TECHNICIAN,
+    ]),
+    asyncHandler(getTicketFinalReportController),
+  )
+  .put(
+    "/:id/final-report",
+    authMiddleware,
+    typeBasedAuthMiddleware([
+      UserType.ADMIN,
+      UserType.SUPER_ADMIN,
+      UserType.TECHNICIAN,
+    ]),
+    asyncHandler(upsertTicketFinalReportController),
+  )
+  .post(
+    "/:id/final-report/media",
+    authMiddleware,
+    typeBasedAuthMiddleware([
+      UserType.ADMIN,
+      UserType.SUPER_ADMIN,
+      UserType.TECHNICIAN,
+    ]),
+    upload.array("files"),
+    asyncHandler(uploadTicketFinalReportMediaController),
   );
 
 router.get(

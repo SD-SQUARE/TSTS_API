@@ -1,4 +1,10 @@
 export interface KnowledgeBaseItemResponse {
+  attachments?: {
+    id: string;
+    fileName: string;
+    mime: string | null;
+    url: string;
+  }[];
   id: string;
   title_en?: string;
   title_ar?: string;

@@ -1,6 +1,5 @@
 import { Column, Entity, Index, ManyToOne } from "typeorm";
 import { BaseEntity } from "./BaseEntity.js";
-import { User } from "./User.js";
 
 @Entity({ name: "ticket_quick_messages" })
 @Index(["user"])
@@ -17,6 +16,6 @@ export class TicketQuickMessage extends BaseEntity {
   @Column({ type: "text" })
   content_ar: string;
 
-  @ManyToOne(() => User, { nullable: false, onDelete: "CASCADE" })
-  user: User;
+  @ManyToOne("User", undefined, { nullable: false, onDelete: "CASCADE" })
+  user: any;
 }

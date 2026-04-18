@@ -23,6 +23,12 @@ type RequesterDto = {
   university: { id: string; name: string } | null;
   domain: { id: string; name: string } | null;
   departments: { id: string; name: string }[];
+  permission_profile: {
+    id: string;
+    name: string;
+    name_en: string;
+    name_ar: string;
+  } | null;
   specializations: { id: string; name: string }[];
   contacts: {
     phones: string[];
@@ -43,9 +49,18 @@ export const toRequester = async (
   const userDepartments = entity.userDepartments
     ? await entity.userDepartments
     : [];
+  const usersPermissions = entity.usersPermissions
+    ? await entity.usersPermissions
+    : [];
   const userspecializations = entity.allowedSpecializations
     ? await entity.allowedSpecializations
     : [];
+  const userPermission = Array.isArray(usersPermissions)
+    ? usersPermissions[0]
+    : null;
+  const permissionProfile = userPermission?.permissionProfile
+    ? await userPermission.permissionProfile
+    : null;
 
   // 2) for each userDepartment, load department (lazy) and map it
   const departments = await Promise.all(
@@ -118,6 +133,15 @@ export const toRequester = async (
     departments: departments.filter(
       (d): d is { id: string; name: string } => d !== null,
     ),
+
+    permission_profile: permissionProfile
+      ? {
+          id: permissionProfile.id,
+          name: permissionProfile.name?.[lang] ?? "",
+          name_en: permissionProfile.name?.en ?? "",
+          name_ar: permissionProfile.name?.ar ?? "",
+        }
+      : null,
 
     specializations: specializations,
 

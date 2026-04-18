@@ -37,6 +37,7 @@ import {
   getUserProfileById,
   getUserSpecializations,
 } from "../controllers/profile.controller.js";
+import { getSystemInfoController } from "../controllers/systemInfo.controller.js";
 import {
   getGroupsForUserPagedController,
   getSpecializationsForUserPagedController,
@@ -53,6 +54,7 @@ router
   .get("/technicians/:id", asyncHandler(getTechnicianById))
   .get("/admins", asyncHandler(getAdminsPaged))
   .get("/admins/:id", asyncHandler(getAdminById))
+  .get("/system/info", asyncHandler(getSystemInfoController))
   .get("/profile/:id/view", asyncHandler(getUserProfileById))
   .get("/profile/:id", asyncHandler(getMyProfileById))
   .post("/profile/:id/reset-password", asyncHandler(resetUserPassword))
