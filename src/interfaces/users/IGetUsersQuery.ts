@@ -12,6 +12,10 @@ export interface GetUsersQuery {
   departments?: string;
   domains?: string;
   universities?: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
+  job_title?: string;
   page_index?: number;
   page_size?: number;
 }
@@ -26,6 +30,10 @@ export const parseGetUsersQuery = (q: any): GetUsersQuery => {
     departments: normalize(q.departments),
     domains: normalize(q.domains),
     universities: normalize(q.universities),
+    email: normalize(q.email),
+    phone: normalize(q.phone),
+    mobile: normalize(q.mobile),
+    job_title: normalize(q.job_title),
     page_index: parsePageIndex(q.page_index),
     page_size: parsePageSize(q.page_size),
   };

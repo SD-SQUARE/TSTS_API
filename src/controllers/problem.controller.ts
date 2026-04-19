@@ -42,10 +42,29 @@ export async function getProblemById(req: Request, res: Response) {
 }
 
 export async function getProblems(req: Request, res: Response) {
-    const { page, page_size: limit, name, specialization } = req.query;
+    const {
+      page,
+      page_size: limit,
+      name,
+      name_en,
+      name_ar,
+      description_en,
+      description_ar,
+      specialization,
+      review_required,
+    } = req.query;
     const problemRepo = new ProblemRepo().getRepository();
     const pageNum = page ? parseInt(page as string, 10) : 1;
     const limitNum = limit ? parseInt(limit as string, 10) : 20;
+    const filters = {
+      search: name as string | undefined,
+      name_en: name_en as string | undefined,
+      name_ar: name_ar as string | undefined,
+      description_en: description_en as string | undefined,
+      description_ar: description_ar as string | undefined,
+      specialization: specialization as string | undefined,
+      review_required: review_required as string | undefined,
+    };
 
     const auditLog = audit(req)
     .summary("Fetch paginated problems")
@@ -53,16 +72,14 @@ export async function getProblems(req: Request, res: Response) {
     .metadata({
       page: pageNum,
       limit: limitNum,
-      name: name ?? null,
-      specialization: specialization ?? null,
+      filters,
     });
 
     const result = await Problem.paginate(
         pageNum,
         limitNum,
-        name as string | undefined,
+        filters,
         problemRepo,
-        specialization as string | undefined
     );
 
     auditLog

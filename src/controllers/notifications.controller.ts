@@ -3,6 +3,7 @@ import { AppError } from "../utils/AppError.js";
 import logger from "../utils/logger.js";
 import {
   broadcastNotification,
+  deleteNotifications,
   countUnreadNotifications,
   getNotificationById,
   listNotifications,
@@ -45,8 +46,10 @@ export const getNotificationsController = async (
     parsed.data.isRead === undefined
       ? undefined
       : parsed.data.isRead === "true";
+  const page = parsed.data.page ? Number(parsed.data.page) : 1;
+  const pageSize = parsed.data.pageSize ? Number(parsed.data.pageSize) : 10;
 
-  const notifications = await listNotifications(userId, isRead);
+  const notifications = await listNotifications(userId, isRead, page, pageSize);
 
   return res.status(200).json(notifications);
 };
@@ -185,4 +188,32 @@ export const broadcastNotificationController = async (
   );
 
   return res.status(201).json(notification);
+};
+
+export const deleteNotificationsController = async (
+  req: Request,
+  res: Response,
+) => {
+  const t = req.t;
+  const userId = (req as any).user?.id;
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+
+  if (!userId) {
+    throw new AppError(t("unauthorized"), 401);
+  }
+
+  if (!ids.length) {
+    throw new AppError(t("invalid_input"), 400);
+  }
+
+  try {
+    const result = await deleteNotifications(userId, ids);
+    return res.status(200).json(result);
+  } catch (error: any) {
+    if (error?.message === "UNREAD_NOTIFICATIONS_CANNOT_BE_DELETED") {
+      throw new AppError(t("invalid_input"), 400);
+    }
+
+    throw error;
+  }
 };

@@ -10,4 +10,18 @@ export const getNotificationsSchema = (t: Request["t"]) =>
         message: t("invalid_isRead_filter"),
         path: ["isRead"],
       }),
+    page: z
+      .string()
+      .optional()
+      .refine((val) => val === undefined || Number.isInteger(Number(val)), {
+        message: t("invalid_input"),
+        path: ["page"],
+      }),
+    pageSize: z
+      .string()
+      .optional()
+      .refine((val) => val === undefined || Number.isInteger(Number(val)), {
+        message: t("invalid_input"),
+        path: ["pageSize"],
+      }),
   });

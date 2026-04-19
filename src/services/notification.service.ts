@@ -29,11 +29,21 @@ const mapNotificationReadDto = (nr: NotificationRead) => ({
   createdAt: nr.createdAt,
 });
 
-export const listNotifications = async (userId: string, isRead?: boolean) => {
+export const listNotifications = async (
+  userId: string,
+  isRead?: boolean,
+  page = 1,
+  pageSize = 10,
+) => {
   logger.info("[server][notification][service] listNotifications start", {
     userId,
     isRead,
+    page,
+    pageSize,
   });
+
+  const safePage = Math.max(1, Math.floor(page));
+  const safePageSize = Math.max(1, Math.min(100, Math.floor(pageSize)));
 
   const query = notificationReadRepo
     .createQueryBuilder("nr")
@@ -44,16 +54,28 @@ export const listNotifications = async (userId: string, isRead?: boolean) => {
     query.andWhere("nr.isRead = :isRead", { isRead });
   }
 
+  const total = await query.getCount();
+
   const notifications = await query
     .orderBy("notification.createdAt", "DESC")
+    .skip((safePage - 1) * safePageSize)
+    .take(safePageSize)
     .getMany();
 
   logger.info("[server][notification][service] listNotifications fetched", {
     userId,
     count: notifications.length,
+    total,
   });
 
-  return notifications.map(mapNotificationReadDto);
+  return {
+    data: notifications.map(mapNotificationReadDto),
+    pagination: {
+      page: safePage,
+      pageSize: safePageSize,
+      total,
+    },
+  };
 };
 
 /**
@@ -318,4 +340,59 @@ export const broadcastNotification = async (
   );
 
   return notification;
+};
+
+export const deleteNotifications = async (
+  userId: string,
+  notificationReadIds: string[],
+) => {
+  logger.info("[server][notification][service] deleteNotifications start", {
+    userId,
+    notificationReadIds,
+  });
+
+  const uniqueIds = Array.from(new Set(notificationReadIds.filter(Boolean)));
+
+  if (!uniqueIds.length) {
+    return { deletedCount: 0 };
+  }
+
+  const records = await notificationReadRepo.find({
+    where: uniqueIds.map((id) => ({
+      id,
+      user: { id: userId },
+    })) as any,
+    relations: ["notification"],
+  });
+
+  const unreadRecords = records.filter((record) => !record.isRead);
+
+  if (unreadRecords.length > 0) {
+    throw new Error("UNREAD_NOTIFICATIONS_CANNOT_BE_DELETED");
+  }
+
+  const notificationIds = Array.from(
+    new Set(records.map((record) => record.notification?.id).filter(Boolean)),
+  );
+
+  if (records.length > 0) {
+    await notificationReadRepo.remove(records);
+  }
+
+  for (const notificationId of notificationIds) {
+    const remainingReads = await notificationReadRepo.count({
+      where: { notification: { id: notificationId } },
+    });
+
+    if (!remainingReads) {
+      await notificationRepo.delete(notificationId);
+    }
+  }
+
+  logger.info("[server][notification][service] deleteNotifications completed", {
+    userId,
+    deletedCount: records.length,
+  });
+
+  return { deletedCount: records.length };
 };

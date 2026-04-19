@@ -12,6 +12,14 @@ type PaginatedResult<T> = {
   };
 };
 
+type UniversityFilters = {
+  search?: string;
+  name_en?: string;
+  name_ar?: string;
+  description_en?: string;
+  description_ar?: string;
+};
+
 @Entity({ name: "universities" })
 export class University extends BaseEntity {
   @Column({ type: "jsonb" })
@@ -35,7 +43,7 @@ export class University extends BaseEntity {
   static async paginate(
     page = 1,
     limit = 20,
-    search?: string,
+    filters: UniversityFilters = {},
     repo?: Repository<University>,
     includeDomains = false
   ): Promise<PaginatedResult<University>> {
@@ -50,13 +58,45 @@ export class University extends BaseEntity {
 
     const qb: SelectQueryBuilder<University> = repo.createQueryBuilder("u");
 
-    if (search) {
-      const s = search.trim();
+    if (filters.search) {
+      const s = filters.search.trim();
       if (s.length > 0) {
-        qb.where(`u.name->>'en' ILIKE :search OR u.name->>'ar' ILIKE :search`, {
-          search: `%${s}%`,
-        });
+        qb.andWhere(
+          `(
+            u.name->>'en' ILIKE :search OR
+            u.name->>'ar' ILIKE :search OR
+            COALESCE(u.description->>'en', '') ILIKE :search OR
+            COALESCE(u.description->>'ar', '') ILIKE :search
+          )`,
+          {
+            search: `%${s}%`,
+          },
+        );
       }
+    }
+
+    if (filters.name_en?.trim()) {
+      qb.andWhere(`u.name->>'en' ILIKE :nameEn`, {
+        nameEn: `%${filters.name_en.trim()}%`,
+      });
+    }
+
+    if (filters.name_ar?.trim()) {
+      qb.andWhere(`u.name->>'ar' ILIKE :nameAr`, {
+        nameAr: `%${filters.name_ar.trim()}%`,
+      });
+    }
+
+    if (filters.description_en?.trim()) {
+      qb.andWhere(`COALESCE(u.description->>'en', '') ILIKE :descriptionEn`, {
+        descriptionEn: `%${filters.description_en.trim()}%`,
+      });
+    }
+
+    if (filters.description_ar?.trim()) {
+      qb.andWhere(`COALESCE(u.description->>'ar', '') ILIKE :descriptionAr`, {
+        descriptionAr: `%${filters.description_ar.trim()}%`,
+      });
     }
 
     if (includeDomains) {

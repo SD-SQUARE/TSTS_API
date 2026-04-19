@@ -23,9 +23,13 @@ type PaginatedResult<T> = {
 interface DepartmentFilter {
   page?: number;
   limit?: number;
-  departmentName?: string;
-  domainName?: string;
-  universityName?: string;
+  search?: string;
+  name_en?: string;
+  name_ar?: string;
+  description_en?: string;
+  description_ar?: string;
+  domain?: string;
+  university?: string;
 }
 
 @Entity({ name: "departments" })
@@ -68,32 +72,58 @@ export class Department extends BaseEntity {
     qb.leftJoinAndSelect("dep.domain", "dom");
     qb.leftJoinAndSelect("dom.university", "u");
 
-    const conditions: string[] = [];
-    const params: Record<string, any> = {};
-
-    if (filters.departmentName) {
-      conditions.push(
-        `dep.name->>'en' ILIKE :departmentName OR dep.name->>'ar' ILIKE :departmentName`,
+    if (filters.search?.trim()) {
+      qb.andWhere(
+        `(
+          dep.name->>'en' ILIKE :search OR
+          dep.name->>'ar' ILIKE :search OR
+          COALESCE(dep.description->>'en', '') ILIKE :search OR
+          COALESCE(dep.description->>'ar', '') ILIKE :search OR
+          dom.name->>'en' ILIKE :search OR
+          dom.name->>'ar' ILIKE :search OR
+          u.name->>'en' ILIKE :search OR
+          u.name->>'ar' ILIKE :search
+        )`,
+        { search: `%${filters.search.trim()}%` },
       );
-      params.departmentName = `%${filters.departmentName}%`;
     }
 
-    if (filters.domainName) {
-      conditions.push(
-        `dom.name->>'en' ILIKE :domainName OR dom.name->>'ar' ILIKE :domainName`,
-      );
-      params.domainName = `%${filters.domainName}%`;
+    if (filters.name_en?.trim()) {
+      qb.andWhere(`dep.name->>'en' ILIKE :nameEn`, {
+        nameEn: `%${filters.name_en.trim()}%`,
+      });
     }
 
-    if (filters.universityName) {
-      conditions.push(
-        `u.name->>'en' ILIKE :universityName OR u.name->>'ar' ILIKE :universityName`,
-      );
-      params.universityName = `%${filters.universityName}%`;
+    if (filters.name_ar?.trim()) {
+      qb.andWhere(`dep.name->>'ar' ILIKE :nameAr`, {
+        nameAr: `%${filters.name_ar.trim()}%`,
+      });
     }
 
-    if (conditions.length > 0) {
-      qb.andWhere(`(${conditions.join(" OR ")})`, params);
+    if (filters.description_en?.trim()) {
+      qb.andWhere(`COALESCE(dep.description->>'en', '') ILIKE :descriptionEn`, {
+        descriptionEn: `%${filters.description_en.trim()}%`,
+      });
+    }
+
+    if (filters.description_ar?.trim()) {
+      qb.andWhere(`COALESCE(dep.description->>'ar', '') ILIKE :descriptionAr`, {
+        descriptionAr: `%${filters.description_ar.trim()}%`,
+      });
+    }
+
+    if (filters.domain?.trim()) {
+      qb.andWhere(
+        `(dom.name->>'en' ILIKE :domain OR dom.name->>'ar' ILIKE :domain)`,
+        { domain: `%${filters.domain.trim()}%` },
+      );
+    }
+
+    if (filters.university?.trim()) {
+      qb.andWhere(
+        `(u.name->>'en' ILIKE :university OR u.name->>'ar' ILIKE :university)`,
+        { university: `%${filters.university.trim()}%` },
+      );
     }
 
     if (repo.metadata.findColumnWithPropertyName("createdAt")) {

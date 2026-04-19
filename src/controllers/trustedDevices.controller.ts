@@ -117,7 +117,17 @@ export const removeTrustedDevice = async (req: any, res: any) => {
 };
 
 export const adminListTrustedDevices = async (req: any, res: any) => {
-  const { search = "", page = 1, pageSize = 10 } = req.query;
+  const {
+    search = "",
+    user = "",
+    ipAddress = "",
+    name = "",
+    deviceType = "",
+    browser = "",
+    os = "",
+    page = 1,
+    pageSize = 10,
+  } = req.query;
 
   const qb = PostgresDataSource.getRepository(TrustedDevice)
     .createQueryBuilder("device")
@@ -126,9 +136,55 @@ export const adminListTrustedDevices = async (req: any, res: any) => {
 
   if (search) {
     qb.andWhere(
-      `(user.email ILIKE :search OR user.ssn ILIKE :search)`,
+      `(
+        user.email ILIKE :search OR
+        user.ssn ILIKE :search OR
+        user.fullName::text ILIKE :search OR
+        device.name ILIKE :search
+      )`,
       { search: `%${search}%` }
     );
+  }
+
+  if (user) {
+    qb.andWhere(
+      `(
+        user.email ILIKE :userSearch OR
+        user.ssn ILIKE :userSearch OR
+        user.fullName::text ILIKE :userSearch
+      )`,
+      { userSearch: `%${user}%` },
+    );
+  }
+
+  if (ipAddress) {
+    qb.andWhere(`device.ipAddress ILIKE :ipAddress`, {
+      ipAddress: `%${ipAddress}%`,
+    });
+  }
+
+  if (name) {
+    qb.andWhere(`device.name ILIKE :deviceName`, {
+      deviceName: `%${name}%`,
+    });
+  }
+
+  if (deviceType) {
+    qb.andWhere(`LOWER(device.deviceType) = LOWER(:deviceType)`, {
+      deviceType,
+    });
+  }
+
+  if (browser) {
+    qb.andWhere(`device.browser ILIKE :browser`, {
+      browser: `%${browser}%`,
+    });
+  }
+
+  if (os) {
+    qb.andWhere(`device.os ILIKE :os`, {
+      os: `%${os}%`,
+    });
   }
 
   qb

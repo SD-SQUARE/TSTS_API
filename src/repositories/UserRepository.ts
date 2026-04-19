@@ -140,6 +140,22 @@ export class UserRepository {
       qb.andWhere("department.id = :dep", { dep: query.departments });
     }
 
+    if (query.email) {
+      qb.andWhere("user.email ILIKE :email", { email: `%${query.email}%` });
+    }
+
+    if (query.phone) {
+      qb.andWhere("\"user\".contacts->>'phone' ILIKE :phone", { phone: `%${query.phone}%` });
+    }
+
+    if (query.mobile) {
+      qb.andWhere("\"user\".contacts->>'mobile' ILIKE :mobile", { mobile: `%${query.mobile}%` });
+    }
+
+    if (query.job_title) {
+      qb.andWhere("(\"user\".job->>'en' ILIKE :job OR \"user\".job->>'ar' ILIKE :job)", { job: `%${query.job_title}%` });
+    }
+
     if (query.universities && query.domains) {
       qb.andWhere("(university.id = :un OR domain.id = :dm)", {
         un: query.universities,
@@ -222,6 +238,22 @@ export class UserRepository {
       qb.andWhere("user.user_type = :ut", { ut: query.user_type });
     }
 
+    if (query.email) {
+      qb.andWhere("user.email ILIKE :email", { email: `%${query.email}%` });
+    }
+
+    if (query.phone) {
+      qb.andWhere("\"user\".contacts->>'phone' ILIKE :phone", { phone: `%${query.phone}%` });
+    }
+
+    if (query.mobile) {
+      qb.andWhere("\"user\".contacts->>'mobile' ILIKE :mobile", { mobile: `%${query.mobile}%` });
+    }
+
+    if (query.job_title) {
+      qb.andWhere("(\"user\".job->>'en' ILIKE :job OR \"user\".job->>'ar' ILIKE :job)", { job: `%${query.job_title}%` });
+    }
+
     if (query.universities && query.domains) {
       qb.andWhere("(university.id = :un OR domain.id = :dm)", {
         un: query.universities,
@@ -301,6 +333,22 @@ export class UserRepository {
 
     if (query.user_type) {
       qb.andWhere("user.user_type = :ut", { ut: query.user_type });
+    }
+
+    if (query.email) {
+      qb.andWhere("user.email ILIKE :email", { email: `%${query.email}%` });
+    }
+
+    if (query.phone) {
+      qb.andWhere("\"user\".contacts->>'phone' ILIKE :phone", { phone: `%${query.phone}%` });
+    }
+
+    if (query.mobile) {
+      qb.andWhere("\"user\".contacts->>'mobile' ILIKE :mobile", { mobile: `%${query.mobile}%` });
+    }
+
+    if (query.job_title) {
+      qb.andWhere("(\"user\".job->>'en' ILIKE :job OR \"user\".job->>'ar' ILIKE :job)", { job: `%${query.job_title}%` });
     }
 
     if (query.universities && query.domains) {

@@ -31,6 +31,15 @@ type PaginatedResult<T> = {
   };
 };
 
+type SpecializationFilters = {
+  search?: string;
+  name_en?: string;
+  name_ar?: string;
+  description_en?: string;
+  description_ar?: string;
+  review_required?: string;
+};
+
 
 @Entity({ name: "specializations" })
 export class Specialization extends BaseEntity {
@@ -71,7 +80,7 @@ export class Specialization extends BaseEntity {
   static async paginate(
     page = 1,
     limit = 20,
-    search?: string,
+    filters: SpecializationFilters = {},
     repo?: Repository<Specialization>,
     includeAllowed = false,
     includeGroups = false
@@ -100,8 +109,8 @@ export class Specialization extends BaseEntity {
       qb.distinct(true);
     }
 
-    if (search) {
-      const s = search.trim();
+    if (filters.search) {
+      const s = filters.search.trim();
       if (s.length > 0) {
         const param = `%${s}%`;
         qb.andWhere(
@@ -113,6 +122,36 @@ export class Specialization extends BaseEntity {
           { q: param }
         );
       }
+    }
+
+    if (filters.name_en?.trim()) {
+      qb.andWhere(`s.name->>'en' ILIKE :nameEn`, {
+        nameEn: `%${filters.name_en.trim()}%`,
+      });
+    }
+
+    if (filters.name_ar?.trim()) {
+      qb.andWhere(`s.name->>'ar' ILIKE :nameAr`, {
+        nameAr: `%${filters.name_ar.trim()}%`,
+      });
+    }
+
+    if (filters.description_en?.trim()) {
+      qb.andWhere(`COALESCE(s.description->>'en', '') ILIKE :descriptionEn`, {
+        descriptionEn: `%${filters.description_en.trim()}%`,
+      });
+    }
+
+    if (filters.description_ar?.trim()) {
+      qb.andWhere(`COALESCE(s.description->>'ar', '') ILIKE :descriptionAr`, {
+        descriptionAr: `%${filters.description_ar.trim()}%`,
+      });
+    }
+
+    if (filters.review_required === "true" || filters.review_required === "false") {
+      qb.andWhere(`s.review_required = :reviewRequired`, {
+        reviewRequired: filters.review_required === "true",
+      });
     }
 
     if (repo.metadata.findColumnWithPropertyName("createdAt")) {
