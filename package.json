@@ -42,7 +42,7 @@
     "schema:apply": "run-s migration:run mongo:migration:run",
     "schema:apply:prod": "run-s migration:run:prod mongo:migration:run:prod",
     "seed": "tsx src/database/seeding/index.ts",
-    "seed:system": "tsx src/database/seeding/system.seeding.ts",
+    "seed:system": "node dist/database/seeding/system.seeding.js",
     "seed:local": "tsx src/database/seeding/seed-local.ts",
     "seed-reports": "tsx src/database/seeding/reports/reports.seed.ts",
     "sp:seed": "tsx src/database/stored-procedures/seed-sp.ts",
