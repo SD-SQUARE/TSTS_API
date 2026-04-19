@@ -9,6 +9,11 @@ export type PermissionProfileDto = {
   name_ar: string;
   description_en?: string;
   description_ar?: string;
+  permissions?: Array<{
+    key: string;
+    name_en: string;
+    name_ar: string;
+  }>;
 };
 
 type PaginatedResult<T> = {
@@ -18,6 +23,15 @@ type PaginatedResult<T> = {
     page_index: number;
     page_size: number;
   };
+};
+
+type PermissionProfileFilters = {
+  search?: string;
+  name_en?: string;
+  name_ar?: string;
+  description_en?: string;
+  description_ar?: string;
+  permission_name?: string;
 };
 
 @Entity({ name: "permission_profile" })
@@ -41,7 +55,7 @@ export class PermissionProfile extends BaseEntity {
   static async paginate(
     page = 1,
     limit = 20,
-    search?: string,
+    filters: PermissionProfileFilters = {},
     repo?: Repository<PermissionProfile>
   ): Promise<PaginatedResult<PermissionProfileDto>> {
 
@@ -54,9 +68,10 @@ export class PermissionProfile extends BaseEntity {
 
     const qb: SelectQueryBuilder<PermissionProfile> =
       repo.createQueryBuilder("p");
+    qb.leftJoinAndSelect("p.permissions", "permission");
 
-    if (search) {
-      const param = `%${search.trim()}%`;
+    if (filters.search) {
+      const param = `%${filters.search.trim()}%`;
 
       qb.andWhere(
         `(
@@ -67,7 +82,45 @@ export class PermissionProfile extends BaseEntity {
       );
     }
 
+    if (filters.name_en?.trim()) {
+      qb.andWhere(`p.name->>'en' ILIKE :nameEn`, {
+        nameEn: `%${filters.name_en.trim()}%`,
+      });
+    }
+
+    if (filters.name_ar?.trim()) {
+      qb.andWhere(`p.name->>'ar' ILIKE :nameAr`, {
+        nameAr: `%${filters.name_ar.trim()}%`,
+      });
+    }
+
+    if (filters.description_en?.trim()) {
+      qb.andWhere(`COALESCE(p.descriptions->>'en', '') ILIKE :descriptionEn`, {
+        descriptionEn: `%${filters.description_en.trim()}%`,
+      });
+    }
+
+    if (filters.description_ar?.trim()) {
+      qb.andWhere(`COALESCE(p.descriptions->>'ar', '') ILIKE :descriptionAr`, {
+        descriptionAr: `%${filters.description_ar.trim()}%`,
+      });
+    }
+
+    if (filters.permission_name?.trim()) {
+      qb.andWhere(
+        `(
+          permission.name->>'en' ILIKE :permissionName OR
+          permission.name->>'ar' ILIKE :permissionName OR
+          permission.key ILIKE :permissionName
+        )`,
+        {
+          permissionName: `%${filters.permission_name.trim()}%`,
+        },
+      );
+    }
+
     qb.orderBy("p.createdAt", "DESC")
+      .distinct(true)
       .skip((page - 1) * limit)
       .take(limit);
 
@@ -90,6 +143,11 @@ export class PermissionProfile extends BaseEntity {
       name_ar: this.name?.ar,
       description_en: this.descriptions?.en,
       description_ar: this.descriptions?.ar,
+      permissions: this.permissions?.map((permission) => ({
+        key: permission.key ?? "",
+        name_en: permission.name?.en ?? "",
+        name_ar: permission.name?.ar ?? "",
+      })),
     };
   }
 }

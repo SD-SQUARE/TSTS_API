@@ -9,7 +9,7 @@ export const listAuditLogsController = async (req: Request, res: Response) => {
     { query: req.query },
   );
 
-  const { page, limit, from, to, actorId, action, status } = req.query;
+  const { page, limit, from, to, actorId, action, status, summary } = req.query;
 
   const pagination = {
     page: page ? parseInt(page as string) : undefined,
@@ -22,6 +22,7 @@ export const listAuditLogsController = async (req: Request, res: Response) => {
     actorId: actorId as string | undefined,
     action: action as string | undefined,
     status: status as string | undefined,
+    summary: summary as string | undefined,
   };
 
   const result = await listAuditLogsService(pagination, filters);

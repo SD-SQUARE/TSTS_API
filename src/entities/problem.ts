@@ -38,6 +38,16 @@ type PaginatedResult<T> = {
   };
 };
 
+type ProblemFilters = {
+  search?: string;
+  name_en?: string;
+  name_ar?: string;
+  description_en?: string;
+  description_ar?: string;
+  specialization?: string;
+  review_required?: string;
+};
+
 @Entity({ name: "problems" })
 export class Problem extends BaseEntity {
   @Column({ type: "jsonb" })
@@ -77,9 +87,8 @@ export class Problem extends BaseEntity {
   static async paginate(
     page = 1,
     limit = 20,
-    search?: string,
+    filters: ProblemFilters = {},
     repo?: Repository<Problem>,
-    specializationId?: string
   ): Promise<PaginatedResult<ProblemDto>> {
     if (!repo) {
       throw new Error("Repository not provided.");
@@ -94,12 +103,12 @@ export class Problem extends BaseEntity {
     // ✅ Always join specialization
     qb.leftJoinAndSelect("p.specialization", "s");
 
-    if (specializationId) {
-      qb.andWhere("s.id = :specId", { specId: specializationId });
+    if (filters.specialization) {
+      qb.andWhere("s.id = :specId", { specId: filters.specialization });
     }
 
-    if (search) {
-      const param = `%${search.trim()}%`;
+    if (filters.search) {
+      const param = `%${filters.search.trim()}%`;
       qb.andWhere(
         `(
           p.name->>'en' ILIKE :q OR 
@@ -109,6 +118,36 @@ export class Problem extends BaseEntity {
         )`,
         { q: param }
       );
+    }
+
+    if (filters.name_en?.trim()) {
+      qb.andWhere(`p.name->>'en' ILIKE :nameEn`, {
+        nameEn: `%${filters.name_en.trim()}%`,
+      });
+    }
+
+    if (filters.name_ar?.trim()) {
+      qb.andWhere(`p.name->>'ar' ILIKE :nameAr`, {
+        nameAr: `%${filters.name_ar.trim()}%`,
+      });
+    }
+
+    if (filters.description_en?.trim()) {
+      qb.andWhere(`COALESCE(p.description->>'en', '') ILIKE :descriptionEn`, {
+        descriptionEn: `%${filters.description_en.trim()}%`,
+      });
+    }
+
+    if (filters.description_ar?.trim()) {
+      qb.andWhere(`COALESCE(p.description->>'ar', '') ILIKE :descriptionAr`, {
+        descriptionAr: `%${filters.description_ar.trim()}%`,
+      });
+    }
+
+    if (filters.review_required === "true" || filters.review_required === "false") {
+      qb.andWhere(`p.review_required = :reviewRequired`, {
+        reviewRequired: filters.review_required === "true",
+      });
     }
 
     qb.orderBy("p.createdAt", "DESC")

@@ -17,8 +17,14 @@ export async function getAllDomains(req: Request, res: Response) {
         const domainRepoInstance = domainRepo.returnRepo();
         const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
         const limit = req.query.page_size ? parseInt(req.query.page_size as string, 10) : 20;
-        const domainSearch = (req.query.name) as string | undefined;
-        const universitySearch = req.query.university as string | undefined;
+        const filters = {
+          search: req.query.name as string | undefined,
+          name_en: req.query.name_en as string | undefined,
+          name_ar: req.query.name_ar as string | undefined,
+          description_en: req.query.description_en as string | undefined,
+          description_ar: req.query.description_ar as string | undefined,
+          university: req.query.university as string | undefined,
+        };
 
         const safePage = isNaN(page) || page < 1 ? 1 : page;
         const safeLimit = isNaN(limit) || limit < 1 ? 20 : limit;
@@ -26,14 +32,13 @@ export async function getAllDomains(req: Request, res: Response) {
         const result = await Domain.paginate(
         safePage,
         safeLimit,
-        domainSearch,
+        filters,
         domainRepoInstance,
-        universitySearch      
         );
 
         audit(req).step("Domains fetched successfully").metadata({ total: result.meta.total, page: safePage, limit: safeLimit });
 
-    logger.info(`Fetched domains - Page: ${safePage}, Limit: ${safeLimit}, Domain filter: ${domainSearch || "None"}, University filter: ${universitySearch || "None"}`);
+    logger.info(`Fetched domains - Page: ${safePage}, Limit: ${safeLimit}, Filters: ${JSON.stringify(filters)}`);
     return res.json(result); 
 }
 

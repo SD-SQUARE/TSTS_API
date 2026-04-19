@@ -13,6 +13,7 @@ interface AuditLogFilters {
   actorId?: string;
   action?: string;
   status?: string;
+  summary?: string;
 }
 
 const parseAuditLogDate = (value: string | undefined): Date | undefined => {
@@ -124,6 +125,13 @@ export const listAuditLogsService = async (
 
   if (filters.status) {
     query.status = filters.status;
+  }
+
+  if (filters.summary?.trim()) {
+    query.summary = {
+      $regex: filters.summary.trim(),
+      $options: "i",
+    };
   }
 
   const total = await auditRepository.count(query);

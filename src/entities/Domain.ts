@@ -20,6 +20,15 @@ type PaginatedResult<T> = {
   };
 };
 
+type DomainFilters = {
+  search?: string;
+  name_en?: string;
+  name_ar?: string;
+  description_en?: string;
+  description_ar?: string;
+  university?: string;
+};
+
 @Entity({ name: "domains" })
 export class Domain extends BaseEntity {
   @ManyToOne(() => University, (u) => u.domains, {
@@ -49,9 +58,8 @@ export class Domain extends BaseEntity {
   static async paginate(
     page = 1,
     limit = 20,
-    search?: string,
+    filters: DomainFilters = {},
     repo?: Repository<Domain>,
-    universityName?: string,
   ): Promise<PaginatedResult<Domain>> {
     if (!repo) {
       throw new Error(
@@ -65,8 +73,8 @@ export class Domain extends BaseEntity {
     const qb: SelectQueryBuilder<Domain> = repo.createQueryBuilder("d");
     qb.leftJoinAndSelect("d.university", "u");
 
-    if (universityName) {
-      const uniName = universityName.trim();
+    if (filters.university) {
+      const uniName = filters.university.trim();
       if (uniName.length > 0) {
         qb.andWhere(
           `u.name->>'en' ILIKE :uname OR u.name->>'ar' ILIKE :uname`,
@@ -75,13 +83,45 @@ export class Domain extends BaseEntity {
       }
     }
 
-    if (search) {
-      const s = search.trim();
+    if (filters.search) {
+      const s = filters.search.trim();
       if (s.length > 0) {
-        qb.where(`d.name->>'en' ILIKE :search OR d.name->>'ar' ILIKE :search`, {
-          search: `%${s}%`,
-        });
+        qb.andWhere(
+          `(
+            d.name->>'en' ILIKE :search OR
+            d.name->>'ar' ILIKE :search OR
+            COALESCE(d.description->>'en', '') ILIKE :search OR
+            COALESCE(d.description->>'ar', '') ILIKE :search
+          )`,
+          {
+            search: `%${s}%`,
+          },
+        );
       }
+    }
+
+    if (filters.name_en?.trim()) {
+      qb.andWhere(`d.name->>'en' ILIKE :nameEn`, {
+        nameEn: `%${filters.name_en.trim()}%`,
+      });
+    }
+
+    if (filters.name_ar?.trim()) {
+      qb.andWhere(`d.name->>'ar' ILIKE :nameAr`, {
+        nameAr: `%${filters.name_ar.trim()}%`,
+      });
+    }
+
+    if (filters.description_en?.trim()) {
+      qb.andWhere(`COALESCE(d.description->>'en', '') ILIKE :descriptionEn`, {
+        descriptionEn: `%${filters.description_en.trim()}%`,
+      });
+    }
+
+    if (filters.description_ar?.trim()) {
+      qb.andWhere(`COALESCE(d.description->>'ar', '') ILIKE :descriptionAr`, {
+        descriptionAr: `%${filters.description_ar.trim()}%`,
+      });
     }
 
     if (repo.metadata.findColumnWithPropertyName("createdAt") !== undefined) {

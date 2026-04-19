@@ -18,19 +18,36 @@ export async function getAllUniversities(req: Request, res: Response) {
   
     const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
     const limit = req.query.page_size ? parseInt(req.query.page_size as string, 10) : 20;
-    const name = req.query.name ? (req.query.name as string) : undefined;
+    const filters = {
+      search: req.query.name ? (req.query.name as string) : undefined,
+      name_en: req.query.name_en ? (req.query.name_en as string) : undefined,
+      name_ar: req.query.name_ar ? (req.query.name_ar as string) : undefined,
+      description_en: req.query.description_en
+        ? (req.query.description_en as string)
+        : undefined,
+      description_ar: req.query.description_ar
+        ? (req.query.description_ar as string)
+        : undefined,
+    };
     const safePage = isNaN(page) || page < 1 ? 1 : page;
     const safeLimit = isNaN(limit) || limit < 1 ? 20 : limit;
     const universityRepoInstance = universityRepo.returnRepo();
-    const result = await University.paginate(safePage, safeLimit, name, universityRepoInstance);
-    logger.info(`Fetched universities - Page: ${safePage}, Limit: ${safeLimit}, Name filter: ${name || "None"}`);
+    const result = await University.paginate(
+      safePage,
+      safeLimit,
+      filters,
+      universityRepoInstance,
+    );
+    logger.info(
+      `Fetched universities - Page: ${safePage}, Limit: ${safeLimit}, Filters: ${JSON.stringify(filters)}`,
+    );
 
     auditLog
       .step("Fetched universities successfully")
       .metadata({
         page: safePage,
         limit: safeLimit,
-        nameFilter: name || null,
+        filters,
         totalItems: result.meta?.total || 0,
       });
 

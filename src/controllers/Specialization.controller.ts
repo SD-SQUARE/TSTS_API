@@ -34,11 +34,29 @@ export async function getSpecializationById(req: Request, res: Response) {
     return res.json(result);
 }
 export async function getAllSpecializations(req: Request, res: Response) {
-    const { page, page_size: limit, name } = req.query;
+    const {
+      page,
+      page_size: limit,
+      name,
+      name_en,
+      name_ar,
+      description_en,
+      description_ar,
+      review_required,
+    } = req.query;
     const specializationRepo = new SpecializationRepo().getRepository();
     const pageNum = page ? parseInt(page as string, 10) : 1;
     const limitNum = limit ? parseInt(limit as string, 10) : 20;
-    const search = name ? name as string : undefined;
+    const filters = {
+      search: name ? (name as string) : undefined,
+      name_en: name_en ? (name_en as string) : undefined,
+      name_ar: name_ar ? (name_ar as string) : undefined,
+      description_en: description_en ? (description_en as string) : undefined,
+      description_ar: description_ar ? (description_ar as string) : undefined,
+      review_required: review_required
+        ? (review_required as string)
+        : undefined,
+    };
 
     const auditLog = audit(req)
     .summary("Fetch all specializations")
@@ -46,13 +64,13 @@ export async function getAllSpecializations(req: Request, res: Response) {
     .metadata({
       page: pageNum,
       limit: limitNum,
-      search,
+      filters,
     });
 
     const result = await Specialization.paginate(
         pageNum,
         limitNum,
-        search as string | undefined,
+        filters,
         specializationRepo
     );
 
