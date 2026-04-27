@@ -279,7 +279,7 @@ export const logoutUser = async (refreshToken: string): Promise<void> => {
 
   let decoded: any;
   try {
-    decoded = verifyToken(refreshToken);
+    decoded = verifyToken(refreshToken, true);
   } catch (err) {
     logger.error(`[server][auth] Invalid refresh token`);
     throw new AppError(t("not_token"), 401);

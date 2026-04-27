@@ -16,6 +16,6 @@ export const generateToken = (
   return jwt.sign(payload, SECRET, options);
 };
 
-export const verifyToken = (token: string) => {
-  return jwt.verify(token, SECRET);
+export const verifyToken = (token: string, ignoreExpiration: boolean = false) => {
+  return jwt.verify(token, SECRET, { ignoreExpiration });
 };
