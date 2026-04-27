@@ -17,6 +17,7 @@ import { io as socketIoInstance } from "./config/socket.js";
 import { requestContextMiddleware } from "./middleware/requestContextMiddleware.js";
 import { auditMiddleware } from "./middleware/audit-middleware.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { AppError } from "./utils/AppError.js";
 
 const app = express();
 
@@ -80,7 +81,7 @@ import permissionProfileRouter from "./routes/permissionProfile.router.js";
 
 import logger from "./utils/logger.js";
 // routes
-app.get("/api/v1/health", (req, res) => {
+app.get("/api/health", (req, res) => {
   logger.info("[HealthCheck]: OK");
   res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
 });
@@ -95,7 +96,7 @@ if (process.env.NODE_ENV === "production") app.use(csrfMiddleware);
 
 app.use("/api/v1/auth", authRouter);
 
-app.use(authMiddleware);
+app.use("/api/v1", authMiddleware);
 
 app.use("/api/v1/work-hours", workHourRouter);
 app.use("/api/v1/chat", chatRouter);
@@ -118,6 +119,10 @@ app.use("/api/v1/permissions/profile", permissionProfileRouter);
 app.use("/api/v1/tickets", ticketsRouter);
 app.use("/api/v1/reports", reportRoutes);
 
+
+app.use((req, res, next) => {
+  next(new AppError(`Route ${req.originalUrl} not found`, 404));
+});
 
 app.use(errorHandler);
 
