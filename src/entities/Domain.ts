@@ -29,6 +29,9 @@ type DomainFilters = {
   university?: string;
 };
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 @Entity({ name: "domains" })
 export class Domain extends BaseEntity {
   @ManyToOne(() => University, (u) => u.domains, {
@@ -76,10 +79,16 @@ export class Domain extends BaseEntity {
     if (filters.university) {
       const uniName = filters.university.trim();
       if (uniName.length > 0) {
-        qb.andWhere(
-          `u.name->>'en' ILIKE :uname OR u.name->>'ar' ILIKE :uname`,
-          { uname: `%${uniName}%` },
-        );
+        if (UUID_REGEX.test(uniName)) {
+          qb.andWhere(`u.id = :universityId`, {
+            universityId: uniName,
+          });
+        } else {
+          qb.andWhere(
+            `(u.name->>'en' ILIKE :uname OR u.name->>'ar' ILIKE :uname)`,
+            { uname: `%${uniName}%` },
+          );
+        }
       }
     }
 

@@ -32,6 +32,9 @@ interface DepartmentFilter {
   university?: string;
 }
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 @Entity({ name: "departments" })
 export class Department extends BaseEntity {
   @ManyToOne(() => Domain, (domain) => domain.departments, {
@@ -113,17 +116,27 @@ export class Department extends BaseEntity {
     }
 
     if (filters.domain?.trim()) {
-      qb.andWhere(
-        `(dom.name->>'en' ILIKE :domain OR dom.name->>'ar' ILIKE :domain)`,
-        { domain: `%${filters.domain.trim()}%` },
-      );
+      const domainFilter = filters.domain.trim();
+      if (UUID_REGEX.test(domainFilter)) {
+        qb.andWhere(`dom.id = :domainId`, { domainId: domainFilter });
+      } else {
+        qb.andWhere(
+          `(dom.name->>'en' ILIKE :domain OR dom.name->>'ar' ILIKE :domain)`,
+          { domain: `%${domainFilter}%` },
+        );
+      }
     }
 
     if (filters.university?.trim()) {
-      qb.andWhere(
-        `(u.name->>'en' ILIKE :university OR u.name->>'ar' ILIKE :university)`,
-        { university: `%${filters.university.trim()}%` },
-      );
+      const universityFilter = filters.university.trim();
+      if (UUID_REGEX.test(universityFilter)) {
+        qb.andWhere(`u.id = :universityId`, { universityId: universityFilter });
+      } else {
+        qb.andWhere(
+          `(u.name->>'en' ILIKE :university OR u.name->>'ar' ILIKE :university)`,
+          { university: `%${universityFilter}%` },
+        );
+      }
     }
 
     if (repo.metadata.findColumnWithPropertyName("createdAt")) {
