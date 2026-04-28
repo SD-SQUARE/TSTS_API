@@ -41,8 +41,13 @@ import { getSystemInfoController } from "../controllers/systemInfo.controller.js
 import {
   getGroupsForUserPagedController,
   getSpecializationsForUserPagedController,
+  toggleRoleProfileEditAccessController,
+  toggleUserProfileEditAccessController,
 } from "../controllers/users.controller.js";
 import { getPermissionsOfUser } from "../controllers/PermissionProfile.controller.js";
+import { typeBasedAuthMiddleware } from "../middleware/typeBasedAuthMiddleware.js";
+import { UserType } from "../enums/UserType.enum.js";
+import { updateProfileImageController } from "../controllers/profile.controller.js";
 
 const router = Router();
 
@@ -57,6 +62,11 @@ router
   .get("/system/info", asyncHandler(getSystemInfoController))
   .get("/profile/:id/view", asyncHandler(getUserProfileById))
   .get("/profile/:id", asyncHandler(getMyProfileById))
+  .patch(
+    "/profile/:id/image",
+    upload.single("image"),
+    asyncHandler(updateProfileImageController),
+  )
   .post("/profile/:id/reset-password", asyncHandler(resetUserPassword))
   .get("/profile/:id/view/groups", asyncHandler(getUserGroups))
   .get(
@@ -67,10 +77,18 @@ router
   .get(
     "/:id/specializations",
     asyncHandler(getSpecializationsForUserPagedController)
-  ).get(
-  "/:id/permissions",
-  asyncHandler(getPermissionsOfUser)
-);
+  )
+  .get("/:id/permissions", asyncHandler(getPermissionsOfUser))
+  .patch(
+    "/profile-edit-access/role/:role",
+    typeBasedAuthMiddleware([UserType.ADMIN, UserType.SUPER_ADMIN]),
+    asyncHandler(toggleRoleProfileEditAccessController),
+  )
+  .patch(
+    "/profile-edit-access/:id",
+    typeBasedAuthMiddleware([UserType.ADMIN, UserType.SUPER_ADMIN]),
+    asyncHandler(toggleUserProfileEditAccessController),
+  );
   
 
 router

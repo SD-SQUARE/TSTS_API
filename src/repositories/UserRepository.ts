@@ -156,6 +156,16 @@ export class UserRepository {
       qb.andWhere("(\"user\".job->>'en' ILIKE :job OR \"user\".job->>'ar' ILIKE :job)", { job: `%${query.job_title}%` });
     }
 
+    if (query.status) {
+      qb.andWhere("user.status = :status", { status: query.status });
+    }
+
+    if (query.allow_profile_edit !== undefined) {
+      qb.andWhere("user.allowProfileEdit = :allowProfileEdit", {
+        allowProfileEdit: query.allow_profile_edit === "true",
+      });
+    }
+
     if (query.universities && query.domains) {
       qb.andWhere("(university.id = :un OR domain.id = :dm)", {
         un: query.universities,
@@ -254,6 +264,16 @@ export class UserRepository {
       qb.andWhere("(\"user\".job->>'en' ILIKE :job OR \"user\".job->>'ar' ILIKE :job)", { job: `%${query.job_title}%` });
     }
 
+    if (query.status) {
+      qb.andWhere("user.status = :status", { status: query.status });
+    }
+
+    if (query.allow_profile_edit !== undefined) {
+      qb.andWhere("user.allowProfileEdit = :allowProfileEdit", {
+        allowProfileEdit: query.allow_profile_edit === "true",
+      });
+    }
+
     if (query.universities && query.domains) {
       qb.andWhere("(university.id = :un OR domain.id = :dm)", {
         un: query.universities,
@@ -349,6 +369,16 @@ export class UserRepository {
 
     if (query.job_title) {
       qb.andWhere("(\"user\".job->>'en' ILIKE :job OR \"user\".job->>'ar' ILIKE :job)", { job: `%${query.job_title}%` });
+    }
+
+    if (query.status) {
+      qb.andWhere("user.status = :status", { status: query.status });
+    }
+
+    if (query.allow_profile_edit !== undefined) {
+      qb.andWhere("user.allowProfileEdit = :allowProfileEdit", {
+        allowProfileEdit: query.allow_profile_edit === "true",
+      });
     }
 
     if (query.universities && query.domains) {

@@ -23,6 +23,7 @@ import { validateRequesterExcelFiles } from "../services/users/requester/bulk-up
 import { bulkUploadRequestersService } from "../services/users/requester/bulk-upload/requesterBulkUploadService.js";
 import { audit } from "../helpers/auditBuilder.js";
 import { AuditAction } from "../enums/AuditAction.enum.js";
+import { ensureUserCanEditProfileFields } from "../services/users/profile/profileCommandService.js";
 
 export const createRequester = async (
   req: RequestWithFileAndBody,
@@ -130,13 +131,21 @@ export const EditRequester = async (req, res: Response) => {
       .json({ is_edited: false, message: t("user_not_found"), errors: [] });
   }
 
+  const permissionCheck = await ensureUserCanEditProfileFields(id, req.user);
+  if (!permissionCheck.allowed) {
+    return res.status(permissionCheck.statusCode).json({
+      is_edited: false,
+      message: permissionCheck.message,
+      errors: [],
+    });
+  }
+
   const result = await editRequesterService(id, requesterDto, req.file, req);
   if (!result.is_edited) {
     auditLog
       .metadata({ errors: result.errors })
       .step("Requester edit failed");
 
-    result.message = t("user_not_edited");
     return res.status(ResponseStatus.BAD_REQUEST).json(result);
   }
 
