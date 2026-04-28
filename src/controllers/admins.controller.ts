@@ -19,6 +19,7 @@ import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 import { Lang } from "../types/lang.types.js";
 import { audit } from "../helpers/auditBuilder.js";
 import { AuditAction } from "../enums/AuditAction.enum.js";
+import { ensureUserCanEditProfileFields } from "../services/users/profile/profileCommandService.js";
 
 export const createAdmin = async (req: RequestWithFileAndBody, res: Response) => {
   audit(req as unknown as Request)
@@ -112,11 +113,19 @@ export const EditAdmin = async (req: Request, res: Response) => {
       .json({ is_edited: false, message: t("user_not_found"), errors: [] });
   }
 
+  const permissionCheck = await ensureUserCanEditProfileFields(id, req.user);
+  if (!permissionCheck.allowed) {
+    return res.status(permissionCheck.statusCode).json({
+      is_edited: false,
+      message: permissionCheck.message,
+      errors: [],
+    });
+  }
+
   const result = await editAdminService(id, adminDto, req.file, req);
 
   if (!result.is_edited) {
     audit(req).step("Admin edit failed").metadata({ errors: result.errors || [] });
-    result.message = t("user_not_edited");
     return res.status(ResponseStatus.BAD_REQUEST).json(result);
   }
 

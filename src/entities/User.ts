@@ -66,6 +66,9 @@ export class User extends BaseEntity {
   @Column({ type: "enum", enum: UserStatus, default: UserStatus.INACTIVE })
   status!: UserStatus;
 
+  @Column({ type: "boolean", default: false })
+  allowProfileEdit!: boolean;
+
   @Column({ type: "jsonb", nullable: true })
   job?: { en?: string; ar?: string };
 

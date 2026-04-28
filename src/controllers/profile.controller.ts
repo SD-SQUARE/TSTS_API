@@ -15,6 +15,7 @@ import { AppError } from "../utils/AppError.js";
 import { resetProfilePassword } from "../services/auth.service.js";
 import { audit } from "../helpers/auditBuilder.js";
 import { AuditAction } from "../enums/AuditAction.enum.js";
+import { updateProfileImageService } from "../services/users/profile/profileCommandService.js";
 
 export const getUserProfileById = async (req: Request, res: Response) => {
   const id = req.params.id;
@@ -196,4 +197,28 @@ export const getUserSpecializations = async (req: Request, res: Response) => {
     .step("User specializations retrieved successfully");
 
   return res.status(ResponseStatus.SUCCESS).json(profile);
+};
+
+export const updateProfileImageController = async (req: Request, res: Response) => {
+  const id = req.params.id;
+  const isValid = uuidValidationSchema.safeParse(id);
+
+  if (!id || !isValid.success) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_updated: false, message: t("invalid_uuid") });
+  }
+
+  if (!req.file) {
+    return res
+      .status(ResponseStatus.BAD_REQUEST)
+      .json({ is_updated: false, message: t("file_required") });
+  }
+
+  const result = await updateProfileImageService(id, req.file, req.user);
+
+  return res.status(result.statusCode).json({
+    is_updated: result.is_updated,
+    message: result.message,
+  });
 };

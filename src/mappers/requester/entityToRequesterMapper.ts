@@ -35,6 +35,7 @@ type RequesterDto = {
     mobiles: string[];
   };
   status: string;
+  allow_profile_edit: boolean;
 
   job_ar: string;
   job_en: string;
@@ -151,6 +152,7 @@ export const toRequester = async (
     },
 
     status: entity.status,
+    allow_profile_edit: entity.allowProfileEdit ?? false,
 
     job_ar: entity.job.ar ?? "",
     job_en: entity.job.en ?? "",
