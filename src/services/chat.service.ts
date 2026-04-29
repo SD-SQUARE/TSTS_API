@@ -8,6 +8,7 @@ import { Media } from "../entities/Media.js";
 import { v4 as uuid } from "uuid";
 import { getPresignedUrl, uploadFile } from "../utils/storage.js";
 import { Group } from "../entities/Group.js";
+import { Team } from "../entities/Team.js";
 import { createNotification } from "./notification.service.js";
 import { NotificationType } from "../enums/NotificationType.enum.js";
 import { getFullNameByLang } from "../helpers/UserPersonalData.helper.js";
@@ -19,6 +20,7 @@ const chatMessageReadRepository = PostgresDataSource.getRepository(ChatMessageRe
 const usersRepository = PostgresDataSource.getRepository(User);
 const mediaRepository = PostgresDataSource.getRepository(Media);
 const groupRepository = PostgresDataSource.getRepository(Group);
+const teamRepository = PostgresDataSource.getRepository(Team);
 
 const mapChatAttachment = async (item: Media) => ({
   id: item.id,
@@ -48,6 +50,7 @@ const mapChatMessageResponse = async (message: ChatMessage) => ({
   senderId: message.sender?.id ?? null,
   recipientId: message.recipient?.id ?? null,
   groupId: message.group?.id ?? null,
+  teamId: message.team?.id ?? null,
   content: message.content,
   sender: await mapChatUser(message.sender),
   attachments: await Promise.all((message.attachments || []).map(mapChatAttachment)),
@@ -79,14 +82,23 @@ const ensureGroupChatAccess = async (
 ) => {
   const membershipCount = await groupRepository
     .createQueryBuilder("group")
-    .leftJoin("group.teamLeader", "teamLeader")
     .leftJoin("group.heads", "groupHead")
     .leftJoin("groupHead.user", "headUser")
     .leftJoin("group.technicians", "tg")
     .leftJoin("tg.user", "technician")
+    .leftJoin("group.teams", "team")
+    .leftJoin("team.leads", "teamLead")
+    .leftJoin("teamLead.user", "teamLeadUser")
+    .leftJoin("team.technicians", "teamTechnician")
+    .leftJoin("teamTechnician.user", "teamTechnicianUser")
     .where("group.id = :groupId", { groupId })
     .andWhere(
-      "(teamLeader.id = :userId OR headUser.id = :userId OR technician.id = :userId)",
+      `(
+        headUser.id = :userId
+        OR technician.id = :userId
+        OR teamLeadUser.id = :userId
+        OR teamTechnicianUser.id = :userId
+      )`,
       {
         userId,
       },
@@ -96,6 +108,39 @@ const ensureGroupChatAccess = async (
   if (!membershipCount) {
     throw new AppError(
       t("auth.permissions_error") || "You do not have access to this group chat.",
+      403,
+    );
+  }
+};
+
+const ensureTeamChatAccess = async (
+  userId: string,
+  teamId: string,
+  t: any,
+) => {
+  const membershipCount = await teamRepository
+    .createQueryBuilder("team")
+    .leftJoin("team.group", "group")
+    .leftJoin("group.heads", "groupHead")
+    .leftJoin("groupHead.user", "headUser")
+    .leftJoin("team.leads", "teamLead")
+    .leftJoin("teamLead.user", "teamLeadUser")
+    .leftJoin("team.technicians", "teamTechnician")
+    .leftJoin("teamTechnician.user", "teamTechnicianUser")
+    .where("team.id = :teamId", { teamId })
+    .andWhere(
+      `(
+        headUser.id = :userId
+        OR teamLeadUser.id = :userId
+        OR teamTechnicianUser.id = :userId
+      )`,
+      { userId },
+    )
+    .getCount();
+
+  if (!membershipCount) {
+    throw new AppError(
+      t("auth.permissions_error") || "You do not have access to this team chat.",
       403,
     );
   }
@@ -496,22 +541,29 @@ export const sendGroupMessage = async (
 
   const groupWithMembers = await groupRepository
     .createQueryBuilder("group")
-    .leftJoinAndSelect("group.teamLeader", "teamLeader")
     .leftJoinAndSelect("group.heads", "groupHead")
     .leftJoinAndSelect("groupHead.user", "headUser")
     .leftJoinAndSelect("group.technicians", "tg")
     .leftJoinAndSelect("tg.user", "technician")
+    .leftJoinAndSelect("group.teams", "team")
+    .leftJoinAndSelect("team.leads", "teamLead")
+    .leftJoinAndSelect("teamLead.user", "teamLeadUser")
+    .leftJoinAndSelect("team.technicians", "teamTechnician")
+    .leftJoinAndSelect("teamTechnician.user", "teamTechnicianUser")
     .where("group.id = :groupId", { groupId: group.id })
     .getOne();
 
   const userIds = Array.from(
     new Set(
       [
-        groupWithMembers?.teamLeader?.id,
         ...(groupWithMembers?.heads || []).map((head: any) => head.user?.id),
         ...(groupWithMembers?.technicians || []).map(
           (member: any) => member.user?.id,
         ),
+        ...(groupWithMembers?.teams || []).flatMap((team: any) => [
+          ...(team.leads || []).map((lead: any) => lead.user?.id),
+          ...(team.technicians || []).map((member: any) => member.user?.id),
+        ]),
       ].filter((memberId): memberId is string => Boolean(memberId)),
     ),
   ).filter((memberId) => memberId !== sender.id);
@@ -597,13 +649,22 @@ export const listGroupConversations = async (userId: string) => {
     .createQueryBuilder("group")
     .leftJoinAndSelect("group.chat", "chat") // all messages
     .leftJoinAndSelect("chat.sender", "sender") // message sender
-    .leftJoinAndSelect("group.teamLeader", "teamLeader")
     .leftJoinAndSelect("group.heads", "groupHead")
     .leftJoinAndSelect("groupHead.user", "headUser")
     .leftJoinAndSelect("group.technicians", "tg")
     .leftJoinAndSelect("tg.user", "technician")
+    .leftJoinAndSelect("group.teams", "team")
+    .leftJoinAndSelect("team.leads", "teamLead")
+    .leftJoinAndSelect("teamLead.user", "teamLeadUser")
+    .leftJoinAndSelect("team.technicians", "teamTechnician")
+    .leftJoinAndSelect("teamTechnician.user", "teamTechnicianUser")
     .where(
-      "teamLeader.id = :userId OR headUser.id = :userId OR technician.id = :userId",
+      `(
+        headUser.id = :userId
+        OR technician.id = :userId
+        OR teamLeadUser.id = :userId
+        OR teamTechnicianUser.id = :userId
+      )`,
       { userId },
     )
     .distinct(true)
@@ -662,6 +723,215 @@ export const listGroupConversations = async (userId: string) => {
   return conversationsWithUnread;
 };
 
+export const sendTeamMessage = async (
+  senderId: string,
+  teamId: string,
+  content: string,
+  files: Express.Multer.File[],
+  t: any,
+) => {
+  const sender = ensureStaffChatUser(
+    await usersRepository.findOne({
+      where: { id: senderId, deletedAt: null },
+    }),
+    t,
+  );
+
+  const team = await teamRepository.findOne({
+    where: { id: teamId },
+    relations: ["group"],
+  });
+
+  if (!team) {
+    throw new AppError(t("team_not_found"), 404);
+  }
+
+  await ensureTeamChatAccess(senderId, teamId, t);
+
+  const message = chatRepository.create({
+    sender,
+    team,
+    content,
+    attachments: [],
+  });
+
+  await chatRepository.save(message);
+
+  if (files?.length) {
+    const mediaEntities: Media[] = [];
+
+    for (const file of files) {
+      const key = `chat/teams/${teamId}/${message.id}/${uuid()}-${file.originalname}`;
+
+      await uploadFile(
+        process.env.MINIO_BUCKET!,
+        key,
+        file.buffer,
+        file.mimetype,
+      );
+
+      const media = mediaRepository.create({
+        name: file.originalname,
+        mime: file.mimetype,
+        url: key,
+      });
+
+      await mediaRepository.save(media);
+      mediaEntities.push(media);
+    }
+
+    message.attachments = mediaEntities;
+    await chatRepository.save(message);
+  }
+
+  const teamWithMembers = await teamRepository
+    .createQueryBuilder("team")
+    .leftJoinAndSelect("team.group", "group")
+    .leftJoinAndSelect("group.heads", "groupHead")
+    .leftJoinAndSelect("groupHead.user", "headUser")
+    .leftJoinAndSelect("team.leads", "teamLead")
+    .leftJoinAndSelect("teamLead.user", "teamLeadUser")
+    .leftJoinAndSelect("team.technicians", "teamTechnician")
+    .leftJoinAndSelect("teamTechnician.user", "teamTechnicianUser")
+    .where("team.id = :teamId", { teamId })
+    .getOne();
+
+  const userIds = Array.from(
+    new Set(
+      [
+        ...(teamWithMembers?.group?.heads || []).map((head: any) => head.user?.id),
+        ...(teamWithMembers?.leads || []).map((lead: any) => lead.user?.id),
+        ...(teamWithMembers?.technicians || []).map(
+          (member: any) => member.user?.id,
+        ),
+      ].filter((memberId): memberId is string => Boolean(memberId)),
+    ),
+  ).filter((memberId) => memberId !== sender.id);
+
+  if (userIds.length > 0) {
+    await createNotification(
+      NotificationType.MESSAGE,
+      `New message in team ${team.name?.en || ""}`,
+      content,
+      userIds,
+      { chatMessageId: message.id },
+    );
+  }
+
+  const fullMessage = await chatRepository.findOne({
+    where: { id: message.id },
+    relations: ["sender", "team", "attachments"],
+  });
+  const response = await mapChatMessageResponse((fullMessage ?? message) as ChatMessage);
+
+  for (const userId of [...userIds, sender.id]) {
+    notificationUser("chat:message", {
+      userId,
+      conversationType: "team",
+      conversationId: team.id,
+      message: response,
+    });
+  }
+
+  return response;
+};
+
+export const getTeamMessages = async (
+  currentUserId: string,
+  teamId: string,
+  t: any,
+) => {
+  await ensureTeamChatAccess(currentUserId, teamId, t);
+
+  const team = await teamRepository.findOne({
+    where: { id: teamId },
+  });
+
+  if (!team) {
+    throw new AppError("team_not_found", 404);
+  }
+
+  const messages = await chatRepository
+    .createQueryBuilder("message")
+    .leftJoinAndSelect("message.sender", "sender")
+    .leftJoinAndSelect("message.team", "team")
+    .leftJoinAndSelect("message.attachments", "attachments")
+    .where("team.id = :teamId", { teamId })
+    .orderBy("message.createdAt", "ASC")
+    .getMany();
+
+  await markGroupMessagesAsRead(currentUserId, messages);
+
+  return Promise.all(messages.map((message) => mapChatMessageResponse(message)));
+};
+
+export const listTeamConversations = async (userId: string) => {
+  const teams = await teamRepository
+    .createQueryBuilder("team")
+    .leftJoinAndSelect("team.chat", "chat")
+    .leftJoinAndSelect("chat.sender", "sender")
+    .leftJoinAndSelect("team.group", "group")
+    .leftJoinAndSelect("group.heads", "groupHead")
+    .leftJoinAndSelect("groupHead.user", "headUser")
+    .leftJoinAndSelect("team.leads", "teamLead")
+    .leftJoinAndSelect("teamLead.user", "teamLeadUser")
+    .leftJoinAndSelect("team.technicians", "teamTechnician")
+    .leftJoinAndSelect("teamTechnician.user", "teamTechnicianUser")
+    .where(
+      `(
+        headUser.id = :userId
+        OR teamLeadUser.id = :userId
+        OR teamTechnicianUser.id = :userId
+      )`,
+      { userId },
+    )
+    .distinct(true)
+    .getMany();
+
+  const conversations = teams.map((team) => {
+    const sortedMessages = team.chat?.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
+
+    const lastMessage = sortedMessages?.[0];
+
+    return {
+      teamId: team.id,
+      name: team.name?.en ?? team.name?.ar ?? "",
+      name_en: team.name?.en ?? team.name?.ar ?? "",
+      name_ar: team.name?.ar ?? team.name?.en ?? "",
+      lastMessage: lastMessage?.content ?? "",
+      lastMessageAt: lastMessage?.createdAt ?? null,
+      unreadCount: 0,
+    };
+  });
+
+  return Promise.all(
+    conversations.map(async (conversation) => {
+      const unreadCount = await chatRepository
+        .createQueryBuilder("message")
+        .leftJoin("message.sender", "sender")
+        .leftJoin(
+          ChatMessageRead,
+          "read",
+          'read."messageId" = message.id AND read."userId" = :userId',
+          { userId },
+        )
+        .where('message."teamId" = :teamId', {
+          teamId: conversation.teamId,
+        })
+        .andWhere("sender.id != :userId", { userId })
+        .andWhere("read.id IS NULL")
+        .getCount();
+
+      return {
+        ...conversation,
+        unreadCount,
+      };
+    }),
+  );
+};
+
 export const getCombinedChatInbox = async (userId: string) => {
   logger.info("[server][chat][service] getCombinedChatInbox start", {
     userId,
@@ -697,7 +967,20 @@ export const getCombinedChatInbox = async (userId: string) => {
     unreadCount: conv.unreadCount,
   }));
 
-  const combined = [...personalMapped, ...groupMapped].sort((a, b) => {
+  const teamConversations = await listTeamConversations(userId);
+  const teamMapped = teamConversations.map((conv) => ({
+    type: "team",
+    id: conv.teamId,
+    name: conv.name_en ?? conv.name_ar ?? "",
+    name_en: conv.name_en ?? conv.name_ar ?? "",
+    name_ar: conv.name_ar ?? conv.name_en ?? "",
+    image: null,
+    lastMessage: conv.lastMessage,
+    lastMessageAt: conv.lastMessageAt,
+    unreadCount: conv.unreadCount,
+  }));
+
+  const combined = [...personalMapped, ...groupMapped, ...teamMapped].sort((a, b) => {
     const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
     const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
     return bTime - aTime;

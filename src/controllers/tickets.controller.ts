@@ -109,7 +109,7 @@ export const getSingleTicketController = async (
     id,
     ticket_number,
     lang,
-    userId,
+    (req as any).user,
     userName,
     req,
   );

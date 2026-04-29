@@ -1,5 +1,5 @@
 import { PostgresDataSource } from "../../../database/postgres-data-source.js";
-import { GroupHead, Ticket } from "../../../entities/index.js";
+import { Ticket } from "../../../entities/index.js";
 import { AuditAction } from "../../../enums/AuditAction.enum.js";
 import { TicketActivityType } from "../../../enums/TicketActivity.enum.js";
 import { UserType } from "../../../enums/UserType.enum.js";
@@ -7,12 +7,14 @@ import { audit } from "../../../helpers/auditBuilder.js";
 import { formatTicketStatus } from "../../../helpers/ticketsHelper.js";
 import { Lang } from "../../../types/lang.types.js";
 import { ReqUserPayload } from "../../../types/ReqUserPayload.js";
+import { AppError } from "../../../utils/AppError.js";
 import { buildLocalizedName } from "../../../utils/localizeName.js";
 import logger from "../../../utils/logger.js";
 import { buildPagination } from "../../../utils/pagination.js";
 import { GetTicketsQuery } from "../../../validation/ticket.schema.js";
 import { logTicketActivity } from "../../tickets.service.js";
 import { Request } from "express";
+import { getManagedGroupSpecializationIds } from "../../groups/group-access.service.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 
@@ -58,6 +60,9 @@ export const getAllTicketsService = async (
     .distinct(true);
 
   auditLog.step("Applying role-based filters");
+  const managedSpecializationIds = await getManagedGroupSpecializationIds(user.id);
+  const hasManagedSpecializations = managedSpecializationIds.length > 0;
+
   if (user.role === UserType.REQUESTER) {
     qb.andWhere("requester.id = :userId", {
       userId: user.id,
@@ -67,41 +72,31 @@ export const getAllTicketsService = async (
   }
 
   if (user.role === UserType.TECHNICIAN) {
-    qb.andWhere("assignee.id = :userId", {
-      userId: user.id,
-    });
+    if (hasManagedSpecializations) {
+      qb.andWhere(
+        "(assignee.id = :userId OR specialization.id IN (:...managedSpecializationIds))",
+        {
+          userId: user.id,
+          managedSpecializationIds,
+        },
+      );
+    } else {
+      qb.andWhere("assignee.id = :userId", {
+        userId: user.id,
+      });
+    }
 
     logger.info("[tickets] technician access applied", { userId: user.id });
   }
 
-  if (user.role === UserType.ADMIN || user.role === UserType.SUPER_ADMIN) {
-    const groupHeadRows = await PostgresDataSource.getRepository(GroupHead)
-      .createQueryBuilder("gh")
-      .innerJoin("gh.group", "g")
-      .innerJoin("g.specializations", "gs")
-      .innerJoin("gs.specialization", "s")
-      .select("s.id", "specializationId")
-      .where("gh.user = :userId", { userId: user.id })
-      .getRawMany();
-
-    const specializationIds: string[] = [
-      ...new Set(groupHeadRows.map((row: any) => row.specializationId)),
-    ];
-
-    logger.info("[tickets] admin specializations resolved", {
-      userId: user.id,
-      userRole: user.role,
-      specializationIds,
+  if (user.role === UserType.ADMIN && hasManagedSpecializations) {
+    qb.andWhere("specialization.id IN (:...managedSpecializationIds)", {
+      managedSpecializationIds,
     });
+  }
 
-    if (specializationIds.length === 0) {
-      qb.andWhere("1 = 0");
-    } else {
-      console.log(specializationIds);
-      qb.andWhere("specialization.id IN (:...adminSpecializations)", {
-        adminSpecializations: specializationIds,
-      });
-    }
+  if (user.role === UserType.SUPER_ADMIN) {
+    logger.info("[tickets] super admin access applied", { userId: user.id });
   }
 
   logger.info("[server][tickets] getAllTickets | base query initialized");
@@ -395,7 +390,7 @@ export const getSingleTicketService = async (
   ticketId: string | undefined,
   ticketNumber: number | undefined,
   lang: Lang,
-  userId: string,
+  user: ReqUserPayload,
   userName: string,
   req?: Request,
 ) => {
@@ -472,6 +467,29 @@ export const getSingleTicketService = async (
     }
   }
 
+  const managedSpecializationIds = await getManagedGroupSpecializationIds(
+    user.id,
+  );
+  const specializationId = ticket.specialization?.id || null;
+  const isRequester = ticket.requester?.id === user.id;
+  const isAssignee =
+    ticket.assigneeList?.some((assignee) => assignee.id === user.id) || false;
+  const isManagedSpecialization =
+    !!specializationId && managedSpecializationIds.includes(specializationId);
+  const canAccess =
+    user.role === UserType.SUPER_ADMIN ||
+    (user.role === UserType.REQUESTER && isRequester) ||
+    (user.role === UserType.TECHNICIAN &&
+      (isAssignee || isManagedSpecialization)) ||
+    (user.role === UserType.ADMIN &&
+      (managedSpecializationIds.length === 0 ||
+        isManagedSpecialization ||
+        isAssignee));
+
+  if (!canAccess) {
+    throw new AppError("Ticket not found", 404);
+  }
+
   const mappedTicket = {
     id: ticket.id,
     ticket_number: ticket.ticket_number,
@@ -535,7 +553,7 @@ export const getSingleTicketService = async (
     "Ticket Viewed",
     TicketActivityType.VIEW,
     `Ticket "${ticket.title}" was viewed by ${userName}`,
-    userId,
+    user.id,
     { ticketId: ticket.id, ticket_number: ticket.ticket_number },
   );
 

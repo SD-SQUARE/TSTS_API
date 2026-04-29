@@ -129,7 +129,9 @@ export const createTicket = async (dto, files, req?: Request) => {
         "groupSpecializations.group",
         "groupSpecializations.group.heads",
         "groupSpecializations.group.heads.user",
-        "groupSpecializations.group.teamLeader",
+        "groupSpecializations.group.teams",
+        "groupSpecializations.group.teams.leads",
+        "groupSpecializations.group.teams.leads.user",
       ],
     });
 
@@ -331,8 +333,12 @@ const assignUsersFromSpecialization = async (spec: any) => {
   );
 
   const teamLeaderIds = spec.groupSpecializations
-    .map((gs: any) => gs.group?.teamLeader?.id)
-    .filter(Boolean);
+    .flatMap(
+      (gs: any) =>
+        gs.group?.teams?.flatMap((team: any) =>
+          (team.leads || []).map((lead: any) => lead.user?.id).filter(Boolean),
+        ) ?? [],
+    );
 
   const userIds = Array.from(new Set([...headIds, ...teamLeaderIds]));
 
@@ -343,14 +349,19 @@ const assignUsersFromSpecialization = async (spec: any) => {
 
 const assignAllGroupHeadsAndLeaders = async (): Promise<User[]> => {
   const groups = await groupRepo.find({
-    relations: ["heads", "heads.user", "teamLeader"],
+    relations: ["heads", "heads.user", "teams", "teams.leads", "teams.leads.user"],
   });
 
   const headIds = groups.flatMap(
     (g) => g.heads?.map((h) => h.user?.id).filter(Boolean) ?? [],
   );
 
-  const teamLeaderIds = groups.map((g) => g.teamLeader?.id).filter(Boolean);
+  const teamLeaderIds = groups.flatMap(
+    (g) =>
+      g.teams?.flatMap((team: any) =>
+        (team.leads || []).map((lead: any) => lead.user?.id).filter(Boolean),
+      ) ?? [],
+  );
 
   const userIds = Array.from(new Set([...headIds, ...teamLeaderIds]));
 

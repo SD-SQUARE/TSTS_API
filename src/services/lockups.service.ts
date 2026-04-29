@@ -11,6 +11,7 @@ import { Domain } from "../entities/Domain.js";
 import { Department } from "../entities/Department.js";
 import { Specialization } from "../entities/Specialization.js";
 import { Group } from "../entities/Group.js";
+import { Team } from "../entities/Team.js";
 import { Ticket } from "../entities/Ticket.js";
 import { PermissionProfile } from "../entities/PermissionProfile.js";
 import { ProblemRepo } from "../repositories/ProblemRepo.js";
@@ -22,6 +23,7 @@ import { Lang } from "../types/lang.types.js";
 import { getFullNameByLang } from "../helpers/UserPersonalData.helper.js";
 import { In } from "typeorm";
 import { getPresignedUrl } from "../utils/storage.js";
+import { getManagedGroupSpecializationIds } from "./groups/group-access.service.js";
 
 interface UsersLockupQuery {
   name?: string;
@@ -53,6 +55,12 @@ interface GroupsLockupQuery extends PaginationQuery {
   current_user_id?: string;
 }
 
+interface TeamsLockupQuery extends PaginationQuery {
+  name?: string;
+  group_id?: string;
+  current_user_id?: string;
+}
+
 interface UniversityDomainsLockupQuery extends PaginationQuery {
   name?: string;
   universityId: string;
@@ -76,6 +84,7 @@ const departmentsRepository = PostgresDataSource.getRepository(Department);
 const specializationsRepository =
   PostgresDataSource.getRepository(Specialization);
 const groupsRepository = PostgresDataSource.getRepository(Group);
+const teamsRepository = PostgresDataSource.getRepository(Team);
 const ticketsRepository = PostgresDataSource.getRepository(Ticket);
 const problemRepo = new ProblemRepo().getRepository();
 const PermissionProfileRepo =
@@ -309,7 +318,7 @@ export const getDepartmentsLockupService = async (
 };
 
 export const getSpecializationsLockupService = async (
-  query: SpecializationsLockupQuery,
+  query: SpecializationsLockupQuery & { current_user_id?: string },
 ) => {
   const { skip, take } = buildPagination({
     page: query.page,
@@ -323,6 +332,18 @@ export const getSpecializationsLockupService = async (
       `specialization.name->>'en' ILIKE :name OR specialization.name->>'ar' ILIKE :name`,
       { name: `%${query.name}%` },
     );
+  }
+
+  if (query.current_user_id) {
+    const specializationIds = await getManagedGroupSpecializationIds(
+      query.current_user_id,
+    );
+
+    if (specializationIds.length > 0) {
+      qb.andWhere("specialization.id IN (:...specializationIds)", {
+        specializationIds,
+      });
+    }
   }
 
   // const [specializations] = await qb.skip(skip).take(take).getManyAndCount();
@@ -343,11 +364,15 @@ export const getGroupsLockupService = async (query: GroupsLockupQuery) => {
 
   const qb = groupsRepository
     .createQueryBuilder("group")
-    .leftJoin("group.teamLeader", "teamLeader")
     .leftJoin("group.heads", "groupHead")
     .leftJoin("groupHead.user", "headUser")
     .leftJoin("group.technicians", "tg")
     .leftJoin("tg.user", "technician")
+    .leftJoin("group.teams", "team")
+    .leftJoin("team.leads", "teamLead")
+    .leftJoin("teamLead.user", "teamLeadUser")
+    .leftJoin("team.technicians", "teamTechnician")
+    .leftJoin("teamTechnician.user", "teamTechnicianUser")
     .distinct(true);
 
   if (query.name) {
@@ -359,7 +384,12 @@ export const getGroupsLockupService = async (query: GroupsLockupQuery) => {
 
   if (query.current_user_id) {
     qb.andWhere(
-      "(teamLeader.id = :currentUserId OR headUser.id = :currentUserId OR technician.id = :currentUserId)",
+      `(
+        headUser.id = :currentUserId
+        OR technician.id = :currentUserId
+        OR teamLeadUser.id = :currentUserId
+        OR teamTechnicianUser.id = :currentUserId
+      )`,
       {
         currentUserId: query.current_user_id,
       },
@@ -371,11 +401,58 @@ export const getGroupsLockupService = async (query: GroupsLockupQuery) => {
 
   return groups.map((g) => ({
     id: g.id,
-    name: g.name?.en || "",
+    name: g.name?.en || g.name?.ar || "",
     name_en: g.name?.en || "",
     name_ar: g.name?.ar || "",
     description: g.descriptions?.en || "",
+    description_en: g.descriptions?.en || "",
+    description_ar: g.descriptions?.ar || "",
     color: g.color || "",
+  }));
+};
+
+export const getTeamsLockupService = async (query: TeamsLockupQuery) => {
+  const qb = teamsRepository
+    .createQueryBuilder("team")
+    .leftJoinAndSelect("team.group", "group")
+    .leftJoin("group.heads", "groupHead")
+    .leftJoin("groupHead.user", "headUser")
+    .leftJoin("team.leads", "teamLead")
+    .leftJoin("teamLead.user", "teamLeadUser")
+    .leftJoin("team.technicians", "teamTechnician")
+    .leftJoin("teamTechnician.user", "teamTechnicianUser")
+    .distinct(true);
+
+  if (query.name?.trim()) {
+    qb.andWhere(
+      `(team.name->>'en' ILIKE :name OR team.name->>'ar' ILIKE :name)`,
+      { name: `%${query.name.trim()}%` },
+    );
+  }
+
+  if (query.group_id) {
+    qb.andWhere("group.id = :groupId", { groupId: query.group_id });
+  }
+
+  if (query.current_user_id) {
+    qb.andWhere(
+      `(
+        headUser.id = :currentUserId
+        OR teamLeadUser.id = :currentUserId
+        OR teamTechnicianUser.id = :currentUserId
+      )`,
+      { currentUserId: query.current_user_id },
+    );
+  }
+
+  const teams = await qb.getMany();
+
+  return teams.map((team) => ({
+    id: team.id,
+    name: team.name?.en || team.name?.ar || "",
+    name_en: team.name?.en || "",
+    name_ar: team.name?.ar || "",
+    group_id: (team as any).group?.id || null,
   }));
 };
 
@@ -609,6 +686,7 @@ export const getTicketProblemsService = async (
   specializationId: string | undefined,
   specializationName: string | undefined,
   lang: "en" | "ar",
+  currentUserId?: string,
 ) => {
   if (!["en", "ar"].includes(lang)) throw new Error("Invalid language");
 
@@ -625,6 +703,18 @@ export const getTicketProblemsService = async (
     qb.andWhere(`specialization.name->>'${key}' ILIKE :name`, {
       name: `%${specializationName.trim()}%`,
     });
+  }
+
+  if (currentUserId) {
+    const specializationIds = await getManagedGroupSpecializationIds(
+      currentUserId,
+    );
+
+    if (specializationIds.length > 0) {
+      qb.andWhere("specialization.id IN (:...specializationIds)", {
+        specializationIds,
+      });
+    }
   }
 
   const rows = await qb

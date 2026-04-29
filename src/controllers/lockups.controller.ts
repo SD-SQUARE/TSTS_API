@@ -18,6 +18,7 @@ import {
   getAuditActionsLockupService,
   getTicketActivityActionsService,
   getTicketActivityUsersService,
+  getTeamsLockupService,
 } from "../services/lockups.service.js";
 import { UserType } from "../enums/UserType.enum.js";
 
@@ -78,7 +79,11 @@ export const getSpecializationsLockupController = async (
   req: Request,
   res: Response,
 ) => {
-  const specializations = await getSpecializationsLockupService(req.query);
+  const specializations = await getSpecializationsLockupService({
+    ...req.query,
+    current_user_id:
+      req.query.mine === "true" ? (req as any).user?.id : undefined,
+  });
   res.status(200).json({ specializations });
 };
 
@@ -92,6 +97,20 @@ export const getGroupsLockupController = async (
       req.query.mine === "true" ? (req as any).user?.id : undefined,
   });
   res.status(200).json({ groups });
+};
+
+export const getTeamsLockupController = async (
+  req: Request,
+  res: Response,
+) => {
+  const teams = await getTeamsLockupService({
+    ...req.query,
+    group_id: req.query.group_id as string | undefined,
+    current_user_id:
+      req.query.mine === "true" ? (req as any).user?.id : undefined,
+  });
+
+  res.status(200).json({ teams });
 };
 
 export const getUniversityDomainsLockupController = async (
@@ -176,6 +195,7 @@ export const getTicketProblemsLockupController = async (
     specialization as string | undefined,
     name as string | undefined,
     lang,
+    req.query.mine === "true" ? (req as any).user?.id : undefined,
   );
 
   return res.status(200).json(specializations);

@@ -10,13 +10,14 @@ import { University } from "./University.js";
 import { Domain } from "./Domain.js";
 import { UserStatus } from "../enums/UserStatus.enum.js";
 import { UserType } from "../enums/UserType.enum.js";
-import { Group } from "./Group.js";
 import { Ticket } from "./Ticket.js";
 import { TicketChat } from "./TicketChat.js";
 import { TicketListener } from "./TicketListener.js";
 import { NotificationRead } from "./NotificationRead.js";
 import { ChatMessage } from "./ChatMessage.js";
 import { TrustedDevice } from "./TrustedDevice.js";
+import { TeamLead } from "./TeamLead.js";
+import { TeamTechnician } from "./TeamTechnician.js";
 
 @Entity({ name: "users" })
 @Unique(["email"])
@@ -87,8 +88,11 @@ export class User extends BaseEntity {
   @OneToMany(() => UserDepartment, (ud) => ud.user, { lazy: true })
   userDepartments!: any[];
 
-  @OneToMany(() => Group, (g) => g.teamLeader)
-  ledGroups!: any[];
+  @OneToMany(() => TeamLead, (lead) => lead.user)
+  teamLeadAssignments!: any[];
+
+  @OneToMany(() => TeamTechnician, (assignment) => assignment.user)
+  teamTechnicianAssignments!: any[];
 
   @OneToMany(() => Ticket, (ticket) => ticket.requester)
   requestedTickets: any[];
