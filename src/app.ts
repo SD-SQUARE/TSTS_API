@@ -68,6 +68,7 @@ import {
   trustedDevicesRouter,
   authV2Router,
   auditActionRouter,
+  customFormsRouter,
 } from "./routes/index.js";
 import universitiesRouter from "./routes/universities.router.js";
 import domainsRouter from "./routes/domains.router.js";
@@ -95,6 +96,7 @@ app.use("/api/v2/auth", authV2Router);
 if (process.env.NODE_ENV === "production") app.use(csrfMiddleware);
 
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/custom-forms", customFormsRouter);
 
 app.use("/api/v1", authMiddleware);
 

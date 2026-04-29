@@ -7,7 +7,8 @@ import chatRouter from "./chat.router.js";
 import notificationRouter from "./notification.router.js";
 import trustedDevicesRouter from "./trustedDevices.routes.js";
 import authV2Router from "./auth.v2.router.js";
-import auditActionRouter  from "./auditAction.router.js";
+import auditActionRouter from "./auditAction.router.js";
+import customFormsRouter from "./customForms.router.js";
 
 export {
   authRouter,
@@ -19,5 +20,6 @@ export {
   notificationRouter,
   trustedDevicesRouter,
   authV2Router,
-  auditActionRouter
+  auditActionRouter,
+  customFormsRouter
 };
