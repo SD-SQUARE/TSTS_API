@@ -32,4 +32,6 @@ export * from "./TrustedDevice.js";
 export * from "./TicketReview.js";
 export * from "./problem.js";
 export * from "./Report.js";
+export * from "./CustomForm.js";
+export * from "./FormResponse.js";
 

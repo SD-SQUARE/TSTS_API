@@ -1,4 +1,4 @@
-import { In } from "typeorm";
+import { In, IsNull } from "typeorm";
 import { t } from "i18next";
 import { PostgresDataSource } from "../../../database/postgres-data-source.js";
 import { User } from "../../../entities/User.js";
@@ -159,33 +159,38 @@ export const updateUserProfileEditAccessService = async (
 };
 
 export const updateRoleProfileEditAccessService = async (
-  role: string,
-  allowProfileEdit: boolean,
+    role: string,
+    allowProfileEdit: boolean,
 ) => {
-  const userTypes = mapRoleSegmentToUserTypes(role);
+    const userTypes = mapRoleSegmentToUserTypes(role);
 
-  if (!userTypes?.length) {
+    if (!userTypes?.length) {
+        return {
+            is_updated: false,
+            statusCode: 400,
+            message: t("invalid_input"),
+        };
+    }
+
+    const result = await userRepo.update(
+        {
+            user_type: In(userTypes),
+            deletedAt: IsNull(), // ✅ FIXED
+        },
+        {
+            allowProfileEdit,
+        },
+    );
+
+    const affected = result.affected ?? 0;
+
     return {
-      is_updated: false,
-      statusCode: 400,
-      message: t("invalid_input"),
+        is_updated: affected > 0, // ✅ FIXED
+        statusCode: affected > 0 ? 200 : 404,
+        message:
+            affected > 0
+                ? t("profile_edit_access_role_updated")
+                : t("no_users_found_for_role"),
+        affected,
     };
-  }
-
-  const result = await userRepo.update(
-    {
-      user_type: In(userTypes),
-      deletedAt: null,
-    },
-    {
-      allowProfileEdit,
-    },
-  );
-
-  return {
-    is_updated: true,
-    statusCode: 200,
-    message: t("profile_edit_access_role_updated"),
-    affected: result.affected ?? 0,
-  };
 };
