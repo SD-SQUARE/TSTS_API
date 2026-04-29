@@ -1,18 +1,19 @@
 import { Request, Response } from "express";
 import {
-  bulkAssignUsersToGroup,
   createGroup,
   editGroup,
   getAllGroups,
   getGroupById,
   getGroupUsersService,
   softDeleteGroup,
+  upsertGroupAssignments,
 } from "../services/groups.service.js";
 import { AppError } from "../utils/AppError.js";
 import logger from "../utils/logger.js";
 import {
-  bulkAssignUsersSchema,
   createGroupSchema,
+  editGroupSchema,
+  upsertGroupAssignmentsSchema,
 } from "../validation/group.schema.js";
 import { audit } from "../helpers/auditBuilder.js";
 import { AuditAction } from "../enums/AuditAction.enum.js";
@@ -55,7 +56,7 @@ export const addGroup = async (req: Request, res: Response) => {
   });
 };
 
-export const bulkAssignUsersController = async (
+export const upsertGroupAssignmentsController = async (
   req: Request,
   res: Response,
 ) => {
@@ -72,7 +73,7 @@ export const bulkAssignUsersController = async (
   });
 
   // Validate body
-  const result = bulkAssignUsersSchema(t).safeParse(req.body);
+  const result = upsertGroupAssignmentsSchema(t).safeParse(req.body);
   if (!result.success) {
     const messages = result.error.issues.map((i) => i.message).join(", ");
     auditLog.step(`Validation failed: ${messages}`);
@@ -80,21 +81,21 @@ export const bulkAssignUsersController = async (
     throw new AppError(result.error.issues[0].message, 400);
   }
 
-  const { added, removed } = await bulkAssignUsersToGroup(
+  const assignmentResult = await upsertGroupAssignments(
     groupId,
-    result.data.users,
+    result.data,
     t,
     req,
   );
 
   auditLog
-    .step(`Users assigned: ${added.length}, removed: ${removed.length}`)
+    .step(`Group assignments updated`)
     .resource("group", groupId)
-    .metadata({ addedUserIds: added, removedUserIds: removed });
+    .metadata({ users: result.data.users, teams: result.data.teams.length });
 
   return res.status(200).json({
-    is_updated: true,
-    message: t("users_assigned_successfully"),
+    is_updated: assignmentResult.is_updated,
+    message: assignmentResult.message,
     errors: [],
   });
 };
@@ -185,7 +186,7 @@ export const getAllGroupsController = async (req: Request, res: Response) => {
 
   const pagination = {
     page: page_index ? parseInt(page_index as string) : undefined,
-    limit: page_size ? parseInt(page_size as string) : undefined,
+    page_size: page_size ? parseInt(page_size as string) : undefined,
   };
 
   const filters = {
@@ -215,7 +216,7 @@ export const getGroupUsersController = async (req: Request, res: Response) => {
   const data = await getGroupUsersService(id, req.query, req);
 
   auditLog
-    .step(`Users fetched: ${data.technicians.length} technicians, ${data.heads.length} heads, team leader present: ${!!data.team_leader}`)
+    .step(`Users fetched: ${data.technicians.length} technicians, ${data.heads.length} heads, ${data.teams.length} teams`)
     .resource("group", id)
     .metadata({ page_index, page_size, total: data.meta_data.total });
 
@@ -244,7 +245,12 @@ export const editGroupController = async (req: any, res: any) => {
   }
 
   try {
-    const result = await editGroup(groupId, req.body, t, req);
+    const validated = editGroupSchema(t).safeParse(req.body);
+    if (!validated.success) {
+      throw new AppError(validated.error.issues[0].message, 400);
+    }
+
+    const result = await editGroup(groupId, validated.data, t, req);
 
     auditLog
       .step("Group edited successfully")

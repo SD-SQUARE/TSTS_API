@@ -5,11 +5,14 @@ import {
   getCombinedChatInbox,
   getGroupMessages,
   getPersonalMessages,
+  getTeamMessages,
   getUnreadPersonalMessageCount,
   listGroupConversations,
   listPersonalConversations,
+  listTeamConversations,
   sendGroupMessage,
   sendPersonalMessage,
+  sendTeamMessage,
 } from "../services/chat.service.js";
 import { sendPersonalMessageSchema } from "../validation/chat.schema.js";
 
@@ -197,6 +200,75 @@ export const listGroupConversationsController = async (
   }
 
   const conversations = await listGroupConversations(userId);
+
+  return res.status(200).json(conversations);
+};
+
+export const sendTeamMessageController = async (
+  req: Request,
+  res: Response,
+) => {
+  const t = req.t;
+  const senderId = (req as any).user?.id;
+  const teamId = req.params.teamId;
+
+  if (!senderId) {
+    throw new AppError(t("unauthorized"), 401);
+  }
+
+  if (!teamId) {
+    throw new AppError(t("team_id_required"), 400);
+  }
+
+  const validated = sendPersonalMessageSchema(t).safeParse(req.body);
+  if (!validated.success) {
+    throw new AppError(validated.error.issues[0].message, 400);
+  }
+
+  const message = await sendTeamMessage(
+    senderId,
+    teamId,
+    validated.data.content || "",
+    req.files as Express.Multer.File[],
+    t,
+  );
+
+  return res.status(201).json(message);
+};
+
+export const getTeamMessagesController = async (
+  req: Request,
+  res: Response,
+) => {
+  const t = req.t;
+  const currentUserId = (req as any).user?.id;
+  const teamId = req.params.teamId;
+
+  if (!currentUserId) {
+    throw new AppError(t("unauthorized"), 401);
+  }
+
+  if (!teamId) {
+    throw new AppError(t("team_id_required"), 400);
+  }
+
+  const messages = await getTeamMessages(currentUserId, teamId, t);
+
+  return res.status(200).json(messages);
+};
+
+export const listTeamConversationsController = async (
+  req: Request,
+  res: Response,
+) => {
+  const t = req.t;
+  const userId = (req as any).user?.id;
+
+  if (!userId) {
+    throw new AppError(t("unauthorized"), 401);
+  }
+
+  const conversations = await listTeamConversations(userId);
 
   return res.status(200).json(conversations);
 };

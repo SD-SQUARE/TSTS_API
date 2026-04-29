@@ -8,6 +8,9 @@ import {
   listGroupConversationsController,
   getCombinedChatInboxController,
   getUnreadPersonalMessagesCount,
+  sendTeamMessageController,
+  getTeamMessagesController,
+  listTeamConversationsController,
 } from "../controllers/chat.controller.js";
 import { upload } from "../middleware/upload.js";
 import { authMiddleware } from "../middleware/auth.js";
@@ -56,6 +59,22 @@ router.get(
 router.get(
   "/group/conversations",
   listGroupConversationsController
+);
+
+router.post(
+  "/team/:teamId/messages",
+  upload.array("attachments"),
+  sendTeamMessageController
+);
+
+router.get(
+  "/team/:teamId/messages",
+  getTeamMessagesController
+);
+
+router.get(
+  "/team/conversations",
+  listTeamConversationsController
 );
 
 router.get(
