@@ -15,6 +15,7 @@ import { PASSWORD_REGEX } from '../config/validations.js';
 import { audit } from '../helpers/auditBuilder.js';
 import { Request } from 'express';
 import { AuditAction } from '../enums/AuditAction.enum.js';
+import { generateOTPEmail } from '../helpers/OTPEmailTemplate.js';
 
 // Constants
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -388,12 +389,15 @@ export const forgetPassword = async (
     `[server][auth] Forget password OTP generated for user ${user.id}: ${otp} (OID: ${oid})`,
   );
 
-  const html = `
-    <p>Hello user,</p>
-    <p>You requested a password reset. Your OTP is:</p>
-    <h2>${otp}</h2>
-    <p>This OTP will expire in 3 minutes.</p>
-  `;
+  // const html = `
+  //   <p>Hello user,</p>
+  //   <p>You requested a password reset. Your OTP is:</p>
+  //   <h2>${otp}</h2>
+  //   <p>This OTP will expire in 3 minutes.</p>
+  // `;
+
+  const html = generateOTPEmail("Habiba", "حبيبة", otp);
+  
 
   await sendMail(user.email, 'Your Password Reset OTP', html).catch((err) =>
     logger.warn(`[server] [auth] couldn't send email, skipping... ${err}`),
