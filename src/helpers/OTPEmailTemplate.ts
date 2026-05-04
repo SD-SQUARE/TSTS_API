@@ -8,7 +8,9 @@ export const generateOTPEmail = (
   const bgColor = "#f4f4f4";
   const cardColor = "#ffffff";
   // TODO: Replace with actual logo URL 
-  const logoUrl = "https://upload.wikimedia.org/wikipedia/commons/8/88/Helwan_University_Logo.jpg"; 
+  const cdn_url = process.env.PROTOCOL + '://' + process.env.HOST + ':' + process.env.PORT + '/';
+  const image_path= 'assets/logos/university-logo.png';
+  const logoUrl = cdn_url + image_path; 
 
   return `
     <!DOCTYPE html>
@@ -69,7 +71,7 @@ export const generateOTPEmail = (
 
                 <tr>
                 <td align="left" style="border-bottom: 1px solid #eeeeee; padding-bottom: 30px; margin-bottom: 30px; font-size: 14px; color: #666666;">
-                    This code is valid for 10 minutes. 
+                    This code is valid for 3 minutes. 
                     <br /><br />
                     Need help? Contact <a href="mailto:support@yourdomain.com" style="color: ${primaryBlue}; text-decoration: none; font-weight: bold;">support@yourdomain.com</a>
                 </td>
@@ -96,7 +98,7 @@ export const generateOTPEmail = (
 
                 <tr>
                 <td align="right" dir="rtl" style="font-size: 14px; color: #666666;">
-                    هذا الرمز صالح لمدة 10 دقائق.
+                    هذا الرمز صالح لمدة 3 دقائق.
                     <br /><br />
                     تحتاج مساعدة؟ تواصل معنا عبر <a href="mailto:support@yourdomain.com" style="color: ${primaryBlue}; text-decoration: none; font-weight: bold;">support@yourdomain.com</a>
                 </td>

@@ -18,11 +18,16 @@ import { requestContextMiddleware } from "./middleware/requestContextMiddleware.
 import { auditMiddleware } from "./middleware/audit-middleware.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { AppError } from "./utils/AppError.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const app = express();
 
 app.set("trust proxy", process.env.NODE_ENV === "production" ? 1 : 0);
 // basic security
+app.use("/assets", express.static(path.join(__dirname, "../assets")));
 app.use(helmet({ contentSecurityPolicy: false })); // CSP setup later if needed
 app.use(hpp());
 app.use(xss());
