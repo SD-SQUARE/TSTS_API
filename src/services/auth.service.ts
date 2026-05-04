@@ -396,7 +396,10 @@ export const forgetPassword = async (
   //   <p>This OTP will expire in 3 minutes.</p>
   // `;
 
-  const html = generateOTPEmail("Habiba", "حبيبة", otp);
+  const Name_en = user.firstName?.en + " " + user.midName?.en + " " + user.lastName?.en;
+  const Name_ar = user.firstName?.ar + " " + user.midName?.ar + " " + user.lastName?.ar;
+
+  const html = generateOTPEmail(Name_en, Name_ar, otp);
   
 
   await sendMail(user.email, 'Your Password Reset OTP', html).catch((err) =>
