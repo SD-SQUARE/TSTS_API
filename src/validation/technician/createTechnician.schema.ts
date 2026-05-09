@@ -85,7 +85,11 @@ export const editTechnicianSchema = (t: Request["t"]) =>
       .max(255)
       .regex(ARABIC_REGEX, { message: t("full_name_ar_must_be_arabic") }),
 
-    ssn: z.string().regex(EGYPTIAN_SSN_REGEX, { message: t("invalid_ssn") }),
+    ssn: z
+      .string()
+      .min(14, { message: t("ssn_must_be_14_digits") })
+      .max(14, { message: t("ssn_must_be_14_digits") })
+      .regex(EGYPTIAN_SSN_REGEX, { message: t("invalid_ssn") }),
 
     university: z.string().uuid({ message: t("university_required") }),
     domain: z.string().uuid({ message: t("domain_required") }),
@@ -139,10 +143,9 @@ export const editTechnicianSchema = (t: Request["t"]) =>
         .default([]),
     ),
 
-    // TODO: add permission_profile
-    // permission_profile: z
-    //   .string()
-    //   .uuid({ message: t("permission_profile_required") }),
+    permission_profile: z
+      .string()
+      .uuid({ message: t("permission_profile_required") }),
 
     extra_permissions: z.preprocess(
       (val) => {

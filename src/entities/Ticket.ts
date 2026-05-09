@@ -77,6 +77,9 @@ export class Ticket {
   @DeleteDateColumn()
   deletedAt?: Date;
 
+  @Column({ type: "timestamptz", nullable: true })
+  unassignedAlertedAt?: Date | null;
+
   @OneToMany(() => TicketListener, (listener) => listener.ticket)
   listeners: any[];
 

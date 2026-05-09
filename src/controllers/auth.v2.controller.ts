@@ -8,10 +8,35 @@ import { TrustedDevice } from "../entities/TrustedDevice.js";
 import { audit } from "../helpers/auditBuilder.js";
 import { AuditAction } from "../enums/AuditAction.enum.js";
 import { t } from "i18next";
+import { loginWithMicrosoftSso } from "../services/microsoft-sso.service.js";
 
 
 
 const deviceRepo = PostgresDataSource.getRepository(TrustedDevice);
+const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+
+export const loginWithMicrosoft = async (req: Request, res: Response) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    throw new AppError(t("invalid_input"), 400);
+  }
+
+  const result = await loginWithMicrosoftSso(idToken, req.t);
+
+  res.cookie("refresh_token", result.refreshToken, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: REFRESH_TOKEN_MAX_AGE,
+  });
+
+  return res.json({
+    step: "LOGGED_IN_SSO",
+    access_token: result.accessToken,
+    permissions: result.permissions,
+  });
+};
 
 export const loginV2 = async (req: Request, res: Response) => {
   const { email, password } = req.body;

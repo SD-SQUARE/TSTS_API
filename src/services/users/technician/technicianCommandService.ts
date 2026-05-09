@@ -64,19 +64,7 @@ export const createTechnicianService = async (
     };
   }
 
-  const specsResult = await validateExistingSpecializations(
-    technicianDto.allowedSpecializations,
-  );
-
-  if (!specsResult.is_valid) {
-    auditLog.metadata({ errors: specsResult.errors }).step("Invalid specializations");
-
-    return {
-      is_added: false,
-      message: "",
-      errors: specsResult.errors,
-    };
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   // 7) Set user type
   technicianDto.userType = UserType.TECHNICIAN;
@@ -122,20 +110,7 @@ export const createTechnicianService = async (
     }),
   );
 
-  // 12) Save allowedSpecializations
-  if (technicianDto.allowedSpecializations?.length > 0) {
-    await allowedSpecializationsRepo.save(
-      technicianDto.allowedSpecializations.map((specId) =>
-        allowedSpecializationsRepo.create({
-          user,
-          specialization: { id: specId } as any,
-        }),
-      ),
-    );
-
-    auditLog.step("Technician specializations assigned");
-
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   return { is_added: true, message: t("user_created") };
 };
@@ -172,6 +147,7 @@ export const editTechnicianService = async (
   const allowedSpecializations = await Promise.resolve(
     userEntity.allowedSpecializations ?? [],
   );
+  const isSelfProfileEdit = req?.user?.id === id;
 
   const oldValues = {
     email: userEntity.email,
@@ -225,26 +201,17 @@ export const editTechnicianService = async (
     };
   }
 
-  // 4) Validate allowed specializations
-  const specsResult = await validateExistingSpecializations(
-    technicianDto.allowedSpecializations,
-  );
-
-  if (!specsResult.is_valid) {
-    auditLog.step("Invalid specializations");
-
-    return {
-      is_edited: false,
-      message: "",
-      errors: specsResult.errors,
-    };
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   // 5) Force user type
   technicianDto.userType = UserType.TECHNICIAN;
 
   // 6) Map DTO → partial User and merge into existing entity
   const userData = await mapTechnicianToUserEntity(technicianDto);
+  if (isSelfProfileEdit) {
+    delete userData.email;
+    delete userData.password;
+  }
 
   userRepo.merge(userEntity, userData);
   userEntity.university = university;
@@ -274,38 +241,29 @@ export const editTechnicianService = async (
   // 9) Clear old relations and re-create them
 
   // 9.1) UsersPermissions – assume one row per user, so delete & recreate
-  await usersPermissionsRepo.delete({ user: { id: user.id } as any });
+  if (!isSelfProfileEdit) {
+    await usersPermissionsRepo.delete({ user: { id: user.id } as any });
 
-  const profile = permResult.profile!;
-  await usersPermissionsRepo.save(
-    usersPermissionsRepo.create({
-      user,
-      permissionProfile: profile,
-      extraPermissions: technicianDto.extraPermissions,
-      revokedPermissions: technicianDto.revokedPermissions,
-    }),
-  );
-
-  // 9.2) AllowedSpecializations – clear then add
-  await allowedSpecializationsRepo.delete({ user: { id: user.id } as any });
-
-  if (technicianDto.allowedSpecializations?.length > 0) {
-    await allowedSpecializationsRepo.save(
-      technicianDto.allowedSpecializations.map((specId) =>
-        allowedSpecializationsRepo.create({
-          user,
-          specialization: { id: specId } as any,
-        }),
-      ),
+    const profile = permResult.profile!;
+    await usersPermissionsRepo.save(
+      usersPermissionsRepo.create({
+        user,
+        permissionProfile: profile,
+        extraPermissions: technicianDto.extraPermissions,
+        revokedPermissions: technicianDto.revokedPermissions,
+      }),
     );
   }
+
+  // 9.2) AllowedSpecializations – clear then add
+  // Specialization assignment is intentionally not editable from user forms.
 
   const newValues = {
     email: user.email,
     university: university?.id,
     domain: domain?.id,
-    permissions: permResult.profile?.id,
-    specializations: technicianDto.allowedSpecializations || [],
+    permissions: isSelfProfileEdit ? oldValues.permissions : permResult.profile?.id,
+    specializations: oldValues.specializations,
     hasImage: !!user.image,
   };
 

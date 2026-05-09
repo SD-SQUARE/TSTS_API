@@ -59,18 +59,7 @@ export const createAdminService = async (
     };
   }
 
-  const specsResult = await validateExistingSpecializations(
-    AdminDto.allowedSpecializations,
-  );
-
-  if (!specsResult.is_valid) {
-    audit(req).step("Specializations validation failed").metadata({ errors: specsResult.errors });
-    return {
-      is_added: false,
-      message: "",
-      errors: specsResult.errors,
-    };
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   // 7) Set user type
   AdminDto.userType = UserType.ADMIN;
@@ -117,18 +106,7 @@ export const createAdminService = async (
   );
   audit(req).step("User permissions saved").metadata({ permissionProfile: profile.name });
 
-  // 12) Save allowedSpecializations
-  if (AdminDto.allowedSpecializations?.length > 0) {
-    await allowedSpecializationsRepo.save(
-      AdminDto.allowedSpecializations.map((specId) =>
-        allowedSpecializationsRepo.create({
-          user,
-          specialization: { id: specId } as any,
-        }),
-      ),
-    );
-    audit(req).step("Allowed specializations saved").metadata({ specializationIds: AdminDto.allowedSpecializations });
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   audit(req).step("Admin creation process completed successfully").metadata({ userId: user.id, email: user.email });
 
@@ -158,6 +136,7 @@ export const editAdminService = async (
     audit(req).step("User not found for editing");
     return { is_edited: false, message: t("user_not_found"), errors: [] };
   }
+  const isSelfProfileEdit = req?.user?.id === id;
 
   audit(req).step("Existing user loaded").metadata({ userId: id });
 
@@ -194,25 +173,17 @@ export const editAdminService = async (
     };
   }
 
-  // 4) Validate allowed specializations
-  const specsResult = await validateExistingSpecializations(
-    AdminDto.allowedSpecializations,
-  );
-
-  if (!specsResult.is_valid) {
-    audit(req).step("Specialization validation failed").metadata({ errors: specsResult.errors });
-    return {
-      is_edited: false,
-      message: "",
-      errors: specsResult.errors,
-    };
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   // 5) Force user type
   AdminDto.userType = UserType.ADMIN;
 
   // 6) Map DTO → partial User and merge into existing entity
   const userData = await mapAdminToUserEntity(AdminDto);
+  if (isSelfProfileEdit) {
+    delete userData.email;
+    delete userData.password;
+  }
 
   userRepo.merge(userEntity, userData);
   userEntity.university = university;
@@ -244,33 +215,23 @@ export const editAdminService = async (
   // 9) Clear old relations and re-create them
 
   // 9.1) UsersPermissions – assume one row per user, so delete & recreate
-  await usersPermissionsRepo.delete({ user: { id: user.id } as any });
+  if (!isSelfProfileEdit) {
+    await usersPermissionsRepo.delete({ user: { id: user.id } as any });
 
-  const profile = permResult.profile!;
-  await usersPermissionsRepo.save(
-    usersPermissionsRepo.create({
-      user,
-      permissionProfile: profile,
-      extraPermissions: AdminDto.extraPermissions,
-      revokedPermissions: AdminDto.revokedPermissions,
-    }),
-  );
-  audit(req).step("User permissions saved").metadata({ permissionProfile: profile.name });
+    const profile = permResult.profile!;
+    await usersPermissionsRepo.save(
+      usersPermissionsRepo.create({
+        user,
+        permissionProfile: profile,
+        extraPermissions: AdminDto.extraPermissions,
+        revokedPermissions: AdminDto.revokedPermissions,
+      }),
+    );
+    audit(req).step("User permissions saved").metadata({ permissionProfile: profile.name });
+  }
 
   // 9.3) AllowedSpecializations – clear then add
-  await allowedSpecializationsRepo.delete({ user: { id: user.id } as any });
-
-  if (AdminDto.allowedSpecializations?.length > 0) {
-    await allowedSpecializationsRepo.save(
-      AdminDto.allowedSpecializations.map((specId) =>
-        allowedSpecializationsRepo.create({
-          user,
-          specialization: { id: specId } as any,
-        }),
-      ),
-    );
-    audit(req).step("Allowed specializations saved").metadata({ specializationIds: AdminDto.allowedSpecializations });
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   audit(req).step("Admin edit process completed successfully").metadata({ userId: user.id, email: user.email });
 

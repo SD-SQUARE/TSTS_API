@@ -48,6 +48,7 @@ import { getPermissionsOfUser } from "../controllers/PermissionProfile.controlle
 import { typeBasedAuthMiddleware } from "../middleware/typeBasedAuthMiddleware.js";
 import { UserType } from "../enums/UserType.enum.js";
 import { updateProfileImageController } from "../controllers/profile.controller.js";
+import { validateAllowedEmailDomainMiddleware } from "../middleware/users/allowedEmailDomain.js";
 
 const router = Router();
 
@@ -96,6 +97,7 @@ router
     "/requesters",
     upload.single("image"),
     validate(createRequesterSchema),
+    validateAllowedEmailDomainMiddleware,
     validateEmailAndSsnMiddleware,
     asyncHandler(createRequester),
   )
@@ -108,6 +110,7 @@ router
     "/technicians",
     upload.single("image"),
     validate(createTechnicianSchema),
+    validateAllowedEmailDomainMiddleware,
     validateEmailAndSsnMiddleware,
     asyncHandler(createTechnician),
   )
@@ -115,6 +118,7 @@ router
     "/admins",
     upload.single("image"),
     validate(createAdminSchema),
+    validateAllowedEmailDomainMiddleware,
     validateEmailAndSsnMiddleware,
     asyncHandler(createAdmin),
   );
@@ -124,6 +128,7 @@ router
     "/requesters/:id",
     upload.single("image"),
     validate(editRequesterSchema),
+    validateAllowedEmailDomainMiddleware,
     validateEmailEditSsnMiddleware,
     asyncHandler(EditRequester),
   )
@@ -131,6 +136,7 @@ router
     "/technicians/:id",
     upload.single("image"),
     validate(editTechnicianSchema),
+    validateAllowedEmailDomainMiddleware,
     validateEmailEditSsnMiddleware,
     asyncHandler(EditTechnician),
   )
@@ -138,6 +144,7 @@ router
     "/admins/:id",
     upload.single("image"),
     validate(editAdminSchema),
+    validateAllowedEmailDomainMiddleware,
     validateEmailEditSsnMiddleware,
     asyncHandler(EditAdmin),
   );

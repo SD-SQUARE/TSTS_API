@@ -71,21 +71,7 @@ export const createRequesterService = async (
     };
   }
 
-  const specsResult = await validateExistingSpecializations(
-    requesterDto.allowedSpecializations
-  );
-
-  if (!specsResult.is_valid) {
-    auditLog
-      .metadata({ errors: specsResult.errors })
-      .step("Invalid specializations");
-
-    return {
-      is_added: false,
-      message: "",
-      errors: specsResult.errors,
-    };
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   // 7) Set user type
   requesterDto.userType = UserType.REQUESTER;
@@ -117,7 +103,7 @@ export const createRequesterService = async (
       email: user.email,
       hasImage: !!imageFile,
       departmentsCount: existingDepartments.length,
-      specializationsCount: requesterDto.allowedSpecializations?.length || 0,
+      specializationsCount: 0,
     })
     .step("User entity created");
 
@@ -153,18 +139,7 @@ export const createRequesterService = async (
   );
   auditLog.step("User permissions assigned");
 
-  // 13) Save allowedSpecializations
-  if (requesterDto.allowedSpecializations?.length > 0) {
-    await allowedSpecializationsRepo.save(
-      requesterDto.allowedSpecializations.map((specId) =>
-        allowedSpecializationsRepo.create({
-          user,
-          specialization: { id: specId } as any,
-        })
-      )
-    );
-    auditLog.step("User specializations assigned");
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   return { is_added: true, message: t("user_created") };
 };
@@ -207,6 +182,7 @@ export const editRequesterService = async (
   const allowedSpecializations = await Promise.resolve(
     userEntity.allowedSpecializations ?? [],
   );
+  const isSelfProfileEdit = req?.user?.id === id;
 
   const oldValues = {
     email: userEntity.email,
@@ -270,26 +246,17 @@ export const editRequesterService = async (
     };
   }
 
-  // 4) Validate allowed specializations
-  const specsResult = await validateExistingSpecializations(
-    requesterDto.allowedSpecializations
-  );
-
-  if (!specsResult.is_valid) {
-    auditLog.step("Invalid specializations");
-
-    return {
-      is_edited: false,
-      message: "",
-      errors: specsResult.errors,
-    };
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   // 5) Force user type
   requesterDto.userType = UserType.REQUESTER;
 
   // 6) Map DTO → partial User and merge into existing entity
   const userData = await mapRequesterToUserEntity(requesterDto);
+  if (isSelfProfileEdit) {
+    delete userData.email;
+    delete userData.password;
+  }
 
   userRepo.merge(userEntity, userData);
   userEntity.university = university;
@@ -332,39 +299,30 @@ export const editRequesterService = async (
   }
 
   // 9.2) UsersPermissions – assume one row per user, so delete & recreate
-  await usersPermissionsRepo.delete({ user: { id: user.id } as any });
+  if (!isSelfProfileEdit) {
+    await usersPermissionsRepo.delete({ user: { id: user.id } as any });
 
-  const profile = permResult.profile!;
-  await usersPermissionsRepo.save(
-    usersPermissionsRepo.create({
-      user,
-      permissionProfile: profile,
-      extraPermissions: requesterDto.extraPermissions,
-      revokedPermissions: requesterDto.revokedPermissions,
-    })
-  );
-
-  // 9.3) AllowedSpecializations – clear then add
-  await allowedSpecializationsRepo.delete({ user: { id: user.id } as any });
-
-  if (requesterDto.allowedSpecializations?.length > 0) {
-    await allowedSpecializationsRepo.save(
-      requesterDto.allowedSpecializations.map((specId) =>
-        allowedSpecializationsRepo.create({
-          user,
-          specialization: { id: specId } as any,
-        })
-      )
+    const profile = permResult.profile!;
+    await usersPermissionsRepo.save(
+      usersPermissionsRepo.create({
+        user,
+        permissionProfile: profile,
+        extraPermissions: requesterDto.extraPermissions,
+        revokedPermissions: requesterDto.revokedPermissions,
+      })
     );
   }
+
+  // 9.3) AllowedSpecializations – clear then add
+  // Specialization assignment is intentionally not editable from user forms.
 
   const newValues = {
     email: user.email,
     university: university?.id,
     domain: domain?.id,
     departments: existingDepartments.map((d) => d.id),
-    permissions: permResult.profile?.id,
-    specializations: requesterDto.allowedSpecializations || [],
+    permissions: isSelfProfileEdit ? oldValues.permissions : permResult.profile?.id,
+    specializations: oldValues.specializations,
     hasImage: !!user.image,
   };
 

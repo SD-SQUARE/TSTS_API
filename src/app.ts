@@ -84,6 +84,9 @@ import knowlegeBaseRouter from "./routes/knowlegeBase.router.js";
 import ProblemRouter from "./routes/problems.router.js";
 import reportRoutes from "./routes/report.router.js";
 import permissionProfileRouter from "./routes/permissionProfile.router.js";
+import siteSettingsRouter from "./routes/siteSettings.router.js";
+import slaRouter from "./routes/sla.router.js";
+import recycleBinRouter from "./routes/recycleBin.router.js";
 
 import logger from "./utils/logger.js";
 // routes
@@ -102,6 +105,7 @@ if (process.env.NODE_ENV === "production") app.use(csrfMiddleware);
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/custom-forms", customFormsRouter);
+app.use("/api/v1/site-settings", siteSettingsRouter);
 
 app.use("/api/v1", authMiddleware);
 
@@ -123,6 +127,8 @@ app.use("/api/v1/specializations", specializationsRouter);
 app.use("/api/v1/knowledge-base", knowlegeBaseRouter);
 app.use("/api/v1/problems", ProblemRouter);
 app.use("/api/v1/permissions/profile", permissionProfileRouter);
+app.use("/api/v1/sla-rules", slaRouter);
+app.use("/api/v1/recycle-bin", recycleBinRouter);
 app.use("/api/v1/tickets", ticketsRouter);
 app.use("/api/v1/reports", reportRoutes);
 

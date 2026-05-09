@@ -15,6 +15,7 @@ import { GetTicketsQuery } from "../../../validation/ticket.schema.js";
 import { logTicketActivity } from "../../tickets.service.js";
 import { Request } from "express";
 import { getManagedGroupSpecializationIds } from "../../groups/group-access.service.js";
+import { getTicketSlaState } from "../../sla.service.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 
@@ -306,11 +307,15 @@ export const getAllTicketsService = async (
       }
     }
 
+    const sla = await getTicketSlaState(ticket, lang);
+
     return {
       id: ticket.id,
       ticket_number: ticket.ticket_number,
       title: ticket.title,
       description: ticket.description,
+      createdAt: ticket.createdAt,
+      modifiedAt: ticket.modifiedAt,
 
       requester: ticket.requester
         ? {
@@ -362,6 +367,7 @@ export const getAllTicketsService = async (
           name: buildLocalizedName(user, lang),
           image: user.image,
         })) || [],
+      sla,
     };
   }));
 
@@ -495,6 +501,8 @@ export const getSingleTicketService = async (
     ticket_number: ticket.ticket_number,
     title: ticket.title,
     description: ticket.description,
+    createdAt: ticket.createdAt,
+    modifiedAt: ticket.modifiedAt,
     requester: ticket.requester
       ? {
           id: ticket.requester.id,
@@ -544,6 +552,7 @@ export const getSingleTicketService = async (
         name: buildLocalizedName(user, lang),
         image: user.image,
       })) || [],
+    sla: await getTicketSlaState(ticket, lang),
   };
 
   auditLog.step("Logging ticket view activity");

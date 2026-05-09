@@ -17,6 +17,8 @@ import {
   getChatMessagesForTicketController,
   getQuickMessagesController,
   createQuickMessageController,
+  updateQuickMessageController,
+  deleteQuickMessageController,
   createTicketReviewController,
   getTicketReviewsController,
   changeTicketStatusController,
@@ -55,6 +57,17 @@ router
     authMiddleware,
     validate(createQuickMessageSchema),
     asyncHandler(createQuickMessageController),
+  )
+  .put(
+    "/quick-messages/:quickMessageId",
+    authMiddleware,
+    validate(createQuickMessageSchema),
+    asyncHandler(updateQuickMessageController),
+  )
+  .delete(
+    "/quick-messages/:quickMessageId",
+    authMiddleware,
+    asyncHandler(deleteQuickMessageController),
   );
 
 router

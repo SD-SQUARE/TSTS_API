@@ -699,6 +699,67 @@ export const createQuickMessageController = async (
   });
 };
 
+export const updateQuickMessageController = async (
+  req: any,
+  res: Response,
+) => {
+  const userId = req.user?.id;
+  const { title_en, title_ar, content_en, content_ar } = req.body;
+
+  const quickMessageRepo = PostgresDataSource.getRepository(TicketQuickMessage);
+  const quickMessage = await quickMessageRepo.findOne({
+    where: { id: req.params.quickMessageId, user: { id: userId } as any } as any,
+  });
+
+  if (!quickMessage) {
+    return res
+      .status(ResponseStatus.NOT_FOUND)
+      .json({ message: req.t ? req.t("quick_message_not_found") : "Quick message not found" });
+  }
+
+  quickMessage.title_en =
+    typeof title_en === "string" && title_en.trim().length > 0
+      ? title_en.trim()
+      : content_en.trim().slice(0, 60);
+  quickMessage.title_ar =
+    typeof title_ar === "string" && title_ar.trim().length > 0
+      ? title_ar.trim()
+      : content_ar.trim().slice(0, 60);
+  quickMessage.content_en = content_en.trim();
+  quickMessage.content_ar = content_ar.trim();
+
+  const savedQuickMessage = await quickMessageRepo.save(quickMessage);
+  return res.status(ResponseStatus.SUCCESS).json({
+    id: savedQuickMessage.id,
+    title_en: savedQuickMessage.title_en,
+    title_ar: savedQuickMessage.title_ar,
+    content_en: savedQuickMessage.content_en,
+    content_ar: savedQuickMessage.content_ar,
+    createdAt: savedQuickMessage.createdAt,
+    updatedAt: savedQuickMessage.updatedAt,
+  });
+};
+
+export const deleteQuickMessageController = async (
+  req: any,
+  res: Response,
+) => {
+  const userId = req.user?.id;
+  const quickMessageRepo = PostgresDataSource.getRepository(TicketQuickMessage);
+  const quickMessage = await quickMessageRepo.findOne({
+    where: { id: req.params.quickMessageId, user: { id: userId } as any } as any,
+  });
+
+  if (!quickMessage) {
+    return res
+      .status(ResponseStatus.NOT_FOUND)
+      .json({ message: req.t ? req.t("quick_message_not_found") : "Quick message not found" });
+  }
+
+  await quickMessageRepo.softRemove(quickMessage);
+  return res.status(ResponseStatus.SUCCESS).json({ is_deleted: true });
+};
+
 export const createTicketReviewController = async (req: any, res: Response) => {
   const ticketId = req.params.id;
   const user = req.user;

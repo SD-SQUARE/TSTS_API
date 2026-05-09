@@ -53,6 +53,17 @@
   "password_must_contain_special_char": "Password must contain at least one special character",
 
   "invalid_ssn": "Invalid Egyptian national ID",
+  "ssn_must_be_14_digits": "SSN must be exactly 14 digits",
+  "email_domain_required": "Email domain is required",
+  "email_domain_not_found": "Allowed email domain not found",
+  "email_domain_not_allowed": "Email domain is not allowed",
+  "email_domain_not_allowed_with_list": "Email domain is not allowed. Allowed domains: {{domains}}",
+  "sla_rule_not_found": "SLA rule not found",
+  "entity_not_found": "Entity not found",
+  "quick_message_not_found": "Quick message not found",
+  "sso_not_configured": "Microsoft SSO is not configured",
+  "sso_email_missing": "Microsoft account did not provide an email address",
+  "sso_user_not_found": "No local account exists for this Microsoft email",
 
   "first_name_en_required": "First name (EN) is required",
   "mid_name_en_required": "Middle name (EN) is required",

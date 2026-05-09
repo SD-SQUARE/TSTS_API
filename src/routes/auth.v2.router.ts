@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { loginV2, getAuthOptions, verifyAuthOptions } from "../controllers/auth.v2.controller.js";
+import { loginV2, getAuthOptions, verifyAuthOptions, loginWithMicrosoft } from "../controllers/auth.v2.controller.js";
 import { forgetPasswordController, verifyOtpController, resetPasswordController, logout } from "../controllers/auth.controller.js";
 import { auditMiddleware } from "../middleware/audit-middleware.js";
 import { webAuthnSessionMiddleware } from "../config/session.js";
@@ -9,6 +9,7 @@ router.use(webAuthnSessionMiddleware);
 // Login
 
 router.post("/login",auditMiddleware, loginV2);
+router.post("/microsoft", auditMiddleware, loginWithMicrosoft);
 router.post("/trusted-device/options", getAuthOptions);
 router.post("/trusted-device/verify", verifyAuthOptions);
 

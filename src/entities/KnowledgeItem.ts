@@ -47,6 +47,7 @@ export class KnowledgeItem extends BaseEntity {
     repo: Repository<KnowledgeItem>,
     options: {
       search?: string;
+      category?: string;
       page?: number;
       limit?: number;
     }
@@ -89,6 +90,13 @@ export class KnowledgeItem extends BaseEntity {
           search: options.search,
           like: `%${options.search}%`,
         }
+      );
+    }
+
+    if (options.category?.trim()) {
+      qb.andWhere(
+        "(item.specialization_en = :category OR item.specialization_ar = :category)",
+        { category: options.category.trim() },
       );
     }
 

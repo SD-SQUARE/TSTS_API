@@ -23,6 +23,8 @@ const userRepo = PostgresDataSource.getRepository(User);
 const specializationRepo = PostgresDataSource.getRepository(Specialization);
 const problemRepo = PostgresDataSource.getRepository(Problem);
 
+const displayName = (entity: { name?: { en?: string; ar?: string } } | null | undefined, fallback: string | null) =>
+  entity?.name?.en || entity?.name?.ar || fallback;
 
 export const applyPrimitiveUpdate = (
   field: string,
@@ -78,6 +80,8 @@ export const handleSpecializationUpdate = async (
 
   const oldId = existingTicket.specialization?.id || null;
   const newId = updateData.specialization || null;
+  const oldName = displayName(existingTicket.specialization as any, oldId);
+  let newName: string | null = null;
 
   // If no change, do nothing (no updates, no changes)
   if (oldId === newId) return null;
@@ -91,11 +95,12 @@ export const handleSpecializationUpdate = async (
       return specializationNotFound("is_edited") as IEditResponse;
 
     updates.specialization = specialization;
+    newName = displayName(specialization, newId);
   } else {
     updates.specialization = null;
   }
 
-  changes.specialization = { oldStatus: oldId, newStatus: newId };
+  changes.specialization = { oldStatus: oldName, newStatus: newName };
 
   return null;
 };
@@ -110,6 +115,8 @@ export const handleProblemUpdate = async (
 
   const oldId = existingTicket.problem?.id || null;
   const newId = updateData.problem || null;
+  const oldName = displayName(existingTicket.problem as any, oldId);
+  let newName: string | null = null;
 
   // If no change, do nothing (no updates, no changes)
   if (oldId === newId) return null;
@@ -123,11 +130,12 @@ export const handleProblemUpdate = async (
       return problemNotFound("is_edited") as IEditResponse;
 
     updates.problem = problem;
+    newName = displayName(problem, newId);
   } else {
     updates.problem = null;
   }
 
-  changes.problem = { oldStatus: oldId, newStatus: newId };
+  changes.problem = { oldStatus: oldName, newStatus: newName };
 
   return null;
 };

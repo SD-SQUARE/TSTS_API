@@ -25,6 +25,26 @@ type KnowledgeBasePayload = {
   content_ar?: string;
 };
 
+export const getKnowledgeBaseCategories = async (req: Request, res: Response) => {
+  const rows = await repo
+    .createQueryBuilder("item")
+    .select("item.specialization_en", "specialization_en")
+    .addSelect("item.specialization_ar", "specialization_ar")
+    .where("item.deletedAt IS NULL")
+    .groupBy("item.specialization_en")
+    .addGroupBy("item.specialization_ar")
+    .orderBy("item.specialization_en", "ASC")
+    .getRawMany();
+
+  return res.status(ResponseStatus.SUCCESS).json({
+    items: rows.map((row) => ({
+      value: row.specialization_en,
+      specialization_en: row.specialization_en,
+      specialization_ar: row.specialization_ar,
+    })),
+  });
+};
+
 const mapKnowledgeAttachment = async (item: any) => ({
   id: item.id,
   fileName: item.name,
@@ -122,6 +142,9 @@ export const getKnowledgeBaseItems = async (req: Request, res: Response) => {
     (req.query.specialization_ar as string | undefined) ||
     (req.query.content_en as string | undefined) ||
     (req.query.content_ar as string | undefined);
+  const category =
+    (req.query.category as string | undefined) ||
+    (req.query.specialization as string | undefined);
   const page = parsePositiveInt(req.query.page);
   const limit =
     parsePositiveInt(req.query.page_size) ||
@@ -130,9 +153,14 @@ export const getKnowledgeBaseItems = async (req: Request, res: Response) => {
   const auditLog = audit(req)
     .summary("Fetch knowledge base items")
     .action(AuditAction.GET_KNOWLEDGE_ITEMS)
-    .metadata({ search, page, limit });
+    .metadata({ search, category, page, limit });
 
-  const result = await KnowledgeItem.paginateAndSearch(repo, { search, page, limit });
+  const result = await KnowledgeItem.paginateAndSearch(repo, {
+    search,
+    category,
+    page,
+    limit,
+  });
   const attachmentsMap = await loadKnowledgeAttachments(
     result.items.map((item) => item.id),
   );
@@ -146,7 +174,7 @@ export const getKnowledgeBaseItems = async (req: Request, res: Response) => {
 
   logger.info(
     "[server][knowledgebase][controller] getKnowledgeItems request processed",
-    { search, page, limit },
+    { search, category, page, limit },
   );
   return res.status(ResponseStatus.SUCCESS).json({
     ...result,

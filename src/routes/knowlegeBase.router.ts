@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createKnowledgeBaseItem,
   deleteKnowledgeBaseItem,
+  getKnowledgeBaseCategories,
   getKnowledgeBaseItemById,
   getKnowledgeBaseItems,
   updateKnowledgeBaseItem,
@@ -21,6 +22,7 @@ import {
 
 const knowlegeBaseRouter = Router();
 knowlegeBaseRouter.get("/", getKnowledgeBaseItems);
+knowlegeBaseRouter.get("/categories", getKnowledgeBaseCategories);
 knowlegeBaseRouter.post("/", createKnowledgeBaseItem);
 knowlegeBaseRouter.get(
   "/generator/reports",
