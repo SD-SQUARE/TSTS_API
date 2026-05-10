@@ -33,7 +33,7 @@ export const editAdminSchema = (t: Request["t"]) =>
         { message: t("image_must_be_under_1mb") },
       ),
 
-    email: z.string().email({ message: t("invalid_mail") }),
+    email: z.string().email({ message: t("invalid_mail") }).optional(),
 
     // English names
     first_name_en: z
@@ -145,7 +145,8 @@ export const editAdminSchema = (t: Request["t"]) =>
 
     permission_profile: z
       .string()
-      .uuid({ message: t("permission_profile_required") }),
+      .uuid({ message: t("permission_profile_required") })
+      .optional(),
 
     extra_permissions: z.preprocess(
       (val) => {

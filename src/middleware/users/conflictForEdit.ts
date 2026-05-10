@@ -26,6 +26,12 @@ export const validateEmailEditSsnMiddleware = async (
 
       return res.status(400).json(response);
     }
+
+    // Skip validation if both email and ssn are not provided
+    if (!email || !ssn) {
+      return next();
+    }
+
     const conflictMessage = await validateEmailAndSsnForEdit(id, email, ssn);
 
     if (conflictMessage) {
