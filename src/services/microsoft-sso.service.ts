@@ -54,25 +54,41 @@ export const loginWithMicrosoftSso = async (idToken: string, t: any) => {
     throw new AppError(t("sso_not_configured"), 500);
   }
 
-  const claims = await verifyMicrosoftIdToken(idToken);
+  let claims;
+  try {
+    claims = await verifyMicrosoftIdToken(idToken);
+  } catch (error) {
+    console.error("[SSO] Token verification failed:", error);
+    throw new AppError(t("sso_token_invalid"), 401);
+  }
+
   const email = (claims.email || claims.preferred_username || "").toLowerCase();
 
   if (!email) {
     throw new AppError(t("sso_email_missing"), 400);
   }
 
-  if (!(await isEmailAllowedByDomainSettings(email))) {
-    throw new AppError(t("email_domain_not_allowed"), 400);
+  console.log(`[SSO] Attempting login for email: ${email}`);
+
+  // Check if email domain is allowed
+  const domainAllowed = await isEmailAllowedByDomainSettings(email);
+  if (!domainAllowed) {
+    console.warn(`[SSO] Email domain not allowed: ${email}`);
+    throw new AppError(t("email_domain_not_allowed"), 403);
   }
 
+  // Find user in database
   const user = await userRepo.findOne({
     where: { email: ILike(email), deletedAt: IsNull() } as any,
     relations: ["usersPermissions", "userDepartments"],
   });
 
   if (!user) {
+    console.warn(`[SSO] User not found in database: ${email}`);
     throw new AppError(t("sso_user_not_found"), 403);
   }
+
+  console.log(`[SSO] User found: ${user.id}, generating tokens...`);
 
   const permissions = await getEffectivePermissionKeysForUser(user.id);
   const payload = {
@@ -93,6 +109,8 @@ export const loginWithMicrosoftSso = async (idToken: string, t: any) => {
     cacheTokens(user.id, refreshToken, generateCsrfToken()),
     setStatusActive(user.id),
   ]);
+
+  console.log(`[SSO] Login successful for user: ${user.id}`);
 
   return {
     accessToken,
