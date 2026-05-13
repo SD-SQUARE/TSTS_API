@@ -3,6 +3,7 @@ import { PostgresDataSource } from '../database/postgres-data-source.js';
 import { redisClient } from '../database/redis.js';
 import { redisKeys } from '../utils/redisKeys.js';
 import { User } from '../entities/User.js';
+import { UsersPermissions } from '../entities/UsersPermissions.js';
 import { UserStatus } from '../enums/UserStatus.enum.js';
 import { AppError } from '../utils/AppError.js';
 import { generateToken, verifyToken } from '../utils/jwt.js';
@@ -28,13 +29,14 @@ const RESET_TOKEN_EXPIRE = 10 * 60;
 const RESET_TOKEN_PREFIX = 'reset_token:';
 
 const userRepo = PostgresDataSource.getRepository(User);
+const usersPermissionsRepo = PostgresDataSource.getRepository(UsersPermissions);
 
 // Types
 interface LoginResult {
   accessToken: string;
   refreshToken: string;
   email: string;
-  permissions: any[];
+  permissions: string[];
 }
 
 interface UserPayload {
@@ -47,7 +49,59 @@ interface UserPayload {
   email: string;
   role: string;
   permission_profile: any;
+  permissions?: string[];
 }
+
+const resolveMaybeLazy = async <T>(value: T | Promise<T> | undefined | null) =>
+  value ? await Promise.resolve(value) : null;
+
+export const getEffectivePermissionKeysForUser = async (
+  userId: string,
+): Promise<string[]> => {
+  const assignments = await usersPermissionsRepo.find({
+    where: { user: { id: userId } as any } as any,
+    relations: [
+      "permissionProfile",
+      "permissionProfile.permissions",
+      "permissions",
+      "extraPermissions",
+      "revokedPermissions",
+    ],
+  } as any);
+
+  const keys = new Set<string>();
+
+  for (const assignment of assignments) {
+    const profile = await resolveMaybeLazy<any>(assignment.permissionProfile);
+    const profilePermissions = profile
+      ? ((await resolveMaybeLazy<any[]>(profile.permissions)) || [])
+      : [];
+    const activatedPermissions =
+      (await resolveMaybeLazy<any[]>(assignment.permissions)) || [];
+    const extraPermissions =
+      (await resolveMaybeLazy<any[]>(assignment.extraPermissions)) || [];
+    const revokedPermissions =
+      (await resolveMaybeLazy<any[]>(assignment.revokedPermissions)) || [];
+
+    const basePermissions = activatedPermissions.length
+      ? activatedPermissions
+      : profilePermissions;
+
+    [...basePermissions, ...extraPermissions].forEach((permission) => {
+      if (permission?.key) {
+        keys.add(permission.key);
+      }
+    });
+
+    revokedPermissions.forEach((permission) => {
+      if (permission?.key) {
+        keys.delete(permission.key);
+      }
+    });
+  }
+
+  return Array.from(keys).sort();
+};
 
 export const loginUser = async (
   email: string,
@@ -109,6 +163,8 @@ export const loginUser = async (
   await resetAttempts(email);
   logger.info(`[server][auth] Reset failed attempts for ${email}`);
 
+  const permissions = await getEffectivePermissionKeysForUser(user.id);
+
   // Token payload
   const userPayload: UserPayload = {
     name: {
@@ -120,6 +176,7 @@ export const loginUser = async (
     email: user.email,
     role: user.user_type,
     permission_profile: user.usersPermissions,
+    permissions,
   };
 
   logger.info(`[server][auth] Generating tokens for user ${user.id}`);
@@ -145,7 +202,7 @@ export const loginUser = async (
     accessToken,
     refreshToken,
     email: user.email,
-    permissions: user.userDepartments || [],
+    permissions,
   };
 };
 

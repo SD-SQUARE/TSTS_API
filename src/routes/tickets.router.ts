@@ -22,6 +22,7 @@ import {
   createTicketReviewController,
   getTicketReviewsController,
   changeTicketStatusController,
+  getTicketAnalyticsController,
 } from "../controllers/tickets.controller.js";
 import {
   getTicketFinalReportController,
@@ -69,6 +70,12 @@ router
     authMiddleware,
     asyncHandler(deleteQuickMessageController),
   );
+
+router.get(
+  "/analytics",
+  authMiddleware,
+  asyncHandler(getTicketAnalyticsController),
+);
 
 router
   .post(

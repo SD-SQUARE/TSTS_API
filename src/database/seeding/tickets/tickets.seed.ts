@@ -34,6 +34,30 @@ function getRandomSubset<T>(arr: T[], maxCount: number): T[] {
   return shuffled.slice(0, count);
 }
 
+const getSeedTicketTimeline = (index: number, status: TicketStatus) => {
+  const now = Date.now();
+  const createdAt = new Date(
+    now - ((index + 1) * 6 * 60 + (index % 11) * 13) * 60 * 1000,
+  );
+  const terminalStatus =
+    status === TicketStatus.CLOSED || status === TicketStatus.RESOLVED;
+  const elapsedMinutes = terminalStatus
+    ? 90 + (index % 16) * 45
+    : 15 + (index % 8) * 20;
+  const intendedModifiedAt = new Date(
+    createdAt.getTime() + elapsedMinutes * 60 * 1000,
+  );
+  const latestAllowedModifiedAt = new Date(now - (index % 5) * 60 * 1000);
+
+  return {
+    createdAt,
+    modifiedAt:
+      intendedModifiedAt.getTime() > latestAllowedModifiedAt.getTime()
+        ? latestAllowedModifiedAt
+        : intendedModifiedAt,
+  };
+};
+
 export async function seedTickets(
   dataSource: DataSource,
   count = 50,
@@ -152,6 +176,11 @@ export async function seedTickets(
         }
       }
 
+      const { createdAt, modifiedAt } = getSeedTicketTimeline(
+        j,
+        template.status,
+      );
+
       // Create ticket using save instead of insert to handle relations properly
       const ticket = ticketRepo.create({
         title: template.title,
@@ -166,9 +195,15 @@ export async function seedTickets(
         assigneeList: assignees,
         isOutOfService: false,
         closeCount: template.status === TicketStatus.CLOSED ? 1 : 0,
+        createdAt,
+        modifiedAt,
       });
 
-      await ticketRepo.save(ticket);
+      const savedTicket = await ticketRepo.save(ticket);
+      await ticketRepo.query(
+        `UPDATE tickets SET "createdAt" = $1, "modifiedAt" = $2 WHERE id = $3`,
+        [createdAt, modifiedAt, savedTicket.id],
+      );
 
       console.log(
         `✅ [TicketsSeed] Created ticket: ${template.title} (${template.status}) - Assigned: ${assignees.length}`,

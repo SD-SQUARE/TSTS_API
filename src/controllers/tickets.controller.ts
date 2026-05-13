@@ -35,6 +35,7 @@ import { AuditAction } from "../enums/AuditAction.enum.js";
 import {
   getAllTicketsService,
   getSingleTicketService,
+  getTicketAnalyticsService,
 } from "../services/tickets/Query/get-tickets.service.js";
 import { Lang } from "../types/lang.types.js";
 import { PostgresDataSource } from "../database/postgres-data-source.js";
@@ -66,6 +67,18 @@ export const getAllTicketsController = async (req: Request, res: Response) => {
   const user = (req as any).user;
 
   const result = await getAllTicketsService(req.query, lang, user, req);
+
+  return res.status(200).json(result);
+};
+
+export const getTicketAnalyticsController = async (
+  req: Request,
+  res: Response,
+) => {
+  const lang = (req.language || "en") as Lang;
+  const user = (req as any).user;
+
+  const result = await getTicketAnalyticsService(lang, user);
 
   return res.status(200).json(result);
 };

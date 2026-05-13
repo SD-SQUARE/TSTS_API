@@ -18,6 +18,7 @@ import { IEditResponse } from "../../../interfaces/response/IEditResponse.js";
 import { UserData } from "../../../types/UserData.js";
 import { Request } from "express";
 import { audit } from "../../../helpers/auditBuilder.js";
+import { invalidateTicketAnalyticsCache } from "../ticket-cache.service.js";
 
 // todo  Emit WebSocket event
 export const editTicketForAdminAndTechniciansService = async (
@@ -139,6 +140,7 @@ export const editTicketForAdminAndTechniciansService = async (
   auditLog.step("Saving ticket updates");
 
   const updatedTicket = await saveTicketUpdates(existingTicket, updates);
+  await invalidateTicketAnalyticsCache();
 
   logger.info("[server][tickets] editTicket | ticket updated", {
     ticketId: updatedTicket.id,

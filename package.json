@@ -19,7 +19,8 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run build:assets",
+    "build:assets": "node scripts/copy-seed-assets.mjs",
     "dev": "tsx watch src/index.ts",
     "start": "run-s db:start dev",
     "typeorm": "node ./scripts/typeorm.mjs",
@@ -44,9 +45,11 @@
     "seed": "tsx src/database/seeding/index.ts",
     "seed:system": "node dist/database/seeding/system.seeding.js",
     "seed:local": "tsx src/database/seeding/seed-local.ts",
+    "seed:sys-data": "tsx src/database/seeding/sys-data.seed.ts",
     "seed-reports": "tsx src/database/seeding/reports/reports.seed.ts",
     "sp:seed": "tsx src/database/stored-procedures/seed-sp.ts",
     "seed:prod": "node dist/database/seeding/index.js",
+    "seed:sys-data:prod": "node dist/database/seeding/sys-data.seed.js",
     "seed-reports:prod": "node dist/database/seeding/reports/reports.seed.js",
     "sp:seed:prod": "node dist/database/stored-procedures/seed-sp.js",
     "test": "jest --runInBand",

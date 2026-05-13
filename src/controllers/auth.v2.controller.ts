@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 
-import { loginUser, findByEmail, generateAuthTokens } from "../services/auth.service.js";
+import {
+  loginUser,
+  findByEmail,
+  generateAuthTokens,
+  getEffectivePermissionKeysForUser,
+} from "../services/auth.service.js";
 import { generateAuthenticationOptions,verifyAuthenticationResponse } from "@simplewebauthn/server";
 import { AppError } from "../utils/AppError.js";
 import { PostgresDataSource } from "../database/postgres-data-source.js";
@@ -57,7 +62,7 @@ export const loginV2 = async (req: Request, res: Response) => {
 
   audit(req).resource('USER', user.id).step('user found');
 
-  await loginUser(email, password, req);
+  const loginResult = await loginUser(email, password, req);
 
   const devicesCount = await deviceRepo.count({
     where: { user: { id: user.id }, isActive: true },
@@ -74,6 +79,7 @@ export const loginV2 = async (req: Request, res: Response) => {
       email: user.email,
       role: user.user_type,
       permission_profile: user.usersPermissions,
+      permissions: loginResult.permissions,
       name: {
         first: user.firstName,
         mid: user.midName,
@@ -81,14 +87,13 @@ export const loginV2 = async (req: Request, res: Response) => {
       },
     };
     (req as any).user = payload;
-    const { accessToken, refreshToken } = generateAuthTokens(payload);
 
     audit(req)
       .step('tokens generated')
       .summary('User logged in without trusted device')
       .metadata({ loginMethod: 'password_only' });
 
-    res.cookie("refresh_token", refreshToken, {
+    res.cookie("refresh_token", loginResult.refreshToken, {
       httpOnly: true,
       sameSite: "strict",
       secure: process.env.NODE_ENV === "production",
@@ -96,8 +101,8 @@ export const loginV2 = async (req: Request, res: Response) => {
 
     return res.json({
       step: "LOGGED_IN_NO_DEVICE",
-      access_token: accessToken,
-      permissions: user.userDepartments || [],
+      access_token: loginResult.accessToken,
+      permissions: loginResult.permissions,
     });
   }
 
@@ -230,11 +235,13 @@ export const verifyAuthOptions = async (req: any, res: any) => {
   audit(req).step("device counter updated");
 
   // ✅ Issue tokens
+  const permissions = await getEffectivePermissionKeysForUser(device.user.id);
   const payload = {
     id: device.user.id,
     email: device.user.email,
     role: device.user.user_type,
     permission_profile: device.user.usersPermissions,
+    permissions,
     name: {
       first: device.user.firstName,
       mid: device.user.midName,
@@ -261,6 +268,6 @@ export const verifyAuthOptions = async (req: any, res: any) => {
 
   return res.json({
     access_token: accessToken,
-    permissions: device.user.userDepartments || [],
+    permissions,
   });
 };

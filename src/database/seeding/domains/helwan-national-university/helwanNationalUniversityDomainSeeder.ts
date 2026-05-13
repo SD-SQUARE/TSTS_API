@@ -1,8 +1,7 @@
 import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { Domain, University, Department } from "../../../../entities/index.js";
 import { DataSource } from "typeorm";
+import { resolveSeedDataFile } from "../../utils/seedFilePaths.js";
 
 type HNUDomainJsonItem = {
   name_ar: string;
@@ -11,13 +10,12 @@ type HNUDomainJsonItem = {
 
 const HNU_UNIVERSITY_EN_NAME = "Helwan National University";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const JSON_PATH = path.join(
-  __dirname,
-  "helwan-national-university-domains.json",
-);
+const getJsonPath = () =>
+  resolveSeedDataFile(
+    import.meta.url,
+    ["domains", "helwan-national-university"],
+    "helwan-national-university-domains.json",
+  );
 
 function normalizeName(s: string) {
   return s.trim().replace(/\s+/g, " ");
@@ -33,11 +31,12 @@ export async function seedHelwanNationalUniversityDomains(
   console.log("🌱 Starting HNU University domains + departments seeding...");
 
   // 1) Load JSON file
-  if (!fs.existsSync(JSON_PATH)) {
-    throw new Error(`Domains JSON file not found at: ${JSON_PATH}`);
+  const jsonPath = getJsonPath();
+  if (!fs.existsSync(jsonPath)) {
+    throw new Error(`Domains JSON file not found at: ${jsonPath}`);
   }
 
-  const raw = fs.readFileSync(JSON_PATH, "utf-8");
+  const raw = fs.readFileSync(jsonPath, "utf-8");
   const items = JSON.parse(raw) as HNUDomainJsonItem[];
 
   if (!Array.isArray(items) || items.length === 0) {

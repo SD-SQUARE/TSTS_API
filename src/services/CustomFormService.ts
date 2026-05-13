@@ -31,16 +31,67 @@ export class CustomFormService {
     return maxLength ? trimmed.slice(0, maxLength) : trimmed;
   }
 
-  private static normalizeFormSettings(settings: any = {}) {
+  private static normalizeLocalizedPair(
+    source: any,
+    baseKey: string,
+    maxLength: number,
+    fallback?: string,
+  ) {
+    const legacy = this.normalizeOptionalString(source?.[baseKey], maxLength);
+    const en =
+      this.normalizeOptionalString(source?.[`${baseKey}_en`], maxLength) ||
+      legacy ||
+      this.normalizeOptionalString(source?.[`${baseKey}_ar`], maxLength) ||
+      fallback ||
+      "";
+    const ar =
+      this.normalizeOptionalString(source?.[`${baseKey}_ar`], maxLength) ||
+      legacy ||
+      en ||
+      fallback ||
+      "";
+
     return {
-      submitLabel:
-        this.normalizeOptionalString(settings?.submitLabel, 80) || "Submit",
-      successTitle:
-        this.normalizeOptionalString(settings?.successTitle, 120) ||
-        "Response received",
-      successDescription:
-        this.normalizeOptionalString(settings?.successDescription, 280) ||
-        "Thanks for filling out this form.",
+      en,
+      ar,
+      value: en || ar || legacy || fallback || "",
+    };
+  }
+
+  private static normalizeFormSettings(settings: any = {}) {
+    const submitLabel = this.normalizeLocalizedPair(
+      settings,
+      "submitLabel",
+      80,
+      "Submit",
+    );
+    const successTitle = this.normalizeLocalizedPair(
+      settings,
+      "successTitle",
+      120,
+      "Response received",
+    );
+    const successDescription = this.normalizeLocalizedPair(
+      settings,
+      "successDescription",
+      280,
+      "Thanks for filling out this form.",
+    );
+
+    return {
+      title_en: this.normalizeOptionalString(settings?.title_en, 255),
+      title_ar: this.normalizeOptionalString(settings?.title_ar, 255),
+      description_en: this.normalizeOptionalString(settings?.description_en, 2000),
+      description_ar: this.normalizeOptionalString(settings?.description_ar, 2000),
+      submitLabel: submitLabel.value,
+      submitLabel_en: submitLabel.en,
+      submitLabel_ar: submitLabel.ar,
+      successTitle: successTitle.value,
+      successTitle_en: successTitle.en,
+      successTitle_ar: successTitle.ar,
+      successDescription: successDescription.value,
+      successDescription_en: successDescription.en,
+      successDescription_ar: successDescription.ar,
     };
   }
 
@@ -57,39 +108,68 @@ export class CustomFormService {
         ? rawOptions
             .map((option: any, optionIndex: number) => {
               if (typeof option === "string") {
-                const label = this.normalizeOptionalString(option, 255);
-                if (!label) return null;
+              const label = this.normalizeOptionalString(option, 255);
+              if (!label) return null;
 
-                return {
-                  id: `${fieldId}_option_${optionIndex + 1}`,
-                  label,
-                };
-              }
+              return {
+                id: `${fieldId}_option_${optionIndex + 1}`,
+                label,
+                label_en: label,
+                label_ar: label,
+              };
+            }
 
-              const label = this.normalizeOptionalString(
-                option?.label ?? option?.value,
+              const labelPair = this.normalizeLocalizedPair(
+                {
+                  label: option?.label ?? option?.value,
+                  label_en: option?.label_en,
+                  label_ar: option?.label_ar,
+                },
+                "label",
                 255,
               );
-              if (!label) return null;
+              if (!labelPair.value) return null;
 
               return {
                 id:
                   this.normalizeOptionalString(option?.id, 100) ||
                   `${fieldId}_option_${optionIndex + 1}`,
-                label,
+                label: labelPair.value,
+                label_en: labelPair.en,
+                label_ar: labelPair.ar,
               };
             })
             .filter(Boolean)
         : [];
+      const labelPair = this.normalizeLocalizedPair(
+        field,
+        "label",
+        255,
+        `Question ${index + 1}`,
+      );
+      const descriptionPair = this.normalizeLocalizedPair(
+        field,
+        "description",
+        1000,
+      );
+      const placeholderPair = this.normalizeLocalizedPair(
+        field,
+        "placeholder",
+        255,
+      );
 
       return {
         id: fieldId,
         type: fieldType,
-        label:
-          this.normalizeOptionalString(field?.label, 255) ||
-          `Question ${index + 1}`,
-        description: this.normalizeOptionalString(field?.description, 1000),
-        placeholder: this.normalizeOptionalString(field?.placeholder, 255),
+        label: labelPair.value,
+        label_en: labelPair.en,
+        label_ar: labelPair.ar,
+        description: descriptionPair.value || null,
+        description_en: descriptionPair.en || null,
+        description_ar: descriptionPair.ar || null,
+        placeholder: placeholderPair.value || null,
+        placeholder_en: placeholderPair.en || null,
+        placeholder_ar: placeholderPair.ar || null,
         required: Boolean(field?.required),
         options,
         settings: {
@@ -146,12 +226,18 @@ export class CustomFormService {
   }
 
   private static serializeForm(form: CustomForm) {
+    const settings = this.normalizeFormSettings(form.settings);
+
     return {
       id: form.id,
       title: form.title,
+      title_en: settings.title_en || form.title,
+      title_ar: settings.title_ar || form.title,
       description: form.description || "",
+      description_en: settings.description_en || form.description || "",
+      description_ar: settings.description_ar || form.description || "",
       fields: this.normalizeFields(form.fields),
-      settings: this.normalizeFormSettings(form.settings),
+      settings,
       isGlobal: Boolean(form.isGlobal),
       ticketId: form.ticketId || null,
       token: form.token,
@@ -432,12 +518,20 @@ export class CustomFormService {
 
   static async createForm(data: any, creator: any) {
     const ticket = await this.ensureTicketExists(data.ticketId || null);
+    const title = this.normalizeLocalizedPair(data, "title", 255, "Untitled form");
+    const description = this.normalizeLocalizedPair(data, "description", 2000);
 
     const form = customFormRepo.create({
-      title: data.title.trim(),
-      description: this.normalizeOptionalString(data.description, 2000),
+      title: title.value,
+      description: description.value || null,
       fields: this.normalizeFields(data.fields),
-      settings: this.normalizeFormSettings(data.settings),
+      settings: this.normalizeFormSettings({
+        ...(data.settings || {}),
+        title_en: title.en,
+        title_ar: title.ar,
+        description_en: description.en,
+        description_ar: description.ar,
+      }),
       isGlobal: Boolean(data.isGlobal) && !ticket,
       ticketId: ticket?.id || null,
       ticket: ticket || null,
@@ -493,21 +587,55 @@ export class CustomFormService {
         ? await this.ensureTicketExists(data.ticketId || null)
         : form.ticket || null;
 
-    if (data.title !== undefined) {
-      form.title = data.title.trim();
+    const nextSettings = {
+      ...(form.settings || {}),
+      ...(data.settings || {}),
+    };
+
+    if (
+      data.title !== undefined ||
+      data.title_en !== undefined ||
+      data.title_ar !== undefined
+    ) {
+      const title = this.normalizeLocalizedPair(
+        {
+          title: data.title ?? form.title,
+          title_en: data.title_en ?? form.settings?.title_en,
+          title_ar: data.title_ar ?? form.settings?.title_ar,
+        },
+        "title",
+        255,
+        form.title || "Untitled form",
+      );
+      form.title = title.value;
+      nextSettings.title_en = title.en;
+      nextSettings.title_ar = title.ar;
     }
 
-    if (data.description !== undefined) {
-      form.description = this.normalizeOptionalString(data.description, 2000);
+    if (
+      data.description !== undefined ||
+      data.description_en !== undefined ||
+      data.description_ar !== undefined
+    ) {
+      const description = this.normalizeLocalizedPair(
+        {
+          description: data.description ?? form.description,
+          description_en: data.description_en ?? form.settings?.description_en,
+          description_ar: data.description_ar ?? form.settings?.description_ar,
+        },
+        "description",
+        2000,
+      );
+      form.description = description.value || null;
+      nextSettings.description_en = description.en;
+      nextSettings.description_ar = description.ar;
     }
 
     if (data.fields !== undefined) {
       form.fields = this.normalizeFields(data.fields);
     }
 
-    if (data.settings !== undefined) {
-      form.settings = this.normalizeFormSettings(data.settings);
-    }
+    form.settings = this.normalizeFormSettings(nextSettings);
 
     if (data.isGlobal !== undefined) {
       form.isGlobal = Boolean(data.isGlobal) && !ticket;
@@ -543,7 +671,11 @@ export class CustomFormService {
       title: data.title?.trim() || sourceForm.title,
       description: sourceForm.description || null,
       fields: this.normalizeFields(sourceForm.fields),
-      settings: this.normalizeFormSettings(sourceForm.settings),
+      settings: this.normalizeFormSettings({
+        ...sourceForm.settings,
+        title_en: data.title?.trim() || sourceForm.settings?.title_en,
+        title_ar: data.title?.trim() || sourceForm.settings?.title_ar,
+      }),
       isGlobal: false,
       ticketId: ticket?.id || null,
       ticket: ticket || null,
@@ -584,7 +716,11 @@ export class CustomFormService {
     return {
       id: form.id,
       title: form.title,
+      title_en: form.settings?.title_en || form.title,
+      title_ar: form.settings?.title_ar || form.title,
       description: form.description || "",
+      description_en: form.settings?.description_en || form.description || "",
+      description_ar: form.settings?.description_ar || form.description || "",
       fields: this.normalizeFields(form.fields),
       settings: this.normalizeFormSettings(form.settings),
       ticketId: form.ticketId || null,

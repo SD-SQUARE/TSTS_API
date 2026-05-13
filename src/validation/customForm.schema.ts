@@ -17,9 +17,22 @@ const choiceFieldTypes = new Set([
   "multiple_choice",
 ]);
 
+const hasText = (value?: string | null) =>
+  typeof value === "string" && value.trim().length > 0;
+
 const optionSchema = z.object({
   id: z.string().trim().min(1).max(100).optional(),
-  label: z.string().trim().min(1).max(255),
+  label: z.string().trim().max(255).optional(),
+  label_en: z.string().trim().max(255).nullish(),
+  label_ar: z.string().trim().max(255).nullish(),
+}).superRefine((option, ctx) => {
+  if (!hasText(option.label) && !hasText(option.label_en) && !hasText(option.label_ar)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["label"],
+      message: "Option label is required in English or Arabic",
+    });
+  }
 });
 
 const fieldSettingsSchema = z
@@ -36,15 +49,29 @@ const fieldSchema = z
   .object({
     id: z.string().trim().min(1).max(100),
     type: z.enum(CUSTOM_FORM_FIELD_TYPES),
-    label: z.string().trim().min(1).max(255),
+    label: z.string().trim().max(255).optional(),
+    label_en: z.string().trim().max(255).nullish(),
+    label_ar: z.string().trim().max(255).nullish(),
     description: z.string().trim().max(1000).nullish(),
+    description_en: z.string().trim().max(1000).nullish(),
+    description_ar: z.string().trim().max(1000).nullish(),
     placeholder: z.string().trim().max(255).nullish(),
+    placeholder_en: z.string().trim().max(255).nullish(),
+    placeholder_ar: z.string().trim().max(255).nullish(),
     required: z.coerce.boolean().optional().default(false),
     options: z.array(optionSchema).optional().default([]),
     settings: fieldSettingsSchema,
   })
   .superRefine((field, ctx) => {
     const hasChoices = choiceFieldTypes.has(field.type);
+
+    if (!hasText(field.label) && !hasText(field.label_en) && !hasText(field.label_ar)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["label"],
+        message: "Question label is required in English or Arabic",
+      });
+    }
 
     if (hasChoices && field.options.length < 2) {
       ctx.addIssue({
@@ -92,22 +119,40 @@ const fieldSchema = z
 const formSettingsSchema = z
   .object({
     submitLabel: z.string().trim().min(1).max(80).optional(),
+    submitLabel_en: z.string().trim().max(80).nullish(),
+    submitLabel_ar: z.string().trim().max(80).nullish(),
     successTitle: z.string().trim().min(1).max(120).optional(),
+    successTitle_en: z.string().trim().max(120).nullish(),
+    successTitle_ar: z.string().trim().max(120).nullish(),
     successDescription: z.string().trim().min(1).max(280).optional(),
+    successDescription_en: z.string().trim().max(280).nullish(),
+    successDescription_ar: z.string().trim().max(280).nullish(),
   })
   .partial()
   .optional();
 
 const baseFormSchema = z
   .object({
-    title: z.string().trim().min(3).max(255),
+    title: z.string().trim().max(255).optional(),
+    title_en: z.string().trim().max(255).nullish(),
+    title_ar: z.string().trim().max(255).nullish(),
     description: z.string().trim().max(2000).nullish(),
+    description_en: z.string().trim().max(2000).nullish(),
+    description_ar: z.string().trim().max(2000).nullish(),
     fields: z.array(fieldSchema).min(1).max(100),
     settings: formSettingsSchema,
     isGlobal: z.coerce.boolean().optional().default(false),
     ticketId: z.string().uuid().nullish(),
   })
   .superRefine((value, ctx) => {
+    if (!hasText(value.title) && !hasText(value.title_en) && !hasText(value.title_ar)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["title"],
+        message: "Form title is required in English or Arabic",
+      });
+    }
+
     if (value.isGlobal && value.ticketId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

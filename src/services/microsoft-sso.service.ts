@@ -7,6 +7,7 @@ import {
   cacheTokens,
   generateAuthTokens,
   generateCsrfToken,
+  getEffectivePermissionKeysForUser,
   setStatusActive,
 } from "./auth.service.js";
 import { AppError } from "../utils/AppError.js";
@@ -73,11 +74,13 @@ export const loginWithMicrosoftSso = async (idToken: string, t: any) => {
     throw new AppError(t("sso_user_not_found"), 403);
   }
 
+  const permissions = await getEffectivePermissionKeysForUser(user.id);
   const payload = {
     id: user.id,
     email: user.email,
     role: user.user_type,
     permission_profile: user.usersPermissions,
+    permissions,
     name: {
       first: user.firstName,
       mid: user.midName,
@@ -94,6 +97,6 @@ export const loginWithMicrosoftSso = async (idToken: string, t: any) => {
   return {
     accessToken,
     refreshToken,
-    permissions: user.userDepartments || [],
+    permissions,
   };
 };

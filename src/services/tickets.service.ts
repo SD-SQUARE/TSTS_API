@@ -24,6 +24,7 @@ import { Group } from "../entities/Group.js";
 import { Request } from "express";
 import { audit } from "../helpers/auditBuilder.js";
 import { AuditAction } from "../enums/AuditAction.enum.js";
+import { invalidateTicketAnalyticsCache } from "./tickets/ticket-cache.service.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 const userRepo = PostgresDataSource.getRepository(User);
@@ -239,6 +240,7 @@ export const createTicket = async (dto, files, req?: Request) => {
   });
 
   const savedTicket = await ticketRepo.save(ticket);
+  await invalidateTicketAnalyticsCache();
 
   auditLog.step("Ticket created").metadata({
     ticketId: savedTicket.id,
@@ -570,6 +572,7 @@ export const createTicketReviewService = async (
     ticket.closeCount = closeCycle;
 
     await ticketRepo.save(ticket);
+    await invalidateTicketAnalyticsCache();
 
     logger.info("[server][tickets][review] ticket resolved successfully", {
       ticketId,
@@ -694,20 +697,21 @@ export const getTicketReviewsService = async (
     (assignee) => assignee.id === user.id,
   );
 
-  const isAllowed = user.role === UserType.ADMIN || isRequester || isAssignee;
+  const isAdmin = user.role === UserType.ADMIN || user.role === UserType.SUPER_ADMIN;
+  const isAllowed = isAdmin || isRequester || isAssignee;
 
   if (!isAllowed) {
     logger.warn("[server][tickets][review] forbidden access attempt", {
       ticketId,
       requestedBy: user.id,
-      isAdmin: user.role === UserType.ADMIN,
+      isAdmin,
       isRequester,
       isAssignee,
     });
 
     auditLog?.step("Forbidden access attempt").metadata({
       attemptedBy: user.id,
-      isAdmin: user.role === UserType.ADMIN,
+      isAdmin,
       isRequester,
       isAssignee,
     });
@@ -843,7 +847,7 @@ export const changeTicketStatusService = async (
     (assignee) => assignee.id === user.id,
   );
 
-  const isAdmin = user.role === UserType.ADMIN;
+  const isAdmin = user.role === UserType.ADMIN || user.role === UserType.SUPER_ADMIN;
   // FIXME: Requester should be able to change status to re_open and
   // also if specialization or problem has review_required set to true  let requester change status to closed
 
@@ -864,7 +868,7 @@ export const changeTicketStatusService = async (
     logger.warn("[server][tickets] forbidden status change attempt", {
       ticketId,
       requestedBy: user.id,
-      isAdmin: user.role === UserType.ADMIN,
+      isAdmin,
       isAssignee,
     });
 
@@ -922,6 +926,7 @@ export const changeTicketStatusService = async (
 
   ticket.status = newStatus;
   await ticketRepo.save(ticket);
+  await invalidateTicketAnalyticsCache();
 
   auditLog
     ?.step("Ticket status updated")

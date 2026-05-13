@@ -7,6 +7,7 @@ import { logTicketActivity } from "../tickets.service.js";
 import { TicketActivityType } from "../../enums/TicketActivity.enum.js";
 import { Request } from "express";
 import { audit } from "../../helpers/auditBuilder.js";
+import { invalidateTicketAnalyticsCache } from "./ticket-cache.service.js";
 
 // todo  Emit WebSocket event `ticket:update` type `deleted`.
 export const deleteTicketService = async (
@@ -32,6 +33,7 @@ export const deleteTicketService = async (
   //   await ticketEntity.softDelete(id);
   ticketEntity.deletedAt = new Date();
   await ticketRepo.update(id, ticketEntity);
+  await invalidateTicketAnalyticsCache();
 
   auditLog.step("Ticket soft-deleted");
 

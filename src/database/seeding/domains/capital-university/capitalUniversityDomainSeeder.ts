@@ -1,11 +1,10 @@
 import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { DataSource } from "typeorm";
 
 import { Domain } from "../../../../entities/Domain.js";
 import { University } from "../../../../entities/University.js";
 import { Department } from "../../../../entities/Department.js";
+import { resolveSeedDataFile } from "../../utils/seedFilePaths.js";
 
 type CapitalDomainJsonItem = {
   name_ar: string;
@@ -14,11 +13,12 @@ type CapitalDomainJsonItem = {
 
 const CAPITAL_UNIVERSITY_EN_NAME = "Capital University";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ✅ JSON is in the same folder as this seeder file
-const JSON_PATH = path.join(__dirname, "capital-university-domains.json");
+const getJsonPath = () =>
+  resolveSeedDataFile(
+    import.meta.url,
+    ["domains", "capital-university"],
+    "capital-university-domains.json",
+  );
 
 const normalizeName = (s: string) => s.trim().replace(/\s+/g, " ");
 
@@ -42,12 +42,13 @@ export async function seedCapitalUniversityDomains(ds: DataSource) {
   }
 
   // 2) read json
-  if (!fs.existsSync(JSON_PATH)) {
-    throw new Error(`JSON file not found: ${JSON_PATH}`);
+  const jsonPath = getJsonPath();
+  if (!fs.existsSync(jsonPath)) {
+    throw new Error(`JSON file not found: ${jsonPath}`);
   }
 
   const items = JSON.parse(
-    fs.readFileSync(JSON_PATH, "utf-8"),
+    fs.readFileSync(jsonPath, "utf-8"),
   ) as CapitalDomainJsonItem[];
   if (!Array.isArray(items) || items.length === 0) {
     throw new Error("Capital domains JSON is empty or invalid.");

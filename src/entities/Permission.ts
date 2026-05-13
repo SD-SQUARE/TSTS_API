@@ -9,7 +9,7 @@ export class Permission {
   id!: number;
 
   @Index({ unique: true })
-  @Column({ type: "varchar", length: 20, nullable: true })
+  @Column({ type: "varchar", length: 100, nullable: true })
   key!: string;
 
   @Column({ type: "jsonb", nullable: true })

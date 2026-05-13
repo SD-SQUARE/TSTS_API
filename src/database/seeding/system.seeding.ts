@@ -13,6 +13,7 @@ import { seedAuditActions } from "./auditActions/seedAuditActions.js";
 import { MongoDataSource } from "../mongo-data-source.js";
 import { seedReports } from "./reports/reports.seed.js";
 import { seedStoredProcedures } from "../stored-procedures/seed-sp.js";
+import { seedSysData } from "./sys-data.seed.js";
 
 export async function runSystemSeeds() {
   try {
@@ -53,6 +54,9 @@ export async function runSystemSeeds() {
 
     console.log("👤 Seeding SuperAdmin...");
     await seedSuperAdmin(PostgresDataSource);
+
+    console.log("Seeding sys_data files...");
+    await seedSysData(PostgresDataSource);
 
     console.log("📚 Seeding knowledge base...");
     await seedKnowledgeBase(PostgresDataSource);

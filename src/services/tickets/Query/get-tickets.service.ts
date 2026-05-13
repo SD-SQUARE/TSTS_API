@@ -2,6 +2,7 @@ import { PostgresDataSource } from "../../../database/postgres-data-source.js";
 import { Ticket } from "../../../entities/index.js";
 import { AuditAction } from "../../../enums/AuditAction.enum.js";
 import { TicketActivityType } from "../../../enums/TicketActivity.enum.js";
+import { TicketStatus } from "../../../enums/TicketStatus.enum.js";
 import { UserType } from "../../../enums/UserType.enum.js";
 import { audit } from "../../../helpers/auditBuilder.js";
 import { formatTicketStatus } from "../../../helpers/ticketsHelper.js";
@@ -11,44 +12,26 @@ import { AppError } from "../../../utils/AppError.js";
 import { buildLocalizedName } from "../../../utils/localizeName.js";
 import logger from "../../../utils/logger.js";
 import { buildPagination } from "../../../utils/pagination.js";
+import { redisKeys } from "../../../utils/redisKeys.js";
 import { GetTicketsQuery } from "../../../validation/ticket.schema.js";
 import { logTicketActivity } from "../../tickets.service.js";
 import { Request } from "express";
 import { getManagedGroupSpecializationIds } from "../../groups/group-access.service.js";
-import { getTicketSlaState } from "../../sla.service.js";
+import {
+  getActiveSlaRuleSnapshots,
+  getTicketSlaState,
+  getTicketSlaStateFromRules,
+} from "../../sla.service.js";
+import {
+  readJsonCache,
+  TICKET_ANALYTICS_TTL_SECONDS,
+  writeJsonCache,
+} from "../ticket-cache.service.js";
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 
-export const getAllTicketsService = async (
-  query: GetTicketsQuery,
-  lang: Lang,
-  user: ReqUserPayload,
-  req?: Request,
-) => {
-  logger.info("[server][tickets] getAllTickets | start", {
-    lang,
-    query,
-  });
-  const auditLog = audit(req)
-    .summary("Get All Tickets")
-    .action(AuditAction.GET_TICKETS)
-    .metadata({ userId: user.id });
-
-  auditLog.step("Resolve pagination");
-
-  const { skip, take, meta } = buildPagination({
-    page: query.page_index,
-    page_size: query.page_size,
-  });
-
-  logger.info("[server][tickets] getAllTickets | pagination resolved", {
-    skip,
-    take,
-    pageIndex: meta.page_index,
-    pageSize: meta.page_size,
-  });
-
-  const qb = ticketRepo
+const buildTicketListQuery = () =>
+  ticketRepo
     .createQueryBuilder("ticket")
     .leftJoinAndSelect("ticket.requester", "requester")
     .leftJoinAndSelect("requester.university", "requesterUniversity")
@@ -60,7 +43,10 @@ export const getAllTicketsService = async (
     .leftJoinAndSelect("ticket.assigneeList", "assignee")
     .distinct(true);
 
-  auditLog.step("Applying role-based filters");
+const applyTicketAccessFilters = async (
+  qb: ReturnType<typeof buildTicketListQuery>,
+  user: ReqUserPayload,
+) => {
   const managedSpecializationIds = await getManagedGroupSpecializationIds(user.id);
   const hasManagedSpecializations = managedSpecializationIds.length > 0;
 
@@ -99,6 +85,65 @@ export const getAllTicketsService = async (
   if (user.role === UserType.SUPER_ADMIN) {
     logger.info("[tickets] super admin access applied", { userId: user.id });
   }
+};
+
+const statusCount = (tickets: Ticket[], statuses: string[]) =>
+  tickets.filter((ticket) => statuses.includes(ticket.status)).length;
+
+const terminalStatuses = new Set<TicketStatus>([
+  TicketStatus.CLOSED,
+  TicketStatus.RESOLVED,
+]);
+
+const getTicketTiming = (ticket: Ticket) => {
+  const closedAt = terminalStatuses.has(ticket.status) ? ticket.modifiedAt : null;
+  const totalTimeUntilClosedSeconds =
+    closedAt && ticket.createdAt
+      ? Math.max(
+          0,
+          Math.floor((closedAt.getTime() - ticket.createdAt.getTime()) / 1000),
+        )
+      : null;
+
+  return {
+    closedAt,
+    totalTimeUntilClosedSeconds,
+  };
+};
+
+export const getAllTicketsService = async (
+  query: GetTicketsQuery,
+  lang: Lang,
+  user: ReqUserPayload,
+  req?: Request,
+) => {
+  logger.info("[server][tickets] getAllTickets | start", {
+    lang,
+    query,
+  });
+  const auditLog = audit(req)
+    .summary("Get All Tickets")
+    .action(AuditAction.GET_TICKETS)
+    .metadata({ userId: user.id });
+
+  auditLog.step("Resolve pagination");
+
+  const { skip, take, meta } = buildPagination({
+    page: query.page_index,
+    page_size: query.page_size,
+  });
+
+  logger.info("[server][tickets] getAllTickets | pagination resolved", {
+    skip,
+    take,
+    pageIndex: meta.page_index,
+    pageSize: meta.page_size,
+  });
+
+  const qb = buildTicketListQuery();
+
+  auditLog.step("Applying role-based filters");
+  await applyTicketAccessFilters(qb, user);
 
   logger.info("[server][tickets] getAllTickets | base query initialized");
   auditLog.step("Applying query filters");
@@ -288,6 +333,8 @@ export const getAllTicketsService = async (
     .step("Mapping tickets to DTO")
     .metadata({ returnedCount: tickets.length });
 
+  const slaRules = await getActiveSlaRuleSnapshots();
+
   const mappedTickets = await Promise.all(tickets.map(async (ticket) => {
     let university = null;
     let domain = null;
@@ -307,7 +354,8 @@ export const getAllTicketsService = async (
       }
     }
 
-    const sla = await getTicketSlaState(ticket, lang);
+    const sla = await getTicketSlaStateFromRules(ticket, lang, slaRules);
+    const timing = getTicketTiming(ticket);
 
     return {
       id: ticket.id,
@@ -316,6 +364,7 @@ export const getAllTicketsService = async (
       description: ticket.description,
       createdAt: ticket.createdAt,
       modifiedAt: ticket.modifiedAt,
+      ...timing,
 
       requester: ticket.requester
         ? {
@@ -390,6 +439,69 @@ export const getAllTicketsService = async (
       page_size: meta.page_size,
     },
   };
+};
+
+export const getTicketAnalyticsService = async (
+  lang: Lang,
+  user: ReqUserPayload,
+) => {
+  const cacheKey = redisKeys.ticketAnalytics(user.role || "unknown", user.id, lang);
+  const cached = await readJsonCache(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const qb = buildTicketListQuery();
+  await applyTicketAccessFilters(qb, user);
+
+  const tickets = await qb.getMany();
+  const slaRules = await getActiveSlaRuleSnapshots();
+  const slaStates = await Promise.all(
+    tickets.map((ticket) => getTicketSlaStateFromRules(ticket, lang, slaRules)),
+  );
+  const slaViolated = slaStates.filter((state) => state.violated).length;
+  const total = tickets.length;
+
+  const base = {
+    total,
+    open: statusCount(tickets, [TicketStatus.OPEN, TicketStatus.REOPEN]),
+    inProgress: statusCount(tickets, [
+      TicketStatus.IN_PROGRESS,
+      TicketStatus.PENDING,
+    ]),
+    resolved: statusCount(tickets, [
+      TicketStatus.RESOLVED,
+      TicketStatus.CLOSED,
+    ]),
+    unassigned: tickets.filter((ticket) => !ticket.assigneeList?.length).length,
+    slaViolated,
+  };
+
+  const analytics =
+    user.role === UserType.REQUESTER
+      ? {
+          total: base.total,
+          open: base.open,
+          resolved: base.resolved,
+        }
+      : user.role === UserType.TECHNICIAN
+        ? {
+            total: base.total,
+            assigned: base.total,
+            open: base.open,
+            inProgress: base.inProgress,
+            slaViolated: base.slaViolated,
+          }
+        : {
+            total: base.total,
+            unassigned: base.unassigned,
+            inProgress: base.inProgress,
+            slaViolated: base.slaViolated,
+          };
+
+  await writeJsonCache(cacheKey, analytics, TICKET_ANALYTICS_TTL_SECONDS);
+
+  return analytics;
 };
 
 export const getSingleTicketService = async (
@@ -496,6 +608,8 @@ export const getSingleTicketService = async (
     throw new AppError("Ticket not found", 404);
   }
 
+  const timing = getTicketTiming(ticket);
+
   const mappedTicket = {
     id: ticket.id,
     ticket_number: ticket.ticket_number,
@@ -503,6 +617,7 @@ export const getSingleTicketService = async (
     description: ticket.description,
     createdAt: ticket.createdAt,
     modifiedAt: ticket.modifiedAt,
+    ...timing,
     requester: ticket.requester
       ? {
           id: ticket.requester.id,

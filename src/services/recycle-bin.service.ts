@@ -1,4 +1,5 @@
 import { PostgresDataSource } from "../database/postgres-data-source.js";
+import { invalidateTicketAnalyticsCache } from "./tickets/ticket-cache.service.js";
 
 const getMetadataByName = (entityName: string) =>
   PostgresDataSource.entityMetadatas.find(
@@ -7,15 +8,39 @@ const getMetadataByName = (entityName: string) =>
       metadata.tableName.toLowerCase() === entityName.toLowerCase(),
   );
 
-export const listSoftDeleteEntities = () =>
-  PostgresDataSource.entityMetadatas
-    .filter((metadata) => metadata.deleteDateColumn)
-    .map((metadata) => ({
-      key: metadata.name,
-      tableName: metadata.tableName,
-      label: metadata.name,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+export const listSoftDeleteEntities = async () => {
+  const entities = await Promise.all(
+    PostgresDataSource.entityMetadatas
+      .filter((metadata) => metadata.deleteDateColumn)
+      .map(async (metadata) => {
+        const alias = "record";
+        const deletedCount = await PostgresDataSource.getRepository(
+          metadata.target as any,
+        )
+          .createQueryBuilder(alias)
+          .withDeleted()
+          .where(
+            `${alias}."${metadata.deleteDateColumn!.databaseName}" IS NOT NULL`,
+          )
+          .getCount();
+
+        if (deletedCount === 0) {
+          return null;
+        }
+
+        return {
+          key: metadata.name,
+          tableName: metadata.tableName,
+          label: metadata.name,
+          deletedCount,
+        };
+      }),
+  );
+
+  return entities
+    .filter(Boolean)
+    .sort((a, b) => a!.label.localeCompare(b!.label));
+};
 
 const serializeRecord = (record: any, columns: string[]) => {
   const output: Record<string, any> = {};
@@ -60,42 +85,8 @@ export const restoreDeletedRecord = async (entityName: string, id: string) => {
 
   const repo = PostgresDataSource.getRepository(metadata.target as any);
   await repo.restore(id);
+  if (metadata.name === "Ticket") {
+    await invalidateTicketAnalyticsCache();
+  }
   return true;
-};
-
-export const updateDeletedRecord = async (
-  entityName: string,
-  id: string,
-  data: Record<string, any>,
-) => {
-  const metadata = getMetadataByName(entityName);
-  if (!metadata?.deleteDateColumn) {
-    return null;
-  }
-
-  const editableColumns = metadata.columns
-    .filter(
-      (column) =>
-        !column.isPrimary &&
-        !column.isGenerated &&
-        column.propertyName !== metadata.deleteDateColumn?.propertyName &&
-        column.propertyName !== metadata.createDateColumn?.propertyName &&
-        column.propertyName !== metadata.updateDateColumn?.propertyName,
-    )
-    .map((column) => column.propertyName);
-
-  const sanitized = Object.fromEntries(
-    Object.entries(data).filter(([key]) => editableColumns.includes(key)),
-  );
-
-  if (Object.keys(sanitized).length) {
-    await PostgresDataSource.getRepository(metadata.target as any)
-      .createQueryBuilder()
-      .update()
-      .set(sanitized)
-      .where("id = :id", { id })
-      .execute();
-  }
-
-  return listDeletedRecords(entityName);
 };

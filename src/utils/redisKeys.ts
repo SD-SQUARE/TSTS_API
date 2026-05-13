@@ -5,4 +5,8 @@ export const redisKeys = {
   lockUntil: (email: string) => `lock_until:${email}`,
   forgetPassword: (oid: string) => `forget_password:${oid}`,
   resetToken: (oid: string) => `reset_token:${oid}`,
+  activeSlaRules: "sla:rules:active",
+  ticketAnalyticsPrefix: "tickets:analytics",
+  ticketAnalytics: (role: string, userId: string, lang: string) =>
+    `tickets:analytics:${role}:${userId}:${lang}`,
 };

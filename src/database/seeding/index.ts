@@ -16,6 +16,7 @@ import { seedKnowledgeBase } from "./knowledge-base/knowledge-base.seed.js";
 import { seedTickets } from "./tickets/tickets.seed.js";
 import { seedAuditActions } from "./auditActions/seedAuditActions.js";
 import { MongoDataSource } from "../mongo-data-source.js";
+import { seedSysData } from "./sys-data.seed.js";
 
 export async function runSeeds() {
   try {
@@ -62,6 +63,9 @@ export async function runSeeds() {
 
     console.log("🔗 Seeding group relations...");
     await seedGroupRelations(PostgresDataSource);
+
+    console.log("Seeding sys_data files...");
+    await seedSysData(PostgresDataSource);
 
     console.log("📚 Seeding knowledge base...");
     await seedKnowledgeBase(PostgresDataSource);

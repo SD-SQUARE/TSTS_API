@@ -5,11 +5,10 @@ import {
   listDeletedRecords,
   listSoftDeleteEntities,
   restoreDeletedRecord,
-  updateDeletedRecord,
 } from "../services/recycle-bin.service.js";
 
 export const listRecycleEntitiesController = async (_req: Request, res: Response) =>
-  res.status(ResponseStatus.SUCCESS).json({ entities: listSoftDeleteEntities() });
+  res.status(ResponseStatus.SUCCESS).json({ entities: await listSoftDeleteEntities() });
 
 export const listDeletedRecordsController = async (req: Request, res: Response) => {
   const result = await listDeletedRecords(req.params.entity);
@@ -30,16 +29,4 @@ export const restoreDeletedRecordController = async (
   }
 
   return res.status(ResponseStatus.SUCCESS).json({ is_restored: true });
-};
-
-export const updateDeletedRecordController = async (
-  req: Request,
-  res: Response,
-) => {
-  const result = await updateDeletedRecord(req.params.entity, req.params.id, req.body);
-  if (!result) {
-    return res.status(ResponseStatus.NOT_FOUND).json({ message: t("entity_not_found") });
-  }
-
-  return res.status(ResponseStatus.SUCCESS).json(result);
 };

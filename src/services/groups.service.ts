@@ -110,7 +110,8 @@ const ensureHeadsAreAssignable = (users: User[], requestedIds: string[], t: Requ
   const invalidHead = users.find(
     (user) =>
       user.user_type !== UserType.ADMIN &&
-      user.user_type !== UserType.SUPER_ADMIN,
+      user.user_type !== UserType.SUPER_ADMIN &&
+      user.user_type !== UserType.TECHNICIAN,
   );
 
   if (invalidHead) {
@@ -205,12 +206,14 @@ const mapGroupSummary = (group: GroupEntity, locale: string) => ({
       name: user!.display_name,
       name_en: user!.name_en,
       name_ar: user!.name_ar,
+      user_type: user!.user_type,
     })),
   team_leads: extractUniqueTeamLeads(group, locale).map((user) => ({
     id: user!.id,
     name: user!.display_name,
     name_en: user!.name_en,
     name_ar: user!.name_ar,
+    user_type: user!.user_type,
   })),
   specializations: (group.specializations || []).map((relation) => ({
     id: relation.specialization.id,

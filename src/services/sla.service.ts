@@ -1,15 +1,84 @@
 import { IsNull } from "typeorm";
+import { redisClient } from "../database/redis.js";
 import { PostgresDataSource } from "../database/postgres-data-source.js";
 import { Domain, Problem, SlaRule, Specialization, Ticket, University } from "../entities/index.js";
 import { Lang } from "../types/lang.types.js";
+import { redisKeys } from "../utils/redisKeys.js";
+import logger from "../utils/logger.js";
+import {
+  invalidateTicketAnalyticsCache,
+  readJsonCache,
+  writeJsonCache,
+} from "./tickets/ticket-cache.service.js";
 
 const slaRuleRepo = PostgresDataSource.getRepository(SlaRule);
+const ACTIVE_SLA_RULES_TTL_SECONDS = 300;
+
+type SlaRuleSnapshot = {
+  id: string;
+  name?: { en?: string; ar?: string };
+  maxHours: number;
+  universityId: string | null;
+  domainId: string | null;
+  specializationId: string | null;
+  problemId: string | null;
+};
 
 const getLocalizedName = (entity: any, lang: Lang) =>
   entity?.name?.[lang] || entity?.name?.en || entity?.name?.ar || "";
 
 const resolveRelation = async <T>(value: Promise<T> | T | null | undefined) =>
   value ? await Promise.resolve(value) : null;
+
+const getRelationId = async (value: Promise<any> | any | null | undefined) => {
+  const relation = await resolveRelation<any>(value);
+  return relation?.id || null;
+};
+
+const mapRuleSnapshot = async (rule: SlaRule): Promise<SlaRuleSnapshot> => ({
+  id: rule.id,
+  name: rule.name,
+  maxHours: rule.maxHours,
+  universityId: await getRelationId(rule.university),
+  domainId: await getRelationId(rule.domain),
+  specializationId: await getRelationId(rule.specialization),
+  problemId: await getRelationId(rule.problem),
+});
+
+export const invalidateSlaCache = async () => {
+  if (redisClient.isOpen) {
+    try {
+      await redisClient.del(redisKeys.activeSlaRules);
+    } catch (error) {
+      logger.warn("[cache] failed to invalidate sla cache", {
+        error: (error as Error).message,
+      });
+    }
+  }
+
+  await invalidateTicketAnalyticsCache();
+};
+
+export const getActiveSlaRuleSnapshots = async () => {
+  const cached = await readJsonCache<SlaRuleSnapshot[]>(redisKeys.activeSlaRules);
+  if (cached) {
+    return cached;
+  }
+
+  const rules = await slaRuleRepo.find({
+    where: { isActive: true, deletedAt: IsNull() },
+    relations: ["university", "domain", "specialization", "problem"],
+  } as any);
+
+  const snapshots = await Promise.all(rules.map(mapRuleSnapshot));
+  await writeJsonCache(
+    redisKeys.activeSlaRules,
+    snapshots,
+    ACTIVE_SLA_RULES_TTL_SECONDS,
+  );
+
+  return snapshots;
+};
 
 const mapRule = async (rule: SlaRule, lang: Lang) => {
   const university = await resolveRelation<University>(rule.university);
@@ -90,7 +159,10 @@ export const saveSlaRule = async (
     : null;
   rule.problem = payload.problem ? ({ id: payload.problem } as any) : null;
 
-  return slaRuleRepo.save(rule);
+  const saved = await slaRuleRepo.save(rule);
+  await invalidateSlaCache();
+
+  return saved;
 };
 
 export const deleteSlaRule = async (id: string) => {
@@ -98,15 +170,15 @@ export const deleteSlaRule = async (id: string) => {
   if (!rule) return false;
 
   await slaRuleRepo.softRemove(rule);
+  await invalidateSlaCache();
   return true;
 };
 
-export const getTicketSlaState = async (ticket: Ticket, lang: Lang) => {
-  const rules = await slaRuleRepo.find({
-    where: { isActive: true, deletedAt: IsNull() },
-    relations: ["university", "domain", "specialization", "problem"],
-  } as any);
-
+export const getTicketSlaStateFromRules = async (
+  ticket: Ticket,
+  lang: Lang,
+  rules: SlaRuleSnapshot[],
+) => {
   if (!rules.length || !ticket.createdAt) {
     return { violated: false };
   }
@@ -120,21 +192,16 @@ export const getTicketSlaState = async (ticket: Ticket, lang: Lang) => {
 
   const matches = [];
   for (const rule of rules) {
-    const ruleUniversity = await resolveRelation<University>(rule.university);
-    const ruleDomain = await resolveRelation<Domain>(rule.domain);
-    const ruleSpecialization = await resolveRelation<Specialization>(rule.specialization);
-    const ruleProblem = await resolveRelation<Problem>(rule.problem);
-
-    if (ruleUniversity && ruleUniversity.id !== requesterUniversity?.id) continue;
-    if (ruleDomain && ruleDomain.id !== requesterDomain?.id) continue;
-    if (ruleSpecialization && ruleSpecialization.id !== specialization?.id) continue;
-    if (ruleProblem && ruleProblem.id !== problem?.id) continue;
+    if (rule.universityId && rule.universityId !== requesterUniversity?.id) continue;
+    if (rule.domainId && rule.domainId !== requesterDomain?.id) continue;
+    if (rule.specializationId && rule.specializationId !== specialization?.id) continue;
+    if (rule.problemId && rule.problemId !== problem?.id) continue;
 
     const specificity = [
-      ruleUniversity,
-      ruleDomain,
-      ruleSpecialization,
-      ruleProblem,
+      rule.universityId,
+      rule.domainId,
+      rule.specializationId,
+      rule.problemId,
     ].filter(Boolean).length;
 
     matches.push({ rule, specificity });
@@ -154,4 +221,9 @@ export const getTicketSlaState = async (ticket: Ticket, lang: Lang) => {
     ruleId: match.rule.id,
     ruleName: match.rule.name?.[lang] || match.rule.name?.en || match.rule.name?.ar || "",
   };
+};
+
+export const getTicketSlaState = async (ticket: Ticket, lang: Lang) => {
+  const rules = await getActiveSlaRuleSnapshots();
+  return getTicketSlaStateFromRules(ticket, lang, rules);
 };
