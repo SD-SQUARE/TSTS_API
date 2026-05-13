@@ -214,5 +214,5 @@ export const createTechnicianSchema = (t: Request["t"]) =>
             })
             .regex(PASSWORD_SPECIAL_CHAR_REGEX, {
                 message: t("password_must_contain_special_char"),
-            }),
+            }).optional(),
     });

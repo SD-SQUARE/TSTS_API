@@ -33,7 +33,7 @@ export const editRequesterSchema = (t: Request["t"]) =>
         { message: t("image_must_be_under_1mb") },
       ),
 
-    email: z.string().email({ message: t("invalid_mail") }),
+    email: z.string().email({ message: t("invalid_mail") }).optional(),
 
     // English names
     first_name_en: z
@@ -236,5 +236,5 @@ export const createRequesterSchema = (t: Request["t"]) =>
       })
       .regex(PASSWORD_SPECIAL_CHAR_REGEX, {
         message: t("password_must_contain_special_char"),
-      }),
+      }).optional(),
   });

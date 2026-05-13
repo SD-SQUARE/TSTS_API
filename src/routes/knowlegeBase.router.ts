@@ -21,9 +21,18 @@ import {
 } from "../controllers/ticketFinalReport.controller.js";
 
 const knowlegeBaseRouter = Router();
-knowlegeBaseRouter.get("/", getKnowledgeBaseItems);
-knowlegeBaseRouter.get("/categories", getKnowledgeBaseCategories);
-knowlegeBaseRouter.post("/", createKnowledgeBaseItem);
+knowlegeBaseRouter.get("/", authMiddleware, getKnowledgeBaseItems);
+knowlegeBaseRouter.get("/categories", authMiddleware, getKnowledgeBaseCategories);
+knowlegeBaseRouter.post(
+  "/",
+  authMiddleware,
+  typeBasedAuthMiddleware([
+    UserType.ADMIN,
+    UserType.SUPER_ADMIN,
+    UserType.TECHNICIAN,
+  ]),
+  createKnowledgeBaseItem
+);
 knowlegeBaseRouter.get(
   "/generator/reports",
   authMiddleware,
@@ -84,7 +93,25 @@ knowlegeBaseRouter.post(
   ]),
   asyncHandler(publishFinalReportController),
 );
-knowlegeBaseRouter.get("/:id", getKnowledgeBaseItemById);
-knowlegeBaseRouter.put("/:id", updateKnowledgeBaseItem);
-knowlegeBaseRouter.delete("/:id", deleteKnowledgeBaseItem);
+knowlegeBaseRouter.get("/:id", authMiddleware, getKnowledgeBaseItemById);
+knowlegeBaseRouter.put(
+  "/:id",
+  authMiddleware,
+  typeBasedAuthMiddleware([
+    UserType.ADMIN,
+    UserType.SUPER_ADMIN,
+    UserType.TECHNICIAN,
+  ]),
+  updateKnowledgeBaseItem
+);
+knowlegeBaseRouter.delete(
+  "/:id",
+  authMiddleware,
+  typeBasedAuthMiddleware([
+    UserType.ADMIN,
+    UserType.SUPER_ADMIN,
+    UserType.TECHNICIAN,
+  ]),
+  deleteKnowledgeBaseItem
+);
 export default knowlegeBaseRouter;

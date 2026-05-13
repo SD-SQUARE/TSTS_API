@@ -48,15 +48,19 @@ const mapRuleSnapshot = async (rule: SlaRule): Promise<SlaRuleSnapshot> => ({
 export const invalidateSlaCache = async () => {
   if (redisClient.isOpen) {
     try {
+      // Invalidate SLA rules cache
       await redisClient.del(redisKeys.activeSlaRules);
+      
+      // Invalidate all ticket analytics caches since SLA affects ticket states
+      await invalidateTicketAnalyticsCache();
+      
+      logger.info("[cache] SLA cache and ticket analytics invalidated");
     } catch (error) {
       logger.warn("[cache] failed to invalidate sla cache", {
         error: (error as Error).message,
       });
     }
   }
-
-  await invalidateTicketAnalyticsCache();
 };
 
 export const getActiveSlaRuleSnapshots = async () => {
