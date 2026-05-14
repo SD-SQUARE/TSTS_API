@@ -83,6 +83,7 @@ import workHourRouter from "./routes/workHour.router.js";
 import knowlegeBaseRouter from "./routes/knowlegeBase.router.js";
 import ProblemRouter from "./routes/problems.router.js";
 import reportRoutes from "./routes/report.router.js";
+import aiAssistantRouter from "./routes/ai-assistant.router.js";
 import permissionProfileRouter from "./routes/permissionProfile.router.js";
 import siteSettingsRouter from "./routes/siteSettings.router.js";
 import slaRouter from "./routes/sla.router.js";
@@ -97,6 +98,7 @@ app.get("/api/health", (req, res) => {
 
 
 app.use("/api/v2/auth", authV2Router);
+app.use("/api/v1/ai-assistant", aiAssistantRouter);
 
 // CSRF (set up if using cookies and forms; for API token flows consider disabling)
 // @AhmedElsenaty
@@ -109,7 +111,6 @@ app.use("/api/v1/site-settings", siteSettingsRouter);
 
 app.use("/api/v1", authMiddleware);
 
-app.use("/api/v1/work-hours", workHourRouter);
 app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/audit-logs", auditActionRouter);

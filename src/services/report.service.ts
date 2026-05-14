@@ -4,8 +4,6 @@ import { PostgresDataSource } from "../database/postgres-data-source.js";
 import { Lang } from "../types/lang.types.js";
 import { ReportHandlerFactory } from "./reports/handlers/ReportHandlerFactory.js";
 import { PeriodType, ReportTypes } from "./reports/types/report.types.js";
-import { Specialization } from "../entities/Specialization.js";
-import { SpecializationTicketsCountPreparation } from "./reports/specialization-tickets/v1.0/services/SpecializationTicketsCountPreparation.js";
 import { audit } from "../helpers/auditBuilder.js";
 import { Request } from "express";
 import { AuditAction } from "../enums/AuditAction.enum.js";
@@ -66,6 +64,7 @@ export class ReportService {
 
   /**
    * Get dashboard statistics for all specializations
+   * Uses a single efficient query instead of N+1 queries
    */
   async getDashboardStatistics(
     startDate?: string,
@@ -78,38 +77,60 @@ export class ReportService {
       statistics: Array<{ period: string; value: number }>;
     }>
   > {
-    const specializationRepo = PostgresDataSource.getRepository(Specialization);
+    let dateFormat: string;
+    switch (periodType) {
+      case PeriodType.DAY: dateFormat = "YYYY-MM-DD"; break;
+      case PeriodType.MONTH: dateFormat = "YYYY-MM"; break;
+      default: dateFormat = "YYYY";
+    }
 
-    // Get all specializations
-    const specializations = await specializationRepo.find({
-      order: { createdAt: "DESC" },
-    });
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let idx = 1;
 
-    const result = [];
+    if (startDate) {
+      conditions.push(`t."createdAt" >= $${idx++}`);
+      params.push(startDate);
+    }
+    if (endDate) {
+      conditions.push(`t."createdAt" <= $${idx++}`);
+      params.push(endDate);
+    }
 
-    // For each specialization, get its statistics
-    for (const spec of specializations) {
-      const filter = {
-        startDate,
-        endDate,
-        groupedFilters: {
-          specialization: [spec.id],
-        },
-      };
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-      const statistics =
-        await SpecializationTicketsCountPreparation.getTimeSeriesStatistics(
-          filter,
-          periodType,
-        );
+    // Single query: get ticket counts per specialization per period
+    const rows = await PostgresDataSource.query(`
+      SELECT
+        s.name as spec_name,
+        TO_CHAR(t."createdAt", '${dateFormat}') as period,
+        COUNT(t.id) as value
+      FROM tickets t
+      INNER JOIN specializations s ON t."specializationId" = s.id
+      ${whereClause}
+      GROUP BY s.id, s.name, period
+      ORDER BY period ASC
+    `, params);
 
-      result.push({
-        ticketType: spec.name[language],
-        statistics,
+    // Group by specialization
+    const specMap = new Map<string, Array<{ period: string; value: number }>>();
+
+    for (const row of rows) {
+      const specName = row.spec_name?.[language] || row.spec_name?.en || row.spec_name?.ar || "Unknown";
+      if (!specMap.has(specName)) {
+        specMap.set(specName, []);
+      }
+      specMap.get(specName)!.push({
+        period: row.period,
+        value: parseInt(row.value, 10),
       });
     }
 
-    return result;
+    // Convert to array, only include specializations with data
+    return Array.from(specMap.entries()).map(([ticketType, statistics]) => ({
+      ticketType,
+      statistics,
+    }));
   }
 
   /**

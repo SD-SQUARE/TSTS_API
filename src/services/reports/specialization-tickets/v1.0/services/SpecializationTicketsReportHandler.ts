@@ -7,6 +7,8 @@ import { SpecializationTicketsCountPreparation } from "./SpecializationTicketsCo
 import { PeriodType, ReportTypes } from "../../../types/report.types.js";
 import { Lang } from "../../../../../types/lang.types.js";
 import { SpecializationTicketsReportPdf } from "./SpecializationTicketsReportPdf.js";
+import { GenericTabularReportDownload } from "../../../utils/GenericTabularReportDownload.js";
+import { SPECIALIZATION_TICKETS_REPORT_CONFIG } from "../config/report.config.js";
 
 export class SpecializationTicketsReportHandler implements IReportHandler {
   async view(params: ViewReportParams): Promise<any> {
@@ -67,12 +69,20 @@ export class SpecializationTicketsReportHandler implements IReportHandler {
   }
 
   async download(params: DownloadReportParams): Promise<void> {
-    const { type } = params;
+    const { type, report, filters, language, user, res } = params;
 
     if (type === ReportTypes.PDF) {
       return new SpecializationTicketsReportPdf().downloadPDF(params);
-    } else {
-      throw new Error(`Unsupported report type: ${type}. Supported types: pdf`);
     }
+    if (type === ReportTypes.EXCEL) {
+      const filteredData = await SpecializationTicketsCountPreparation.getSpecializationTicketsCountData(filters, language as Lang, false);
+      const records = filteredData.results.map((item, i) => ({
+        index: i + 1,
+        specialization: item.specialization,
+        ticketsCount: item.ticketsCount,
+      }));
+      return GenericTabularReportDownload.downloadExcel({ report, records, type, language, user, res, filters, reportConfig: SPECIALIZATION_TICKETS_REPORT_CONFIG });
+    }
+    throw new Error(`Unsupported report type: ${type}`);
   }
 }

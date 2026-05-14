@@ -16,6 +16,7 @@ import fs from "fs";
 import { BaseReportGeneratorPuppeteer } from "./services/reports/base/BaseReportGeneratorPuppeteer.js";
 import { initMongoDataSource } from "./database/mongo-data-source.js";
 import { startUnassignedTicketAlertScheduler } from "./services/ticket-alerts.service.js";
+import { warmUpOllamaModel } from "./controllers/ai-assistant.controller.js";
 
 const PROTOCOL = process.env.PROTOCOL ?? "http";
 const HOST = process.env.HOST ?? "localhost";
@@ -60,6 +61,11 @@ async function main() {
     // Pre-warm Puppeteer browser for faster PDF generation
     BaseReportGeneratorPuppeteer.warmUp().catch(err => {
       logger.warn('[Puppeteer] Failed to warm up browser:', err);
+    });
+
+    // Pre-warm Ollama model (non-blocking - runs in background)
+    warmUpOllamaModel().catch(err => {
+      logger.warn('[ai-assistant] Ollama warm-up failed:', err);
     });
 
     server.listen(PORT, () => {

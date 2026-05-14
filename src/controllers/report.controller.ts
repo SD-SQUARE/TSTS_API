@@ -7,6 +7,7 @@ import { FilterUtils } from "../services/reports/utils/FilterUtils.js";
 import logger from "../utils/logger.js";
 import { audit } from "../helpers/auditBuilder.js";
 import { AuditAction } from "../enums/AuditAction.enum.js";
+import { DashboardAnalyticsService } from "../services/dashboard-analytics.service.js";
 
 export class ReportController {
   private reportService: ReportService;
@@ -71,6 +72,38 @@ export class ReportController {
       res.status(ResponseStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: req.t("report_common.failed_to_fetch_dashboard_stats"),
+        error: error.message,
+      });
+    }
+  };
+
+  getDashboardAnalytics = async (req: Request, res: Response) => {
+    const auditLog = audit(req)
+      .summary("Fetch dashboard analytics")
+      .action(AuditAction.GET_DASHBOARD_STATS)
+      .resource("Dashboard", "analytics")
+      .metadata({ query: req.query });
+
+    try {
+      const { startDate, endDate } = req.query;
+
+      const analytics = await DashboardAnalyticsService.getDashboardAnalytics(
+        startDate as string | undefined,
+        endDate as string | undefined,
+      );
+
+      auditLog
+        .metadata({ totalTickets: analytics.totalTickets })
+        .step("Dashboard analytics fetched successfully");
+
+      res.status(ResponseStatus.SUCCESS).json(analytics);
+    } catch (error: any) {
+      auditLog
+        .metadata({ error: error.message })
+        .step("Failed to fetch dashboard analytics");
+      res.status(ResponseStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: req.t("report_common.failed_to_fetch_dashboard_analytics"),
         error: error.message,
       });
     }

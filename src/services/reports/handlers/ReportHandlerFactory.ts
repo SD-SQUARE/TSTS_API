@@ -2,6 +2,11 @@ import { IReportHandler } from "./IReportHandler.js";
 import { SpecializationTicketsReportHandler } from "../specialization-tickets/v1.0/services/SpecializationTicketsReportHandler.js";
 import { DomainDeptSpecProblemReportHandler } from "../domain-dept-spec-problem/v1.0/services/DomainDeptSpecProblemReportHandler.js";
 import { RequesterDomainReportHandler } from "../requester-domain/v1.0/services/RequesterDomainReportHandler.js";
+import { TicketStatusTimelineReportHandler } from "../ticket-status-timeline/v1.0/services/TicketStatusTimelineReportHandler.js";
+import { TechnicianPerformanceReportHandler } from "../technician-performance/v1.0/services/TechnicianPerformanceReportHandler.js";
+import { SlaComplianceReportHandler } from "../sla-compliance/v1.0/services/SlaComplianceReportHandler.js";
+import { PriorityDistributionReportHandler } from "../priority-distribution/v1.0/services/PriorityDistributionReportHandler.js";
+import { DepartmentWorkloadReportHandler } from "../department-workload/v1.0/services/DepartmentWorkloadReportHandler.js";
 import { ReportHandler } from "../../../enums/ReportHandler.enum.js";
 
 export class ReportHandlerFactory {
@@ -9,6 +14,11 @@ export class ReportHandlerFactory {
     [ReportHandler.SPECIALIZATION_TICKETS_COUNT, SpecializationTicketsReportHandler],
     [ReportHandler.DOMAIN_DEPT_SPEC_PROBLEM, DomainDeptSpecProblemReportHandler],
     [ReportHandler.REQUESTER_DOMAIN, RequesterDomainReportHandler],
+    [ReportHandler.TICKET_STATUS_TIMELINE, TicketStatusTimelineReportHandler],
+    [ReportHandler.TECHNICIAN_PERFORMANCE, TechnicianPerformanceReportHandler],
+    [ReportHandler.SLA_COMPLIANCE, SlaComplianceReportHandler],
+    [ReportHandler.PRIORITY_DISTRIBUTION, PriorityDistributionReportHandler],
+    [ReportHandler.DEPARTMENT_WORKLOAD, DepartmentWorkloadReportHandler],
   ]);
 
   static createHandler(handlerType: string): IReportHandler {

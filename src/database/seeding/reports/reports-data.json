@@ -134,5 +134,265 @@
         "column": "user"
       }
     ]
+  },
+  {
+    "handler": "ticket-status-timeline",
+    "title": {
+      "en": "Ticket Status Timeline Analysis",
+      "ar": "تحليل الجدول الزمني لحالة التذاكر"
+    },
+    "description": {
+      "en": "Report showing ticket status changes over time with transition analysis",
+      "ar": "تقرير يوضح تغييرات حالة التذاكر عبر الزمن مع تحليل الانتقالات"
+    },
+    "columns": [
+      {
+        "key": "ticketNumber",
+        "label": {
+          "en": "Ticket Number",
+          "ar": "رقم التذكرة"
+        }
+      },
+      {
+        "key": "status",
+        "label": {
+          "en": "Status",
+          "ar": "الحالة"
+        }
+      },
+      {
+        "key": "changedAt",
+        "label": {
+          "en": "Changed At",
+          "ar": "تاريخ التغيير"
+        }
+      },
+      {
+        "key": "duration",
+        "label": {
+          "en": "Duration (hours)",
+          "ar": "المدة (ساعات)"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "column": "status"
+      }
+    ]
+  },
+  {
+    "handler": "technician-performance",
+    "title": {
+      "en": "Technician Performance Analysis",
+      "ar": "تحليل أداء الفنيين"
+    },
+    "description": {
+      "en": "Comprehensive report on technician performance including resolution time, ticket count, and ratings",
+      "ar": "تقرير شامل عن أداء الفنيين يتضمن وقت الحل وعدد التذاكر والتقييمات"
+    },
+    "columns": [
+      {
+        "key": "technicianName",
+        "label": {
+          "en": "Technician",
+          "ar": "الفني"
+        }
+      },
+      {
+        "key": "assignedTickets",
+        "label": {
+          "en": "Assigned Tickets",
+          "ar": "التذاكر المسندة"
+        }
+      },
+      {
+        "key": "resolvedTickets",
+        "label": {
+          "en": "Resolved Tickets",
+          "ar": "التذاكر المحلولة"
+        }
+      },
+      {
+        "key": "avgResolutionTime",
+        "label": {
+          "en": "Avg Resolution Time",
+          "ar": "متوسط وقت الحل"
+        }
+      },
+      {
+        "key": "resolutionRate",
+        "label": {
+          "en": "Resolution Rate (%)",
+          "ar": "معدل الحل (%)"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "column": "technician"
+      },
+      {
+        "column": "specialization"
+      }
+    ]
+  },
+  {
+    "handler": "sla-compliance",
+    "title": {
+      "en": "SLA Compliance Report",
+      "ar": "تقرير الامتثال لاتفاقية مستوى الخدمة"
+    },
+    "description": {
+      "en": "Report showing ticket distribution by specialization with resolution metrics",
+      "ar": "تقرير يوضح توزيع التذاكر حسب التخصص مع مقاييس الحل"
+    },
+    "columns": [
+      {
+        "key": "specialization",
+        "label": {
+          "en": "Specialization",
+          "ar": "التخصص"
+        }
+      },
+      {
+        "key": "totalTickets",
+        "label": {
+          "en": "Total Tickets",
+          "ar": "إجمالي التذاكر"
+        }
+      },
+      {
+        "key": "resolvedTickets",
+        "label": {
+          "en": "Resolved Tickets",
+          "ar": "التذاكر المحلولة"
+        }
+      },
+      {
+        "key": "activeTickets",
+        "label": {
+          "en": "Active Tickets",
+          "ar": "التذاكر النشطة"
+        }
+      },
+      {
+        "key": "avgResolutionTime",
+        "label": {
+          "en": "Avg Resolution Time (hours)",
+          "ar": "متوسط وقت الحل (ساعات)"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "column": "specialization"
+      }
+    ]
+  },
+  {
+    "handler": "priority-distribution",
+    "title": {
+      "en": "Ticket Priority Distribution",
+      "ar": "توزيع أولوية التذاكر"
+    },
+    "description": {
+      "en": "Analysis of ticket distribution by priority levels across different time periods",
+      "ar": "تحليل توزيع التذاكر حسب مستويات الأولوية عبر فترات زمنية مختلفة"
+    },
+    "columns": [
+      {
+        "key": "priority",
+        "label": {
+          "en": "Priority",
+          "ar": "الأولوية"
+        }
+      },
+      {
+        "key": "ticketCount",
+        "label": {
+          "en": "Ticket Count",
+          "ar": "عدد التذاكر"
+        }
+      },
+      {
+        "key": "avgResolutionTime",
+        "label": {
+          "en": "Avg Resolution Time",
+          "ar": "متوسط وقت الحل"
+        }
+      },
+      {
+        "key": "percentage",
+        "label": {
+          "en": "Percentage",
+          "ar": "النسبة المئوية"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "column": "priority"
+      },
+      {
+        "column": "status"
+      }
+    ]
+  },
+  {
+    "handler": "department-workload",
+    "title": {
+      "en": "Department Workload Analysis",
+      "ar": "تحليل عبء العمل حسب القسم"
+    },
+    "description": {
+      "en": "Report showing ticket workload distribution across departments with capacity analysis",
+      "ar": "تقرير يوضح توزيع عبء عمل التذاكر عبر الأقسام مع تحليل السعة"
+    },
+    "columns": [
+      {
+        "key": "department",
+        "label": {
+          "en": "Department",
+          "ar": "القسم"
+        }
+      },
+      {
+        "key": "openTickets",
+        "label": {
+          "en": "Open Tickets",
+          "ar": "التذاكر المفتوحة"
+        }
+      },
+      {
+        "key": "inProgressTickets",
+        "label": {
+          "en": "In Progress",
+          "ar": "قيد التنفيذ"
+        }
+      },
+      {
+        "key": "resolvedTickets",
+        "label": {
+          "en": "Resolved",
+          "ar": "المحلولة"
+        }
+      },
+      {
+        "key": "avgHandlingTime",
+        "label": {
+          "en": "Avg Handling Time",
+          "ar": "متوسط وقت المعالجة"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "column": "department"
+      },
+      {
+        "column": "domain"
+      }
+    ]
   }
 ]

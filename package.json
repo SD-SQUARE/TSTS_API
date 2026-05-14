@@ -61,6 +61,13 @@
     "prod:start": "docker compose -f ./docker/compose.prod.yml up  -d",
     "prod:stop": "docker compose -f ./docker/compose.prod.yml down",
     "prod:host": "run-s secret:publish:staging prod:build:start",
+    "ai:start": "docker compose -f ./docker/compose.ai.yml up -d",
+    "ai:stop": "docker compose -f ./docker/compose.ai.yml down",
+    "ai:pull": "docker exec ollama ollama pull llama3.2",
+    "ai:logs": "docker logs ollama-pull --follow",
+    "prod:with-ai:start": "docker compose -f ./docker/compose.prod.yml -f ./docker/compose.ai.yml up -d",
+    "prod:with-ai:build": "docker compose -f ./docker/compose.prod.yml -f ./docker/compose.ai.yml up --build -d",
+    "prod:with-ai:stop": "docker compose -f ./docker/compose.prod.yml -f ./docker/compose.ai.yml down",
     "secret:publish:staging": "npx tsx ./scripts/publish-env.ts"
   },
   "dependencies": {
