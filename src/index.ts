@@ -17,6 +17,7 @@ import { BaseReportGeneratorPuppeteer } from "./services/reports/base/BaseReport
 import { initMongoDataSource } from "./database/mongo-data-source.js";
 import { startUnassignedTicketAlertScheduler } from "./services/ticket-alerts.service.js";
 import { warmUpOllamaModel } from "./controllers/ai-assistant.controller.js";
+import { startNotificationCleanupScheduler } from "./services/notification-cleanup.service.js";
 
 const PROTOCOL = process.env.PROTOCOL ?? "http";
 const HOST = process.env.HOST ?? "localhost";
@@ -72,6 +73,7 @@ async function main() {
       logger.info(`[server] listening on ${PROTOCOL}://${HOST}:${PORT}`);
       initSocket(server);
       startUnassignedTicketAlertScheduler();
+      startNotificationCleanupScheduler();
     });
   } catch (err) {
     logger.error("❌ Server failed to start", {
