@@ -80,7 +80,7 @@ export const createTicket = async (dto, files, req?: Request) => {
     .summary("Create Ticket")
     .action(AuditAction.CREATE_TICKET);
   // FIXME: Take Problem From body and update ticket entity
-  const { title, description, requester, specialization, problem } = dto;
+  const { title, description, requester, specialization, problem, isDraft } = dto;
 
   logger.info("[tickets] createTicket | start", {
     requester,
@@ -228,7 +228,7 @@ export const createTicket = async (dto, files, req?: Request) => {
       ? { id: assignedSpecialization.id }
       : null,
     problem: assignedProblem ? { id: assignedProblem.id } : null,
-    status: TicketStatus.OPEN,
+    status: isDraft ? TicketStatus.DRAFT : TicketStatus.OPEN,
     assigneeList: assignedUsers,
   });
 
@@ -262,6 +262,7 @@ export const createTicket = async (dto, files, req?: Request) => {
       specializationId: assignedSpecialization?.id || null,
       problemId: assignedProblem?.id || null,
       assignees: assignedUsers.map((u) => ({ id: u.id })),
+      isDraft: !!isDraft,
     },
     req,
   );
@@ -842,6 +843,7 @@ export const changeTicketStatusService = async (
   });
 
   const isRequester = ticket.requester?.id === user.id;
+  const isDraft = ticket.status === TicketStatus.DRAFT;
 
   const isAssignee = ticket.assigneeList?.some(
     (assignee) => assignee.id === user.id,
@@ -853,10 +855,15 @@ export const changeTicketStatusService = async (
 
   let isAllowed = false;
 
-  if (isAdmin || isAssignee) {
+  if (dto.status === TicketStatus.DRAFT) {
+    isAllowed = false;
+  } else if (isDraft && !isRequester) {
+    isAllowed = false;
+  } else if (isAdmin || isAssignee) {
     isAllowed = true;
   } else if (isRequester) {
     if (
+      (ticket.status === TicketStatus.DRAFT && dto.status === TicketStatus.OPEN) ||
       dto.status === TicketStatus.REOPEN ||
       dto.status === TicketStatus.RESOLVED
     ) {

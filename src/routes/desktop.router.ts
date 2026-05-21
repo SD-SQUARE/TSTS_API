@@ -2,6 +2,9 @@ import { Router, Request, Response } from "express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { PostgresDataSource } from "../database/postgres-data-source.js";
+import { User } from "../entities/User.js";
+import { UserType } from "../enums/UserType.enum.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,7 +22,7 @@ router.get("/download", (req: Request, res: Response) => {
     if (!fs.existsSync(installerPath)) {
         return res.status(404).json({
             error: "Desktop installer not found. Please build the Electron app first.",
-            buildInstructions: "Run: cd electron && npm run release",
+            buildInstructions: "Run from client/tsts: npm run desktop:release:backend",
         });
     }
 
@@ -55,6 +58,46 @@ router.get("/info", (req: Request, res: Response) => {
             "Native desktop experience",
             "Automatic RustDesk installation",
         ],
+    });
+});
+
+/**
+ * POST /api/v1/desktop/register-device
+ * Registers the requester's RustDesk ID by email. Used by the Electron app
+ * during setup or via silent CLI registration.
+ */
+router.post("/register-device", async (req: Request, res: Response) => {
+    const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const rustdeskId = typeof req.body?.rustdeskId === "string"
+        ? req.body.rustdeskId.replace(/\s+/g, "").trim()
+        : "";
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ message: "A valid email is required" });
+    }
+
+    if (!rustdeskId || !/^[a-zA-Z0-9_-]{4,64}$/.test(rustdeskId)) {
+        return res.status(400).json({ message: "A valid RustDesk ID is required" });
+    }
+
+    const userRepo = PostgresDataSource.getRepository(User);
+    const user = await userRepo.findOne({ where: { email } });
+
+    if (!user) {
+        return res.status(404).json({ message: "Requester email was not found" });
+    }
+
+    if (user.user_type !== UserType.REQUESTER) {
+        return res.status(400).json({ message: "Only requester accounts can register a remote support device" });
+    }
+
+    user.rustdeskId = rustdeskId;
+    await userRepo.save(user);
+
+    return res.status(200).json({
+        success: true,
+        userId: user.id,
+        rustdeskId,
     });
 });
 

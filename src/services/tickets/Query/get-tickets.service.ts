@@ -56,6 +56,10 @@ const applyTicketAccessFilters = async (
     });
 
     logger.info("[tickets] requester access applied", { userId: user.id });
+  } else {
+    qb.andWhere("ticket.status != :draftStatus", {
+      draftStatus: TicketStatus.DRAFT,
+    });
   }
 
   if (user.role === UserType.TECHNICIAN) {
@@ -371,6 +375,7 @@ export const getAllTicketsService = async (
             id: ticket.requester.id,
             name: buildLocalizedName(ticket.requester, lang),
             image: ticket.requester.image,
+            rustdeskId: ticket.requester.rustdeskId ?? null,
             university: university
               ? {
                   id: university.id,
@@ -590,6 +595,7 @@ export const getSingleTicketService = async (
   );
   const specializationId = ticket.specialization?.id || null;
   const isRequester = ticket.requester?.id === user.id;
+  const isDraft = ticket.status === TicketStatus.DRAFT;
   const isAssignee =
     ticket.assigneeList?.some((assignee) => assignee.id === user.id) || false;
   const isManagedSpecialization =
@@ -604,7 +610,7 @@ export const getSingleTicketService = async (
         isManagedSpecialization ||
         isAssignee));
 
-  if (!canAccess) {
+  if (!canAccess || (isDraft && !isRequester)) {
     throw new AppError("Ticket not found", 404);
   }
 
@@ -623,6 +629,7 @@ export const getSingleTicketService = async (
           id: ticket.requester.id,
           name: buildLocalizedName(ticket.requester, lang),
           image: ticket.requester.image,
+          rustdeskId: ticket.requester.rustdeskId ?? null,
           university: university
             ? {
                 id: university.id,

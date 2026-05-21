@@ -10,8 +10,10 @@ const HOST = process.env.HOST;
 export function initSocket(server: any) {
   io = new Server(server, {
     cors: {
-      origin: "*",
+      origin: true,
+      credentials: true,
     },
+    allowRequest: (_req, callback) => callback(null, true),
   });
   logger.info("[Socket]: initialized");
   logger.info(

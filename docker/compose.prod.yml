@@ -147,6 +147,36 @@ services:
         echo 'Model pull completed.';
       "
 
+  hbbs:
+    image: rustdesk/rustdesk-server:latest
+    container_name: rustdesk-hbbs
+    command: hbbs -r ${RUSTDESK_HOST:-${HOST:-localhost}}:21117
+    restart: unless-stopped
+    depends_on:
+      - hbbr
+    ports:
+      - "${RUSTDESK_NAT_PORT:-21115}:21115"
+      - "${RUSTDESK_ID_PORT:-21116}:21116"
+      - "${RUSTDESK_ID_PORT:-21116}:21116/udp"
+      - "${RUSTDESK_ID_WS_PORT:-21118}:21118"
+    volumes:
+      - rustdesk_data:/root
+    networks:
+      - tsts-network
+
+  hbbr:
+    image: rustdesk/rustdesk-server:latest
+    container_name: rustdesk-hbbr
+    command: hbbr
+    restart: unless-stopped
+    ports:
+      - "${RUSTDESK_RELAY_PORT:-21117}:21117"
+      - "${RUSTDESK_RELAY_WS_PORT:-21119}:21119"
+    volumes:
+      - rustdesk_data:/root
+    networks:
+      - tsts-network
+
 volumes:
   postgres_data:
   redis-data:
@@ -154,6 +184,8 @@ volumes:
   mongo_data:
   ollama_data:
     name: ollama_data
+  rustdesk_data:
+    name: rustdesk_data
 
 networks:
   tsts-network:

@@ -34,6 +34,7 @@ type RequesterDto = {
     phones: string[];
     mobiles: string[];
   };
+  rustdeskId: string | null;
   status: string;
   allow_profile_edit: boolean;
 
@@ -150,6 +151,7 @@ export const toRequester = async (
       phones: entity.contacts?.phone ?? [],
       mobiles: entity.contacts?.mobile ?? [],
     },
+    rustdeskId: entity.rustdeskId ?? null,
 
     status: entity.status,
     allow_profile_edit: entity.allowProfileEdit ?? false,

@@ -5,6 +5,9 @@ export const mapStatusToActivityType = (toStatus: any): TicketActivityType => {
   let activityType = TicketActivityType.INFO;
 
   switch (toStatus) {
+    case TicketStatus.DRAFT:
+      activityType = TicketActivityType.INFO;
+      break;
     case TicketStatus.IN_PROGRESS:
       activityType = TicketActivityType.IN_PROGRESS;
       break;

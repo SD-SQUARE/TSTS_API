@@ -7,10 +7,11 @@ import { Problem } from "../entities/problem.js";
 import { TicketStatus } from "../enums/TicketStatus.enum.js";
 import { TicketPriority } from "../enums/TicketPriority.enum.js";
 import logger from "../utils/logger.js";
+import { invalidateTicketAnalyticsCache } from "../services/tickets/ticket-cache.service.js";
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.2";
-const OLLAMA_TIMEOUT_MS = 10 * 60 * 1000;
+const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS || 120000);
 
 // ─── Tool Definitions ────────────────────────────────────────────────────────
 // These are the tools the LLM can call. Kept minimal to save tokens.
@@ -28,22 +29,115 @@ You have access to these tools. Call them by outputting ONLY a JSON object on it
   → Get problems for a specialization (use after get_specializations)
 
 {"tool":"create_ticket","title":"...","description":"...","specializationId":"...","problemId":"..."}
-  → Create a support ticket (use when user confirms)
+  → Prepare a ticket preview for user review
 
 Rules:
 - Call ONE tool at a time
 - After getting tool results, continue helping the user
-- Only call create_ticket when you have title, description, specializationId, problemId AND user confirmed
+- Ask concise follow-up questions until you know: affected service/app, exact symptom/error, when it started, who/what is impacted, and what the user already tried
+- For vague messages like "I have problem with Office", ask targeted questions before choosing the ticket title or description
+- Use get_specializations and get_problems to choose the best specialization and problem type
+- Only call create_ticket when you have title, description, specializationId, and problemId
+- Use exact id values from tool results. Do not put specialization/problem names in specializationId or problemId
+- The frontend will show the preview and ask the user to submit or save as draft
 - Respond in the user's language (Arabic or English)
 `;
 
-const SYSTEM_PROMPT_EN = `You are a helpful technical support assistant. Help users solve problems or create support tickets.
+const SYSTEM_PROMPT_EN = `You are a technical support intake assistant. Your main job is to collect enough detail to create a useful support ticket.
+Ask one focused question at a time when information is missing. Do not invent details. When enough information is available, choose the best specialization/problem type and prepare a clear ticket preview with a short title and a complete description.
 ${TOOLS_DESCRIPTION}`;
 
-const SYSTEM_PROMPT_AR = `أنت مساعد دعم تقني مفيد. ساعد المستخدمين في حل مشاكلهم أو إنشاء تذاكر دعم.
+const SYSTEM_PROMPT_AR = `أنت مساعد استقبال للدعم التقني. مهمتك الأساسية جمع معلومات كافية لإنشاء تذكرة دعم مفيدة.
+اسأل سؤالاً واحداً ومحدداً عندما تكون المعلومات ناقصة. لا تخترع تفاصيل. عندما تكتمل المعلومات، اختر أفضل تخصص ونوع مشكلة وجهز معاينة تذكرة بعنوان قصير ووصف واضح.
 ${TOOLS_DESCRIPTION}`;
 
 // ─── Tool Executors ──────────────────────────────────────────────────────────
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: unknown): value is string {
+    return typeof value === "string" && UUID_RE.test(value.trim());
+}
+
+function normalizeLookupText(value: unknown): string {
+    return typeof value === "string"
+        ? value
+            .trim()
+            .toLowerCase()
+            .normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^\p{L}\p{N}]+/gu, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+        : "";
+}
+
+function getLocalizedName(entity: any, lang: string): string {
+    const name = entity?.name;
+    if (typeof name === "string") return name;
+    return name?.[lang] || name?.en || name?.ar || "";
+}
+
+function getLookupCandidates(entity: any): string[] {
+    const name = entity?.name;
+    if (typeof name === "string") return [name];
+    return [name?.en, name?.ar].filter(Boolean);
+}
+
+function matchesEntityName(entity: any, rawLookup: unknown): boolean {
+    const lookup = normalizeLookupText(rawLookup);
+    if (!lookup) return false;
+
+    const candidates = getLookupCandidates(entity).map(normalizeLookupText).filter(Boolean);
+    return candidates.some(candidate =>
+        candidate === lookup ||
+        candidate.includes(lookup) ||
+        lookup.includes(candidate)
+    );
+}
+
+async function resolveSpecialization(lookup: unknown, lang: string): Promise<Specialization | null> {
+    const repo = PostgresDataSource.getRepository(Specialization);
+    const value = typeof lookup === "string" ? lookup.trim() : "";
+    if (!value) return null;
+
+    if (isUuid(value)) {
+        return repo.findOne({ where: { id: value } });
+    }
+
+    const specs = await repo.find({ order: { createdAt: "DESC" } });
+    return specs.find(spec => matchesEntityName(spec, value)) || null;
+}
+
+async function resolveProblem(
+    lookup: unknown,
+    lang: string,
+    specialization?: Specialization | null,
+): Promise<Problem | null> {
+    const repo = PostgresDataSource.getRepository(Problem);
+    const value = typeof lookup === "string" ? lookup.trim() : "";
+    if (!value) return null;
+
+    if (isUuid(value)) {
+        const problem = await repo.findOne({ where: { id: value }, relations: ["specialization"] });
+        if (!problem || !specialization) return problem;
+        return problem.specialization?.id === specialization.id ? problem : null;
+    }
+
+    const problems = await repo.find({
+        where: specialization ? { specialization: { id: specialization.id } as any } : {},
+        relations: ["specialization"],
+    });
+    return problems.find(problem => matchesEntityName(problem, value)) || null;
+}
+
+function getToolLookup(toolCall: any, ...keys: string[]): string | undefined {
+    for (const key of keys) {
+        const value = toolCall?.[key];
+        if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return undefined;
+}
 
 async function executeTool(toolCall: any, language: string): Promise<string> {
     const lang = language === "ar" ? "ar" : "en";
@@ -89,13 +183,20 @@ async function executeTool(toolCall: any, language: string): Promise<string> {
             try {
                 const repo = PostgresDataSource.getRepository(Problem);
                 const where: any = {};
-                if (toolCall.specializationId) {
-                    where.specialization = { id: toolCall.specializationId };
+                const specializationLookup = getToolLookup(toolCall, "specializationId", "specializationName", "specialization");
+                if (specializationLookup) {
+                    const specialization = await resolveSpecialization(specializationLookup, lang);
+                    if (!specialization) {
+                        return lang === "ar"
+                            ? "لم أجد هذا التخصص. استخدم get_specializations واختر id من القائمة."
+                            : "Specialization not found. Use get_specializations and choose an id from the list.";
+                    }
+                    where.specialization = { id: specialization.id };
                 }
                 const problems = await repo.find({ where, relations: ["specialization"] });
                 if (problems.length === 0) return "No problems found for this specialization.";
                 return problems.map(p => {
-                    const name = p.name[lang as "en" | "ar"] || p.name.en || p.name.ar || "Unknown";
+                    const name = getLocalizedName(p, lang) || "Unknown";
                     return `- ${name} (id: ${p.id})`;
                 }).join("\n");
             } catch {
@@ -104,13 +205,51 @@ async function executeTool(toolCall: any, language: string): Promise<string> {
         }
 
         case "create_ticket": {
-            // Return a special marker - actual creation happens after LLM confirms
+            const specializationLookup = getToolLookup(toolCall, "specializationId", "specializationName", "specialization");
+            const problemLookup = getToolLookup(toolCall, "problemId", "problemName", "problem");
+            const specialization = specializationLookup
+                ? await resolveSpecialization(specializationLookup, lang)
+                : null;
+
+            if (specializationLookup && !specialization) {
+                return lang === "ar"
+                    ? "لم أجد التخصص المطلوب. استخدم get_specializations واختر id من القائمة."
+                    : "I could not find that specialization. Use get_specializations and choose an id from the list.";
+            }
+
+            const problem = problemLookup
+                ? await resolveProblem(problemLookup, lang, specialization)
+                : null;
+
+            if (problemLookup && !problem) {
+                return lang === "ar"
+                    ? "لم أجد نوع المشكلة المطلوب لهذا التخصص. استخدم get_problems واختر id من القائمة."
+                    : "I could not find that problem type for the selected specialization. Use get_problems and choose an id from the list.";
+            }
+
+            const resolvedSpecialization = specialization || problem?.specialization || null;
+            const specializationName = resolvedSpecialization
+                ? getLocalizedName(resolvedSpecialization, lang)
+                : undefined;
+            const problemName = problem
+                ? getLocalizedName(problem, lang)
+                : undefined;
+
+            if (!toolCall.title?.trim() || !toolCall.description?.trim() || !resolvedSpecialization || !problem) {
+                return lang === "ar"
+                    ? "أحتاج إلى عنوان ووصف وتخصص ونوع مشكلة قبل تجهيز معاينة التذكرة."
+                    : "I need a title, description, specialization, and problem type before preparing the ticket preview.";
+            }
+
+            // Return a special marker. The frontend asks the user to review before saving.
             return JSON.stringify({
                 __pending_ticket__: true,
-                title: toolCall.title,
-                description: toolCall.description,
-                specializationId: toolCall.specializationId,
-                problemId: toolCall.problemId,
+                title: toolCall.title.trim(),
+                description: toolCall.description.trim(),
+                specializationId: resolvedSpecialization.id,
+                problemId: problem.id,
+                specializationName,
+                problemName,
             });
         }
 
@@ -122,14 +261,17 @@ async function executeTool(toolCall: any, language: string): Promise<string> {
 // ─── Parse tool call from LLM output ─────────────────────────────────────────
 
 function parseToolCall(text: string): any | null {
-    // Look for a JSON object that has a "tool" key
-    const match = text.match(/\{[^{}]*"tool"\s*:\s*"[^"]+[^{}]*\}/);
-    if (!match) return null;
-    try {
-        return JSON.parse(match[0]);
-    } catch {
-        return null;
+    const matches = text.match(/\{[\s\S]*?\}/g);
+    if (!matches) return null;
+    for (const match of matches) {
+        try {
+            const parsed = JSON.parse(match);
+            if (parsed?.tool) return parsed;
+        } catch {
+            // Keep scanning; the model may include prose or malformed snippets.
+        }
     }
+    return null;
 }
 
 // ─── Call Ollama (non-streaming, for tool loop) ───────────────────────────────
@@ -145,7 +287,7 @@ async function callOllama(messages: any[]): Promise<string> {
             options: {
                 temperature: 0.2,
                 num_ctx: 2048,
-                num_predict: 512,
+                num_predict: 384,
             },
         }),
         signal: AbortSignal.timeout(OLLAMA_TIMEOUT_MS),
@@ -171,6 +313,7 @@ export const aiAssistantChat = async (req: Request, res: Response) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
+    res.write(`data: ${JSON.stringify({ toolStatus: language === "ar" ? "أفكر" : "thinking" })}\n\n`);
 
     const systemPrompt = language === "ar" ? SYSTEM_PROMPT_AR : SYSTEM_PROMPT_EN;
 
@@ -232,14 +375,17 @@ export const aiAssistantChat = async (req: Request, res: Response) => {
                         description: parsed.description,
                         specializationId: parsed.specializationId,
                         problemId: parsed.problemId,
+                        specializationName: parsed.specializationName,
+                        problemName: parsed.problemName,
                     };
-                    // Add to conversation as if tool returned success
-                    conversation.push({ role: "assistant", content: llmResponse });
-                    conversation.push({
-                        role: "user",
-                        content: `[Tool result for ${toolCall.tool}]: Ticket data collected. Now confirm with the user and present a summary.`,
-                    });
-                    continue;
+                    const previewMessage = language === "ar"
+                        ? "جهزت معاينة للتذكرة. راجع العنوان والوصف ثم اختر الإرسال أو الحفظ كمسودة."
+                        : "I prepared a ticket preview. Review the title and description, then submit it or save it as a draft.";
+                    res.write(`data: ${JSON.stringify({ content: previewMessage })}\n\n`);
+                    res.write(`data: ${JSON.stringify({ ticketAction: pendingTicket })}\n\n`);
+                    res.write("data: [DONE]\n\n");
+                    res.end();
+                    return;
                 }
             } catch { /* not JSON */ }
 
@@ -280,28 +426,45 @@ export const aiCreateTicket = async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-    const { title, description, specializationId, problemId } = req.body;
+    const { title, description, specializationId, problemId, isDraft } = req.body;
     if (!title?.trim() || !description?.trim()) {
         return res.status(400).json({ error: "Title and description are required" });
     }
 
     try {
         const ticketRepo = PostgresDataSource.getRepository(Ticket);
+        const lang = req.body?.language === "ar" ? "ar" : "en";
+        const specialization = specializationId
+            ? await resolveSpecialization(specializationId, lang)
+            : null;
+        const problem = problemId
+            ? await resolveProblem(problemId, lang, specialization)
+            : null;
+        const resolvedSpecialization = specialization || problem?.specialization || null;
+
+        if (specializationId && !resolvedSpecialization) {
+            return res.status(400).json({ error: "Invalid specialization" });
+        }
+
+        if (problemId && !problem) {
+            return res.status(400).json({ error: "Invalid problem type" });
+        }
 
         const ticketData: any = {
             title: title.trim().substring(0, 100),
             description: description.trim(),
-            status: TicketStatus.OPEN,
+            status: isDraft ? TicketStatus.DRAFT : TicketStatus.OPEN,
             priority: TicketPriority.NA,
             requester: { id: user.id },
         };
 
-        if (specializationId) ticketData.specialization = { id: specializationId };
-        if (problemId) ticketData.problem = { id: problemId };
+        if (resolvedSpecialization) ticketData.specialization = { id: resolvedSpecialization.id };
+        if (problem) ticketData.problem = { id: problem.id };
 
         const ticket = ticketRepo.create(ticketData);
         const saved = await ticketRepo.save(ticket) as any;
         const savedTicket = Array.isArray(saved) ? saved[0] : saved;
+        await invalidateTicketAnalyticsCache();
 
         logger.info(`[ai-assistant] Ticket #${savedTicket.ticket_number} created by requester ${user.id}`);
 
@@ -309,6 +472,7 @@ export const aiCreateTicket = async (req: Request, res: Response) => {
             success: true,
             ticketId: savedTicket.id,
             ticketNumber: savedTicket.ticket_number,
+            isDraft: !!isDraft,
         });
     } catch (error: any) {
         logger.error("[ai-assistant] Ticket creation error:", error);

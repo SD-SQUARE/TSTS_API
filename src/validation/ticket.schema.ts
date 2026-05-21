@@ -29,6 +29,10 @@ export const createTicketSchema = (t: Request["t"]) =>
       .uuid({ message: t("invalid_problem") })
       .nullable()
       .optional(),
+
+    isDraft: z
+      .preprocess((value) => value === true || value === "true" || value === "1", z.boolean())
+      .optional(),
   });
 
 export const getTicketsSchema = (t: Request["t"]) =>

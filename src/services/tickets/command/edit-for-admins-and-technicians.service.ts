@@ -19,6 +19,7 @@ import { UserData } from "../../../types/UserData.js";
 import { Request } from "express";
 import { audit } from "../../../helpers/auditBuilder.js";
 import { invalidateTicketAnalyticsCache } from "../ticket-cache.service.js";
+import { TicketStatus } from "../../../enums/TicketStatus.enum.js";
 
 // todo  Emit WebSocket event
 export const editTicketForAdminAndTechniciansService = async (
@@ -42,6 +43,17 @@ export const editTicketForAdminAndTechniciansService = async (
     });
 
     return ticketNotFound("is_edited", ticketId) as IEditResponse;
+  }
+
+  if (
+    updateData.status === TicketStatus.DRAFT ||
+    existingTicket.status === TicketStatus.DRAFT
+  ) {
+    return {
+      is_edited: false,
+      message: t("action_not_allowed"),
+      errors: [{ key: "status", message: "Draft tickets are requester-only" }],
+    };
   }
 
   const changes: ChangeMap = {};

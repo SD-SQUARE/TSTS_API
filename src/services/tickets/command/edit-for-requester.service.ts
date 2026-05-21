@@ -44,6 +44,14 @@ export const editTicketForRequesterService = async (
     return ticketNotFound("is_edited", ticketId) as IEditResponse;
   }
 
+  if (existingTicket.requester?.id !== userData.id) {
+    return {
+      is_edited: false,
+      message: t("action_not_allowed"),
+      errors: [{ key: "requester", message: "Requester cannot edit another user's ticket" }],
+    };
+  }
+
   const changes: ChangeMap = {};
   const updates: any = {};
   const wsFlag = { value: false };

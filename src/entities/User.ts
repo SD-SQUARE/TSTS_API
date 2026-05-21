@@ -55,6 +55,9 @@ export class User extends BaseEntity {
   @Column({ type: "jsonb", nullable: true })
   contacts?: { mobile?: string[]; phone?: string[] };
 
+  @Column({ type: "varchar", length: 64, nullable: true })
+  rustdeskId?: string | null;
+
   @ManyToOne(() => University, (u) => u.domains, { nullable: true, lazy: true })
   university?: any;
 

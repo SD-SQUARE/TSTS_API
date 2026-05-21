@@ -17,6 +17,7 @@ const CSRF_EXCLUDED_PATHS = [
     "/api/v1/ai-assistant/chat",
     "/api/v1/ai-assistant/create-ticket",
     "/api/v1/ai-assistant/health",
+    "/api/v1/desktop/register-device",
 ];
 
 export const csrfMiddleware = (req: Request, res: Response, next: NextFunction) => {
