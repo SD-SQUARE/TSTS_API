@@ -1,0 +1,28 @@
+{
+  "id": "tickets/ticket-media",
+  "title": "Ticket Media",
+  "description": "File attachments for tickets and final reports. Stored in MinIO (S3-compatible).",
+  "source": "@site/../docs/tickets/media.md",
+  "sourceDirName": "tickets",
+  "slug": "/tickets/ticket-media",
+  "permalink": "/tickets/ticket-media",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "ticket-media",
+    "title": "Ticket Media",
+    "sidebar_label": "Media"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Tickets",
+    "permalink": "/tickets/"
+  },
+  "next": {
+    "title": "Ticket Chat",
+    "permalink": "/tickets/ticket-chat"
+  }
+}

@@ -1,0 +1,1206 @@
+openapi: 3.0.3
+info:
+  title: TSTS - Technical Support Ticketing System API
+  description: |
+    Comprehensive API documentation for the Technical Support Ticketing System (TSTS).
+    
+    ## Overview
+    TSTS is a full-featured ticketing system designed for university IT support operations.
+    It includes ticket management, chat, knowledge base, AI assistance, and comprehensive reporting.
+    
+    ## Authentication
+    The API supports multiple authentication methods:
+    - **Bearer Token**: JWT-based authentication for web and mobile clients
+    - **API Keys**: For third-party integrations with scope-based access control
+    - **WebAuthn**: Passwordless authentication using trusted devices
+    
+    ## Base URLs
+    - Production: `https://api.tsts.local`
+    - Development: `http://localhost:3000`
+    
+    ## Rate Limiting
+    - 1000 requests per 15 minutes per IP address
+    - Rate limit headers included in responses
+    
+    ## Pagination
+    Most list endpoints support pagination with `page` and `limit` query parameters:
+    - Default page: 1
+    - Default limit: 20
+    - Maximum limit: 200
+    
+    ## Internationalization
+    The API supports English and Arabic. Many fields use JSONB format:
+    ```json
+    {
+      "name": {
+        "en": "Computer Science",
+        "ar": "علوم الحاسب"
+      }
+    }
+    ```
+    
+    ## Error Responses
+    All errors follow a consistent format:
+    ```json
+    {
+      "message": "Error description",
+      "statusCode": 400,
+      "errors": [] // Optional validation errors
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: TSTS Support
+    email: support@tsts.local
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.tsts.local
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Authentication v2
+    description: Enhanced authentication with WebAuthn and OAuth
+  - name: Users
+    description: User management (requesters, technicians, admins)
+  - name: Tickets
+    description: Ticket lifecycle management
+  - name: Chat
+    description: Real-time messaging (personal, group, team)
+  - name: Notifications
+    description: System and user notifications
+  - name: Reports
+    description: Analytics and reporting
+  - name: Custom Forms
+    description: Dynamic form builder and submissions
+  - name: Knowledge Base
+    description: Knowledge base articles and AI-powered generation
+  - name: AI Assistant
+    description: AI-powered chat and ticket creation
+  - name: Groups
+    description: Support group management
+  - name: Teams
+    description: Team management
+  - name: Universities
+    description: University management
+  - name: Domains
+    description: Domain (faculty) management
+  - name: Departments
+    description: Department management
+  - name: Specializations
+    description: Specialization management
+  - name: Problems
+    description: Problem type management
+  - name: SLA
+    description: Service Level Agreement rules
+  - name: Permissions
+    description: Permission and role management
+  - name: Permission Profiles
+    description: Permission profile management
+  - name: Lockups
+    description: Dropdown/autocomplete data endpoints
+  - name: Site Settings
+    description: System configuration
+  - name: Audit
+    description: Audit log tracking
+  - name: Recycle Bin
+    description: Soft-deleted record management
+  - name: Trusted Devices
+    description: WebAuthn device management
+  - name: API Integrations
+    description: API key management for third-party integrations
+  - name: Work Hours
+    description: Work schedule management
+  - name: Quick Messages
+    description: Predefined response templates
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login endpoint
+    
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for third-party integrations
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Validation failed"
+        statusCode:
+          type: integer
+          example: 400
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 150
+        totalPages:
+          type: integer
+          example: 8
+
+    LocalizedString:
+      type: object
+      properties:
+        en:
+          type: string
+          example: "Computer Science"
+        ar:
+          type: string
+          example: "علوم الحاسب"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          $ref: '#/components/schemas/LocalizedString'
+        lastName:
+          $ref: '#/components/schemas/LocalizedString'
+        fullName:
+          $ref: '#/components/schemas/LocalizedString'
+        user_type:
+          type: string
+          enum: [Requester, Admin, Technician, SuperAdmin]
+        status:
+          type: string
+          enum: [Active, Inactive]
+        image:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticket_number:
+          type: integer
+          example: 42
+        title:
+          type: string
+          example: "Cannot access email"
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, open, in_progress, pending, closed, resolved, re_open, out_of_service]
+        priority:
+          type: string
+          enum: [important/urgent, important, urgent, NA]
+        requester:
+          $ref: '#/components/schemas/User'
+        assigneeList:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        specialization:
+          $ref: '#/components/schemas/Specialization'
+        problem:
+          $ref: '#/components/schemas/Problem'
+        createdAt:
+          type: string
+          format: date-time
+        modifiedAt:
+          type: string
+          format: date-time
+
+    Specialization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          $ref: '#/components/schemas/LocalizedString'
+        description:
+          $ref: '#/components/schemas/LocalizedString'
+        review_required:
+          type: boolean
+
+    Problem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          $ref: '#/components/schemas/LocalizedString'
+        specialization:
+          $ref: '#/components/schemas/Specialization'
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [system, ticket, message, other]
+        title:
+          type: string
+        content:
+          type: string
+        read:
+          type: boolean
+        ticketId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    CustomForm:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        fields:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              type:
+                type: string
+                enum: [text, email, textarea, select, checkbox, radio, date, number]
+              label:
+                type: string
+              required:
+                type: boolean
+              options:
+                type: array
+                items:
+                  type: string
+        token:
+          type: string
+        isGlobal:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    KnowledgeItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title_en:
+          type: string
+        title_ar:
+          type: string
+        description_en:
+          type: string
+        description_ar:
+          type: string
+        content_en:
+          type: string
+        content_ar:
+          type: string
+        specialization_en:
+          type: string
+        specialization_ar:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        keyPrefix:
+          type: string
+          example: "tsts_abc123"
+        zones:
+          type: array
+          items:
+            type: string
+          example: ["tickets", "knowledge_base"]
+        methods:
+          type: array
+          items:
+            type: string
+          example: ["GET", "POST"]
+        isActive:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Invalid or expired token"
+            statusCode: 401
+
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "You do not have permission to perform this action"
+            statusCode: 403
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Resource not found"
+            statusCode: 404
+
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Validation failed"
+            statusCode: 400
+            errors:
+              - field: "email"
+                message: "Invalid email format"
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      description: Check if the API is running
+      tags: []
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  # Authentication Endpoints
+  /api/v1/auth/login:
+    post:
+      summary: User login
+      description: Authenticate with email and password
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/auth/logout:
+    post:
+      summary: User logout
+      tags: [Authentication]
+      responses:
+        '200':
+          description: Logout successful
+
+  /api/v1/auth/csrf-token:
+    get:
+      summary: Get CSRF token
+      tags: [Authentication]
+      security: []
+      responses:
+        '200':
+          description: CSRF token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  csrfToken:
+                    type: string
+
+  # Tickets Endpoints
+  /api/v1/tickets:
+    get:
+      summary: List tickets
+      tags: [Tickets]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, open, in_progress, pending, closed, resolved, re_open, out_of_service]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [important/urgent, important, urgent, NA]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of tickets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ticket'
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  total:
+                    type: integer
+                  totalPages:
+                    type: integer
+
+    post:
+      summary: Create ticket
+      tags: [Tickets]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, description, priority]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                priority:
+                  type: string
+                  enum: [important/urgent, important, urgent, NA]
+                departmentId:
+                  type: string
+                  format: uuid
+                specializationId:
+                  type: string
+                  format: uuid
+                media:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+
+  /api/v1/tickets/{id}:
+    get:
+      summary: Get ticket by ID
+      tags: [Tickets]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ticket details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      summary: Update ticket (Requester)
+      tags: [Tickets]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Ticket updated
+
+    delete:
+      summary: Delete ticket
+      tags: [Tickets]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ticket deleted
+
+  /api/v1/tickets/{id}/change-status:
+    patch:
+      summary: Change ticket status
+      tags: [Tickets]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [open, in_progress, pending, closed, resolved, re_open]
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Status changed
+
+  # AI Assistant Endpoints
+  /api/v1/ai-assistant/chat:
+    post:
+      summary: Chat with AI assistant
+      tags: [AI Assistant]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                ticketId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+
+  /api/v1/ai-assistant/create-ticket:
+    post:
+      summary: AI-assisted ticket creation
+      tags: [AI Assistant]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [summary]
+              properties:
+                summary:
+                  type: string
+                priority:
+                  type: string
+      responses:
+        '201':
+          description: Ticket created
+
+  /api/v1/ai-assistant/health:
+    get:
+      summary: AI service health check
+      tags: [AI Assistant]
+      security: []
+      responses:
+        '200':
+          description: AI service status
+
+  # API Integrations Endpoints
+  /api/v1/api-integrations/meta:
+    get:
+      summary: Get API key metadata
+      tags: [API Integrations]
+      responses:
+        '200':
+          description: API key zones and methods
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  zones:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        label:
+                          type: string
+                        description:
+                          type: string
+                        paths:
+                          type: array
+                          items:
+                            type: string
+                  methods:
+                    type: array
+                    items:
+                      type: string
+
+  /api/v1/api-integrations/keys:
+    get:
+      summary: List API keys
+      tags: [API Integrations]
+      responses:
+        '200':
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keys:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKey'
+
+    post:
+      summary: Create API key
+      tags: [API Integrations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, zones, methods]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                zones:
+                  type: array
+                  items:
+                    type: string
+                methods:
+                  type: array
+                  items:
+                    type: string
+                expiresAt:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: API key created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    description: Full API key (shown only once)
+                  apiKey:
+                    $ref: '#/components/schemas/ApiKey'
+
+  /api/v1/api-integrations/keys/{id}:
+    patch:
+      summary: Update API key
+      tags: [API Integrations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                zones:
+                  type: array
+                  items:
+                    type: string
+                methods:
+                  type: array
+                  items:
+                    type: string
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: API key updated
+
+    delete:
+      summary: Revoke API key
+      tags: [API Integrations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: API key revoked
+
+  # Users Endpoints
+  /api/v1/users/requesters:
+    get:
+      summary: List requesters
+      tags: [Users]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of requesters
+
+    post:
+      summary: Create requester
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, email, ssn, departmentId, universityId]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                ssn:
+                  type: string
+                departmentId:
+                  type: string
+                  format: uuid
+                universityId:
+                  type: string
+                  format: uuid
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Requester created
+
+  /api/v1/users/technicians:
+    get:
+      summary: List technicians
+      tags: [Users]
+      responses:
+        '200':
+          description: List of technicians
+
+    post:
+      summary: Create technician
+      tags: [Users]
+      responses:
+        '201':
+          description: Technician created
+
+  /api/v1/users/admins:
+    get:
+      summary: List admins
+      tags: [Users]
+      responses:
+        '200':
+          description: List of admins
+
+    post:
+      summary: Create admin
+      tags: [Users]
+      responses:
+        '201':
+          description: Admin created
+
+  # Notifications Endpoints
+  /api/v1/notifications:
+    get:
+      summary: List notifications
+      tags: [Notifications]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+
+  /api/v1/notifications/unread-count:
+    get:
+      summary: Get unread notification count
+      tags: [Notifications]
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+
+  /api/v1/notifications/{id}/read:
+    patch:
+      summary: Mark notification as read
+      tags: [Notifications]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Notification marked as read
+
+  # Knowledge Base Endpoints
+  /api/v1/knowledge-base:
+    get:
+      summary: List knowledge base items
+      tags: [Knowledge Base]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of knowledge base items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/KnowledgeItem'
+
+    post:
+      summary: Create knowledge base item
+      tags: [Knowledge Base]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title_en, title_ar, content_en, content_ar]
+              properties:
+                title_en:
+                  type: string
+                title_ar:
+                  type: string
+                description_en:
+                  type: string
+                description_ar:
+                  type: string
+                content_en:
+                  type: string
+                content_ar:
+                  type: string
+                specialization_en:
+                  type: string
+                specialization_ar:
+                  type: string
+      responses:
+        '201':
+          description: Knowledge base item created
+
+  # Custom Forms Endpoints
+  /api/v1/custom-forms:
+    get:
+      summary: List custom forms
+      tags: [Custom Forms]
+      responses:
+        '200':
+          description: List of custom forms
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomForm'
+
+    post:
+      summary: Create custom form
+      tags: [Custom Forms]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, fields]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                fields:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '201':
+          description: Custom form created
+
+  /api/v1/custom-forms/public/{token}:
+    get:
+      summary: Get public form by token
+      tags: [Custom Forms]
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public form details
+
+  # Reports Endpoints
+  /api/v1/reports:
+    get:
+      summary: Get available reports
+      tags: [Reports]
+      responses:
+        '200':
+          description: List of available reports
+
+  /api/v1/reports/dashboard/analytics:
+    get:
+      summary: Get dashboard analytics
+      tags: [Reports]
+      responses:
+        '200':
+          description: Dashboard analytics data
+
+  /api/v1/reports/{reportId}:
+    get:
+      summary: Generate report
+      tags: [Reports]
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, pdf, csv]
+            default: json
+        - name: fromDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Report data

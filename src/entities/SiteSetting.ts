@@ -8,4 +8,17 @@ export class SiteSetting extends BaseEntity {
 
   @Column({ type: "int", default: 60 })
   unassignedTicketAlertMinutes!: number;
+
+  // AI Assistant Configuration
+  @Column({ type: "boolean", default: true })
+  aiAssistantEnabled!: boolean;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  aiModelName?: string | null;
+
+  @Column({ type: "varchar", length: 500, nullable: true })
+  aiApiKey?: string | null;
+
+  @Column({ type: "varchar", length: 500, nullable: true })
+  aiChatUrl?: string | null;
 }

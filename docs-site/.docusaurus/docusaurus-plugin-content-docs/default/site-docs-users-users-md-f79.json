@@ -1,0 +1,28 @@
+{
+  "id": "users/users",
+  "title": "Users",
+  "description": "The system manages three user types: Requesters, Technicians, and Admins (including Super Admins).",
+  "source": "@site/../docs/users/users.md",
+  "sourceDirName": "users",
+  "slug": "/users/",
+  "permalink": "/users/",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "users",
+    "title": "Users",
+    "sidebar_label": "Users"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Final Reports",
+    "permalink": "/tickets/ticket-final-report"
+  },
+  "next": {
+    "title": "Profile",
+    "permalink": "/users/user-profile"
+  }
+}

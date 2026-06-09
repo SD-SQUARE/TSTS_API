@@ -1,4 +1,8 @@
-# Database migrations
+---
+id: database-migrations
+title: Database Migrations
+sidebar_label: Database Migrations
+---
 
 ## Postgres
 

@@ -1,0 +1,28 @@
+{
+  "id": "users/user-profile",
+  "title": "User Profile",
+  "description": "Authenticated users can view and manage their own profiles.",
+  "source": "@site/../docs/users/profile.md",
+  "sourceDirName": "users",
+  "slug": "/users/user-profile",
+  "permalink": "/users/user-profile",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "user-profile",
+    "title": "User Profile",
+    "sidebar_label": "Profile"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Users",
+    "permalink": "/users/"
+  },
+  "next": {
+    "title": "Chat",
+    "permalink": "/chat/"
+  }
+}

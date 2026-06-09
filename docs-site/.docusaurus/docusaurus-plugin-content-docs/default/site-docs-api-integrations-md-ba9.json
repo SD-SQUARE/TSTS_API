@@ -1,0 +1,24 @@
+{
+  "id": "api-integrations",
+  "title": "API Integrations",
+  "description": "API Integrations let administrators issue scoped keys for trusted external systems. A key can be limited by API zone and HTTP method, so an integration can be granted only the surface it actually needs.",
+  "source": "@site/../docs/api-integrations.md",
+  "sourceDirName": ".",
+  "slug": "/api-integrations",
+  "permalink": "/api-integrations",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "api-integrations",
+    "title": "API Integrations",
+    "sidebar_label": "API Integrations"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Database Migrations",
+    "permalink": "/database-migrations"
+  }
+}

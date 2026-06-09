@@ -1,5 +1,6 @@
 import csrf from "csurf";
 import { Request, Response, NextFunction } from "express";
+import { hasApiKeyHeader } from "../services/api-keys.service.js";
 
 const CSRF_TOKEN_EXPIRATION_24HR_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -20,9 +21,20 @@ const CSRF_EXCLUDED_PATHS = [
     "/api/v1/desktop/register-device",
 ];
 
+const isExcludedPath = (requestPath: string) =>
+    CSRF_EXCLUDED_PATHS.some((path) => (
+        requestPath.startsWith(path) ||
+        requestPath.startsWith(path.replace(/^\/api/, ""))
+    ));
+
+const hasBearerToken = (req: Request) =>
+    typeof req.headers.authorization === "string" &&
+    req.headers.authorization.toLowerCase().startsWith("bearer ");
+
 export const csrfMiddleware = (req: Request, res: Response, next: NextFunction) => {
-    if (CSRF_EXCLUDED_PATHS.some(path => req.path.startsWith(path.replace("/api", "")))) {
+    if (isExcludedPath(req.path) || hasBearerToken(req) || hasApiKeyHeader(req)) {
         return next();
     }
+
     return csrfProtection(req, res, next);
 };

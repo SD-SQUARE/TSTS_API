@@ -1,0 +1,28 @@
+{
+  "id": "authentication/auth-v1",
+  "title": "Authentication v1",
+  "description": "Legacy session-based authentication with cookie refresh tokens.",
+  "source": "@site/../docs/authentication/auth-v1.md",
+  "sourceDirName": "authentication",
+  "slug": "/authentication/auth-v1",
+  "permalink": "/authentication/auth-v1",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "auth-v1",
+    "title": "Authentication v1",
+    "sidebar_label": "Auth v1"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Overview",
+    "permalink": "/intro"
+  },
+  "next": {
+    "title": "Auth v2",
+    "permalink": "/authentication/auth-v2"
+  }
+}

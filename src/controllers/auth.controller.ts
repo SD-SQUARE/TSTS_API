@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import crypto from "crypto";
 import {
   forgetPassword,
   generateCsrfForUser,
@@ -71,9 +72,10 @@ export const logout = async (req: Request, res: Response) => {
 //   return res.status(200).send();
 // };
 export const getCsrfToken = (req: any, res: any) => {
-  res.json({
-    csrfToken: req.csrfToken(),
-  });
+  const token = typeof req.csrfToken === "function"
+    ? req.csrfToken()
+    : crypto.randomBytes(24).toString("hex");
+  res.json({ csrfToken: token });
 };
 
 export const refreshToken = async (req: Request, res: Response) => {

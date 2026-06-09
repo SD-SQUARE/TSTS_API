@@ -32,7 +32,7 @@ services:
     ports:
       - "9100:9100"
     volumes:
-      - /:/host/rootfs:ro,rslave
+      - /:/host/rootfs:ro
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
     networks:

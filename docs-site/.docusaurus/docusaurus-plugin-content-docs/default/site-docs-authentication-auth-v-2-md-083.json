@@ -1,0 +1,28 @@
+{
+  "id": "authentication/auth-v2",
+  "title": "Authentication v2",
+  "description": "The v2 auth flow supports WebAuthn trusted devices and Microsoft SSO alongside traditional password login.",
+  "source": "@site/../docs/authentication/auth-v2.md",
+  "sourceDirName": "authentication",
+  "slug": "/authentication/auth-v2",
+  "permalink": "/authentication/auth-v2",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "auth-v2",
+    "title": "Authentication v2",
+    "sidebar_label": "Auth v2"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Auth v1",
+    "permalink": "/authentication/auth-v1"
+  },
+  "next": {
+    "title": "Trusted Devices",
+    "permalink": "/authentication/trusted-devices"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "management/academic-structure",
+  "title": "Academic Structure",
+  "description": "Universities, domains, departments, and specializations form the organizational hierarchy.",
+  "source": "@site/../docs/management/academic-structure.md",
+  "sourceDirName": "management",
+  "slug": "/management/academic-structure",
+  "permalink": "/management/academic-structure",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "academic-structure",
+    "title": "Academic Structure",
+    "sidebar_label": "Academic Structure"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Groups",
+    "permalink": "/management/groups"
+  },
+  "next": {
+    "title": "Problems",
+    "permalink": "/management/problems"
+  }
+}

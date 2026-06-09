@@ -1,0 +1,28 @@
+{
+  "id": "management/custom-forms",
+  "title": "Custom Forms",
+  "description": "Dynamic form builder with public submission support and response export.",
+  "source": "@site/../docs/management/custom-forms.md",
+  "sourceDirName": "management",
+  "slug": "/management/custom-forms",
+  "permalink": "/management/custom-forms",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "custom-forms",
+    "title": "Custom Forms",
+    "sidebar_label": "Custom Forms"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Permission Profiles",
+    "permalink": "/management/permission-profiles"
+  },
+  "next": {
+    "title": "Site Settings",
+    "permalink": "/management/site-settings"
+  }
+}

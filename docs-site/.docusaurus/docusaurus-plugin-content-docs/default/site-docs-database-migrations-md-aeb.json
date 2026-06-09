@@ -1,0 +1,28 @@
+{
+  "id": "database-migrations",
+  "title": "Database Migrations",
+  "description": "Postgres",
+  "source": "@site/../docs/database-migrations.md",
+  "sourceDirName": ".",
+  "slug": "/database-migrations",
+  "permalink": "/database-migrations",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": 1775849452000,
+  "frontMatter": {
+    "id": "database-migrations",
+    "title": "Database Migrations",
+    "sidebar_label": "Database Migrations"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Desktop App",
+    "permalink": "/management/desktop-app"
+  },
+  "next": {
+    "title": "API Integrations",
+    "permalink": "/api-integrations"
+  }
+}

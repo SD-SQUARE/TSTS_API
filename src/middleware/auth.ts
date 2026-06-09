@@ -6,6 +6,8 @@ export const authMiddleware = (
   res: Response,
   next: NextFunction
 ) => {
+  if (req.apiKey) return next();
+
   const authHeader = req.headers.authorization;
   if (!authHeader)
     return res.status(401).json({ message: req.t("not_token") });

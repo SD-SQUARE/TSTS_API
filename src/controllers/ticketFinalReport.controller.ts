@@ -19,6 +19,7 @@ import logger from "../utils/logger.js";
 import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 import { uploadTicketMediaSchema } from "../validation/tickets/media/upload-ticket-media-schema.js";
 import { IMAGE_PATHS } from "../constants/imagePathes.js";
+import { getAiSettings } from "../services/site-settings.service.js";
 
 type FinalReportPayload = {
   title_en?: string | null;
@@ -642,7 +643,109 @@ export const generateKnowledgeDraftFromReportController = async (
     });
   }
 
-  report.knowledgeDraft = buildDefaultKnowledgeDraft(report);
+  // Build a base draft from existing data
+  const baseDraft = buildDefaultKnowledgeDraft(report);
+
+  // Try to enhance with AI
+  try {
+    const aiSettings = await getAiSettings();
+
+    if (aiSettings.enabled) {
+      const rawContent = [
+        baseDraft.title_en || baseDraft.title_ar || "",
+        stripHtml(baseDraft.content_en || baseDraft.content_ar || ""),
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+      if (rawContent.trim()) {
+        const ticketSpecialization = (report.ticket as any)?.specialization;
+        const specEn = ticketSpecialization?.name?.en || "";
+        const specAr = ticketSpecialization?.name?.ar || "";
+
+        const prompt = `You are a technical knowledge base writer. Given a support ticket resolution, write a short bilingual knowledge base article.
+
+Specialization: ${specEn || specAr || "General"}
+
+Ticket content:
+"""
+${rawContent.substring(0, 800)}
+"""
+
+Return ONLY valid JSON, no markdown:
+{"title_en":"<English title>","title_ar":"<عنوان عربي>","description_en":"<1-sentence English summary>","description_ar":"<ملخص عربي>","content_en":"<English HTML>","content_ar":"<عربي HTML>"}
+
+Rules: _en fields in English only, _ar fields in Arabic only.`;
+
+        // Detect provider type (same logic as ai-assistant.controller.ts)
+        const isRemote = !!aiSettings.apiKey;
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (aiSettings.apiKey) {
+          headers["Authorization"] = `Bearer ${aiSettings.apiKey}`;
+        }
+
+        const url = isRemote
+          ? `${aiSettings.chatUrl.replace(/\/$/, "")}/chat/completions`
+          : `${aiSettings.chatUrl.replace(/\/$/, "")}/api/chat`;
+
+        const body = isRemote
+          ? {
+              model: aiSettings.modelName,
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.3,
+              max_tokens: 800,
+              stream: false,
+            }
+          : {
+              model: aiSettings.modelName,
+              messages: [{ role: "user", content: prompt }],
+              stream: false,
+              options: { temperature: 0.3, num_ctx: 2048, num_predict: 800 },
+            };
+
+        const aiResponse = await fetch(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(Number(process.env.OLLAMA_TIMEOUT_MS || 180000)),
+        });
+
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json() as any;
+          // Support both OpenAI format (choices[0].message.content) and Ollama format (message.content)
+          const rawAiContent: string =
+            aiData?.choices?.[0]?.message?.content ||
+            aiData?.message?.content ||
+            "";
+          const jsonMatch = rawAiContent.match(/\{[\s\S]*\}/);
+
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+
+            // Merge AI output with base draft, keeping existing values if AI didn't produce them
+            if (parsed.title_en) baseDraft.title_en = parsed.title_en.trim();
+            if (parsed.title_ar) baseDraft.title_ar = parsed.title_ar.trim();
+            if (parsed.description_en) baseDraft.description_en = parsed.description_en.trim();
+            if (parsed.description_ar) baseDraft.description_ar = parsed.description_ar.trim();
+            if (parsed.content_en) baseDraft.content_en = parsed.content_en.trim();
+            if (parsed.content_ar) baseDraft.content_ar = parsed.content_ar.trim();
+            if (specEn && !baseDraft.specialization_en) baseDraft.specialization_en = specEn;
+            if (specAr && !baseDraft.specialization_ar) baseDraft.specialization_ar = specAr;
+
+            logger.info(`[knowledge-generator] AI enhanced draft for report ${reportId}`);
+          }
+        } else {
+          const errText = await aiResponse.text().catch(() => "");
+          logger.warn(`[knowledge-generator] AI service returned ${aiResponse.status}: ${errText.slice(0, 200)}`);
+        }
+      }
+    }
+  } catch (aiError: any) {
+    // AI enhancement failed — fall back to base draft silently
+    logger.warn(`[knowledge-generator] AI enhancement failed, using base draft: ${aiError.message}`);
+  }
+
+  report.knowledgeDraft = baseDraft;
   const saved = await reportRepo.save(report);
 
   await recordHistory(saved, actorId, "ai_generated", {

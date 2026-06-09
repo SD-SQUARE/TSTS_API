@@ -1,9 +1,10 @@
 {
-    "extends": "./tsconfig.json",
-    "compilerOptions": {
-        "module": "es2015",
-        "moduleResolution": "bundler",
-        "isolatedModules": true,
-        "skipLibCheck": true
-    }
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["jest", "node"],
+    "esModuleInterop": true
+  },
+  "include": ["src/**/*", "tests/**/*"]
 }

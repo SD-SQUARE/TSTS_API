@@ -1,0 +1,28 @@
+{
+  "id": "management/problems",
+  "title": "Problems",
+  "description": "Problem types are linked to specializations and are used to categorize tickets.",
+  "source": "@site/../docs/management/problems.md",
+  "sourceDirName": "management",
+  "slug": "/management/problems",
+  "permalink": "/management/problems",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "problems",
+    "title": "Problems",
+    "sidebar_label": "Problems"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Academic Structure",
+    "permalink": "/management/academic-structure"
+  },
+  "next": {
+    "title": "Knowledge Base",
+    "permalink": "/management/knowledge-base"
+  }
+}

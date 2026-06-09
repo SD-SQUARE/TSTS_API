@@ -7,7 +7,16 @@ declare module 'express-serve-static-core' {
       email: string;
       role: string;
       permission_profile?: object;
-      name?: string;
+      permissions?: string[];
+      name?: any;
+    };
+    apiKey?: {
+      id: string;
+      name: string;
+      keyPrefix: string;
+      zones: string[];
+      methods: string[];
+      activeZone: string;
     };
     file?: Express.Multer.File;
     audit?: {

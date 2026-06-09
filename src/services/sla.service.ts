@@ -187,11 +187,13 @@ export const getTicketSlaStateFromRules = async (
     return { violated: false };
   }
 
-  const requester = ticket.requester ? await Promise.resolve(ticket.requester) : null;
-  const requesterUniversity = requester ? await resolveRelation<University>(requester.university) : null;
-  const requesterDomain = requester ? await resolveRelation<Domain>(requester.domain) : null;
-  const specialization = await resolveRelation<Specialization>(ticket.specialization);
-  const problem = await resolveRelation<Problem>(ticket.problem);
+  // Tickets loaded via leftJoinAndSelect have relations hydrated as plain objects.
+  // Use direct property access instead of resolveRelation() to avoid lazy DB round-trips.
+  const requester = ticket.requester ?? null;
+  const requesterUniversity = requester?.university ?? null;
+  const requesterDomain = requester?.domain ?? null;
+  const specialization = ticket.specialization ?? null;
+  const problem = ticket.problem ?? null;
   const ageHours = (Date.now() - new Date(ticket.createdAt).getTime()) / 36e5;
 
   const matches = [];

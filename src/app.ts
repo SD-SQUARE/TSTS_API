@@ -89,8 +89,10 @@ import permissionProfileRouter from "./routes/permissionProfile.router.js";
 import siteSettingsRouter from "./routes/siteSettings.router.js";
 import slaRouter from "./routes/sla.router.js";
 import recycleBinRouter from "./routes/recycleBin.router.js";
+import apiIntegrationsRouter, { apiKeyScopeRouter } from "./routes/apiKeys.router.js";
 
 import logger from "./utils/logger.js";
+import { apiKeyAuthMiddleware } from "./middleware/apiKeyAuth.js";
 // routes
 app.get("/api/health", (req, res) => {
   logger.info("[HealthCheck]: OK");
@@ -111,6 +113,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/custom-forms", customFormsRouter);
 app.use("/api/v1/site-settings", siteSettingsRouter);
 
+app.use("/api/v1",apiKeyAuthMiddleware);
 app.use("/api/v1", authMiddleware);
 
 app.use("/api/v1/chat", chatRouter);
@@ -134,6 +137,9 @@ app.use("/api/v1/sla-rules", slaRouter);
 app.use("/api/v1/recycle-bin", recycleBinRouter);
 app.use("/api/v1/tickets", ticketsRouter);
 app.use("/api/v1/reports", reportRoutes);
+app.use("/api/v1/api-integrations", apiIntegrationsRouter);
+// Scope endpoint uses API key auth only (no bearer token required)
+app.use("/api/v1/api-integrations", apiKeyScopeRouter);
 
 
 app.use((req, res, next) => {

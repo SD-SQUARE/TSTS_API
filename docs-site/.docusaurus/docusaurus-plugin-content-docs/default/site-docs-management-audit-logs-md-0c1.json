@@ -1,0 +1,28 @@
+{
+  "id": "management/audit-logs",
+  "title": "Audit Logs",
+  "description": "Comprehensive audit trail for all system activities.",
+  "source": "@site/../docs/management/audit-logs.md",
+  "sourceDirName": "management",
+  "slug": "/management/audit-logs",
+  "permalink": "/management/audit-logs",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "audit-logs",
+    "title": "Audit Logs",
+    "sidebar_label": "Audit Logs"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Recycle Bin",
+    "permalink": "/management/recycle-bin"
+  },
+  "next": {
+    "title": "AI Assistant",
+    "permalink": "/management/ai-assistant"
+  }
+}
