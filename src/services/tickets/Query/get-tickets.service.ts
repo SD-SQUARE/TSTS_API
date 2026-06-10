@@ -16,6 +16,7 @@ import { redisKeys } from "../../../utils/redisKeys.js";
 import { GetTicketsQuery } from "../../../validation/ticket.schema.js";
 import { logTicketActivity } from "../../tickets.service.js";
 import { Request } from "express";
+import { SelectQueryBuilder } from "typeorm";
 import { getManagedGroupSpecializationIds } from "../../groups/group-access.service.js";
 import {
     getActiveSlaRuleSnapshots,
@@ -43,8 +44,20 @@ const buildTicketListQuery = () =>
         .leftJoinAndSelect("ticket.assigneeList", "assignee")
         .distinct(true);
 
+const buildTicketFilterQuery = () =>
+    ticketRepo
+        .createQueryBuilder("ticket")
+        .leftJoin("ticket.requester", "requester")
+        .leftJoin("requester.university", "requesterUniversity")
+        .leftJoin("requester.domain", "requesterDomain")
+        .leftJoin("requester.userDepartments", "requesterDepartmentLink")
+        .leftJoin("requesterDepartmentLink.department", "requesterDepartment")
+        .leftJoin("ticket.specialization", "specialization")
+        .leftJoin("ticket.problem", "problem")
+        .leftJoin("ticket.assigneeList", "assignee");
+
 const applyTicketAccessFilters = async (
-    qb: ReturnType<typeof buildTicketListQuery>,
+    qb: SelectQueryBuilder<Ticket>,
     user: ReqUserPayload,
 ) => {
     const managedSpecializationIds = await getManagedGroupSpecializationIds(user.id, user.role);
@@ -91,13 +104,26 @@ const applyTicketAccessFilters = async (
     }
 };
 
-const statusCount = (tickets: Ticket[], statuses: string[]) =>
+const statusCount = (tickets: Array<{ status: string }>, statuses: string[]) =>
     tickets.filter((ticket) => statuses.includes(ticket.status)).length;
 
 const terminalStatuses = new Set<TicketStatus>([
     TicketStatus.CLOSED,
     TicketStatus.RESOLVED,
 ]);
+
+type ActiveSlaRuleSnapshot = Awaited<ReturnType<typeof getActiveSlaRuleSnapshots>>[number];
+
+type TicketAnalyticsSnapshot = {
+    id: string;
+    status: TicketStatus;
+    createdAt: Date;
+    requesterUniversityId: string | null;
+    requesterDomainId: string | null;
+    specializationId: string | null;
+    problemId: string | null;
+    assigneeIds: Set<string>;
+};
 
 const getTicketTiming = (ticket: Ticket) => {
     const closedAt = terminalStatuses.has(ticket.status) ? ticket.modifiedAt : null;
@@ -113,6 +139,40 @@ const getTicketTiming = (ticket: Ticket) => {
         closedAt,
         totalTimeUntilClosedSeconds,
     };
+};
+
+const isTicketSlaViolatedFromSnapshots = (
+    ticket: TicketAnalyticsSnapshot,
+    rules: ActiveSlaRuleSnapshot[],
+) => {
+    if (!rules.length || !ticket.createdAt) return false;
+
+    const ageHours = (Date.now() - new Date(ticket.createdAt).getTime()) / 36e5;
+    let bestMatch: { maxHours: number; specificity: number } | null = null;
+
+    for (const rule of rules) {
+        if (rule.universityId && rule.universityId !== ticket.requesterUniversityId) continue;
+        if (rule.domainId && rule.domainId !== ticket.requesterDomainId) continue;
+        if (rule.specializationId && rule.specializationId !== ticket.specializationId) continue;
+        if (rule.problemId && rule.problemId !== ticket.problemId) continue;
+
+        const specificity = [
+            rule.universityId,
+            rule.domainId,
+            rule.specializationId,
+            rule.problemId,
+        ].filter(Boolean).length;
+
+        if (
+            !bestMatch ||
+            specificity > bestMatch.specificity ||
+            (specificity === bestMatch.specificity && rule.maxHours < bestMatch.maxHours)
+        ) {
+            bestMatch = { maxHours: rule.maxHours, specificity };
+        }
+    }
+
+    return bestMatch ? ageHours > bestMatch.maxHours : false;
 };
 
 export const getAllTicketsService = async (
@@ -144,7 +204,7 @@ export const getAllTicketsService = async (
         pageSize: meta.page_size,
     });
 
-    const qb = buildTicketListQuery();
+    const qb = buildTicketFilterQuery();
 
     auditLog.step("Applying role-based filters");
     await applyTicketAccessFilters(qb, user);
@@ -308,7 +368,17 @@ export const getAllTicketsService = async (
         });
     }
 
-    qb.skip(skip).take(take).orderBy("ticket.createdAt", "DESC");
+    const totalQb = qb
+        .clone()
+        .select("COUNT(DISTINCT ticket.id)", "total");
+    const pageIdsQb = qb
+        .clone()
+        .select("ticket.id", "id")
+        .addSelect("ticket.createdAt", "createdAt")
+        .distinct(true)
+        .orderBy("ticket.createdAt", "DESC")
+        .skip(skip)
+        .take(take);
 
     logger.info("[server][tickets] getAllTickets | query ready", {
         skip,
@@ -319,7 +389,18 @@ export const getAllTicketsService = async (
     logger.info("[server][tickets] getAllTickets | executing query");
 
     auditLog.step("Executing query");
-    const [tickets, total] = await qb.getManyAndCount();
+    const [idRows, totalRow] = await Promise.all([
+        pageIdsQb.getRawMany<{ id: string }>(),
+        totalQb.getRawOne<{ total: string }>(),
+    ]);
+    const ticketIds = idRows.map((row) => row.id).filter(Boolean);
+    const total = Number(totalRow?.total || 0);
+    const tickets = ticketIds.length
+        ? await buildTicketListQuery()
+            .where("ticket.id IN (:...ticketIds)", { ticketIds })
+            .orderBy("ticket.createdAt", "DESC")
+            .getMany()
+        : [];
 
     logger.info("[server][tickets] getAllTickets | query executed", {
         returnedCount: tickets.length,
@@ -450,15 +531,55 @@ export const getTicketAnalyticsService = async (
         return cached;
     }
 
-    const qb = buildTicketListQuery();
+    const qb = buildTicketFilterQuery();
     await applyTicketAccessFilters(qb, user);
 
-    const tickets = await qb.getMany();
+    const rows = await qb
+        .clone()
+        .select("ticket.id", "id")
+        .addSelect("ticket.status", "status")
+        .addSelect("ticket.createdAt", "createdAt")
+        .addSelect("requesterUniversity.id", "requesterUniversityId")
+        .addSelect("requesterDomain.id", "requesterDomainId")
+        .addSelect("specialization.id", "specializationId")
+        .addSelect("problem.id", "problemId")
+        .addSelect("assignee.id", "assigneeId")
+        .getRawMany<{
+            id: string;
+            status: TicketStatus;
+            createdAt: Date;
+            requesterUniversityId: string | null;
+            requesterDomainId: string | null;
+            specializationId: string | null;
+            problemId: string | null;
+            assigneeId: string | null;
+        }>();
+
+    const byTicketId = new Map<string, TicketAnalyticsSnapshot>();
+    for (const row of rows) {
+        const existing = byTicketId.get(row.id);
+        if (existing) {
+            if (row.assigneeId) existing.assigneeIds.add(row.assigneeId);
+            continue;
+        }
+
+        byTicketId.set(row.id, {
+            id: row.id,
+            status: row.status,
+            createdAt: row.createdAt,
+            requesterUniversityId: row.requesterUniversityId,
+            requesterDomainId: row.requesterDomainId,
+            specializationId: row.specializationId,
+            problemId: row.problemId,
+            assigneeIds: new Set(row.assigneeId ? [row.assigneeId] : []),
+        });
+    }
+
+    const tickets = Array.from(byTicketId.values());
     const slaRules = await getActiveSlaRuleSnapshots();
-    const slaStates = await Promise.all(
-        tickets.map((ticket) => getTicketSlaStateFromRules(ticket, lang, slaRules)),
-    );
-    const slaViolated = slaStates.filter((state) => state.violated).length;
+    const slaViolated = tickets.filter((ticket) =>
+        isTicketSlaViolatedFromSnapshots(ticket, slaRules),
+    ).length;
     const total = tickets.length;
 
     const base = {
@@ -472,7 +593,7 @@ export const getTicketAnalyticsService = async (
             TicketStatus.RESOLVED,
             TicketStatus.CLOSED,
         ]),
-        unassigned: tickets.filter((ticket) => !ticket.assigneeList?.length).length,
+        unassigned: tickets.filter((ticket) => ticket.assigneeIds.size === 0).length,
         slaViolated,
     };
 
