@@ -71,7 +71,6 @@ async function callAi(
             stream: false,
             options: {
                 temperature,
-                num_ctx: 2048,
                 num_predict: maxTokens,
             },
         };
@@ -91,13 +90,23 @@ async function callAi(
 
     const data = await response.json() as any;
 
+    // OpenRouter may return 200 OK but with an error object
+    if (data?.error) {
+        throw new Error(`AI Provider Error: ${data.error.message || JSON.stringify(data.error)}`);
+    }
+
     // OpenAI format: data.choices[0].message.content
     // Ollama format: data.message.content
-    return (
-        data?.choices?.[0]?.message?.content ||
-        data?.message?.content ||
-        ""
-    );
+    const content = data?.choices?.[0]?.message?.content || data?.message?.content;
+    if (content == null) {
+        // Catch cases where the model natively called a function and returned no content
+        if (data?.choices?.[0]?.message?.tool_calls?.length > 0) {
+            throw new Error(`Model attempted to use native tool calls instead of JSON format.`);
+        }
+        return "";
+    }
+    
+    return content;
 }
 
 // ─── Health check helper ──────────────────────────────────────────────────────
@@ -143,30 +152,109 @@ async function checkAiHealth(settings: AiSettings): Promise<{ available: boolean
 
 // ─── Tool Definitions ─────────────────────────────────────────────────────────
 
-const TOOLS_DESCRIPTION = `
-You MUST call tools using a JSON object on its own line (or in a code block). Supported formats:
-  {"tool":"get_specializations"}
-  {"tool":"get_problems","specializationId":"<id from list>"}
-  {"tool":"create_ticket","title":"...","description":"...","specializationId":"<id>","problemId":"<id>"}
-  {"tool":"search_kb","query":"<terms>"}
+const SYSTEM_PROMPT_EN = `You are an AI support ticket assistant.
 
-Do NOT use XML tags or any other format. Output the raw JSON object only.
+You have access to the following tools:
+{"tool":"get_specializations"}
+{"tool":"get_problems","specializationId":"<id>"}
+{"tool":"search_kb","query":"<query>"}
+{"tool":"create_ticket","title":"<title>","description":"<description>","specializationId":"<id>","problemId":"<id>"}
 
-Rules:
-- Call ONE tool at a time then wait for the result before proceeding
-- ALWAYS call get_specializations first, then get_problems, then create_ticket
-- Use the exact id values shown in brackets [id:...] from tool results — do not show ids to the user
-- Once you have a title and description, ALWAYS call create_ticket immediately — pick the closest matching specialization and problem; the user can adjust later
-- Respond in the user's language (Arabic or English)
-`;
+CRITICAL RULES:
+1. NEVER output XML.
+2. NEVER output tags such as:
+   * <longcat_tool_call>
+   * <tool_call>
+   * <function_call>
+   * any custom markup
+3. Tool calls MUST be returned as a SINGLE JSON object and NOTHING ELSE.
 
-const SYSTEM_PROMPT_EN = `You are a technical support intake assistant. Your main job is to collect enough detail to create a useful support ticket.
-Ask one focused question at a time when information is missing. Do not invent details. When enough information is available, choose the best specialization/problem type and prepare a clear ticket preview with a short title and a complete description.
-${TOOLS_DESCRIPTION}`;
+VALID:
+{"tool":"get_specializations"}
 
-const SYSTEM_PROMPT_AR = `أنت مساعد استقبال للدعم التقني. مهمتك الأساسية جمع معلومات كافية لإنشاء تذكرة دعم مفيدة.
-اسأل سؤالاً واحداً ومحدداً عندما تكون المعلومات ناقصة. لا تخترع تفاصيل. عندما تكتمل المعلومات، اختر أفضل تخصص ونوع مشكلة وجهز معاينة تذكرة بعنوان قصير ووصف واضح.
-${TOOLS_DESCRIPTION}`;
+VALID:
+{"tool":"get_problems","specializationId":"085158a4-f6c8-4c49-810d-4491ff2db3af"}
+
+INVALID:
+دعني أبحث عن التخصصات
+{"tool":"get_specializations"}
+
+INVALID:
+<longcat_tool_call>get_specializations</longcat_tool_call>
+
+4. Execute ONLY ONE tool per response.
+5. Work like a helpdesk analyst:
+   * Do NOT rush to create a ticket.
+   * Determine whether enough information exists.
+   * Prefer using 'search_kb' to see if the issue can be resolved via knowledge base first.
+   * If details are missing, ask exactly ONE concise clarifying question to the user.
+6. Never guess 'specializationId' or 'problemId'. You MUST use 'get_specializations' and 'get_problems' to obtain the exact IDs before creating a ticket.
+7. Only call 'create_ticket' when you are 90%+ confident you have the user's full problem context, the correct specialization ID, and problem ID.
+8. If the user message is generic (e.g., "I can't login", "The portal doesn't work", "There is an error"):
+   * Do NOT create a ticket.
+   * Ask exactly one diagnostic question to identify the specific system or issue.
+9. When creating a ticket:
+    {"tool":"create_ticket","title":"...","description":"...","specializationId":"...","problemId":"..."}
+9. When outputting a tool call:
+   * Output ONLY the JSON object.
+   * No explanation.
+   * No markdown.
+   * No code fences.
+   * No extra text.
+
+Failure to follow these rules is an error. Respond in English.`;
+
+const SYSTEM_PROMPT_AR = `أنت مساعد ذكاء اصطناعي لتذاكر الدعم الفني.
+
+لديك وصول إلى الأدوات التالية:
+{"tool":"get_specializations"}
+{"tool":"get_problems","specializationId":"<id>"}
+{"tool":"search_kb","query":"<query>"}
+{"tool":"create_ticket","title":"<title>","description":"<description>","specializationId":"<id>","problemId":"<id>"}
+
+قواعد حاسمة:
+1. لا تقم أبداً بإخراج XML.
+2. لا تقم أبداً بإخراج علامات مثل:
+   * <longcat_tool_call>
+   * <tool_call>
+   * <function_call>
+   * أو أي علامات مخصصة
+3. يجب إرجاع استدعاءات الأدوات ككائن JSON واحد فقط لا غير.
+
+صحيح:
+{"tool":"get_specializations"}
+
+صحيح:
+{"tool":"get_problems","specializationId":"085158a4-f6c8-4c49-810d-4491ff2db3af"}
+
+غير صحيح:
+دعني أبحث عن التخصصات
+{"tool":"get_specializations"}
+
+غير صحيح:
+<longcat_tool_call>get_specializations</longcat_tool_call>
+
+4. قم بتنفيذ أداة واحدة فقط لكل رد.
+5. اعمل كمحلل دعم فني (Helpdesk Analyst):
+   * لا تتسرع في إنشاء تذكرة.
+   * حدد ما إذا كانت المعلومات الكافية متوفرة.
+   * يُفضل استخدام 'search_kb' لمعرفة ما إذا كان يمكن حل المشكلة عبر قاعدة المعرفة أولاً.
+   * إذا كانت التفاصيل ناقصة، اسأل سؤالاً توضيحياً واحداً فقط وبإيجاز.
+6. لا تقم أبداً بتخمين 'specializationId' أو 'problemId'. يجب عليك استخدام 'get_specializations' و 'get_problems' للحصول على المعرفات الدقيقة قبل إنشاء تذكرة.
+7. لا تستدعِ 'create_ticket' إلا عندما تكون واثقاً بنسبة 90% أو أكثر من أن لديك السياق الكامل لمشكلة المستخدم، ومعرف التخصص الصحيح، ومعرف المشكلة.
+8. إذا كانت رسالة المستخدم عامة (مثل: "لا أستطيع تسجيل الدخول"، "البوابة لا تعمل"، "يوجد خطأ"):
+   * لا تقم بإنشاء تذكرة.
+   * اسأل سؤالاً تشخيصياً واحداً فقط لتحديد النظام أو المشكلة بدقة.
+9. عند إنشاء تذكرة:
+    {"tool":"create_ticket","title":"...","description":"...","specializationId":"...","problemId":"..."}
+9. عند إخراج استدعاء أداة:
+   * أخرج كائن JSON فقط.
+   * بدون أي شرح.
+   * بدون علامات markdown.
+   * بدون أكواد نصية (code fences).
+   * بدون أي نص إضافي.
+
+الفشل في اتباع هذه القواعد يعتبر خطأ. أجب باللغة العربية حصراً.`;
 
 // ─── Tool Executors ───────────────────────────────────────────────────────────
 
@@ -304,32 +392,23 @@ async function executeTool(toolCall: any, language: string): Promise<string> {
 
             let spec = cleanSpecLookup ? await resolveSpecialization(cleanSpecLookup, lang) : null;
 
-            // If no exact match, fall back to first available specialization
+            // Strict specialization check: No guessing allowed
             if (!spec) {
-                const allSpecs = await PostgresDataSource.getRepository(Specialization).find({ order: { createdAt: "DESC" } });
-                spec = allSpecs[0] ?? null;
+                return lang === "ar" 
+                    ? "خطأ: المعرف (ID) الخاص بالتخصص مفقود أو غير صحيح. لا تخمن المعرف. استدعِ get_specializations أولاً للحصول على قائمة التخصصات الصحيحة." 
+                    : "Error: Missing or invalid specialization ID. Do not guess. Call get_specializations first to get the correct list of specializations.";
             }
 
             let prob = cleanProbLookup ? await resolveProblem(cleanProbLookup, lang, spec) : null;
 
-            // If no exact match, fall back to first problem for the chosen specialization
-            if (!prob && spec) {
-                const allProbs = await PostgresDataSource.getRepository(Problem).find({
-                    where: { specialization: { id: spec.id } as any },
-                    relations: ["specialization"],
-                    take: 1,
-                });
-                prob = allProbs[0] ?? null;
-            }
-
-            // If still no problem, get any problem
+            // Strict problem check: No guessing allowed
             if (!prob) {
-                const anyProb = await PostgresDataSource.getRepository(Problem).find({ relations: ["specialization"], take: 1 });
-                prob = anyProb[0] ?? null;
-                if (prob && !spec) spec = prob.specialization ?? null;
+                return lang === "ar" 
+                    ? "خطأ: المعرف (ID) الخاص بالمشكلة مفقود أو غير صحيح أو لا ينتمي للتخصص المختار. لا تخمن المعرف. استدعِ get_problems أولاً للحصول على قائمة المشاكل." 
+                    : "Error: Missing or invalid problem ID for this specialization. Do not guess. Call get_problems first to get the correct list of problems.";
             }
 
-            const resolvedSpec = spec || prob?.specialization || null;
+            const resolvedSpec = spec;
 
             if (!toolCall.title?.trim() || !toolCall.description?.trim()) {
                 return lang === "ar" ? "أحتاج إلى عنوان ووصف قبل تجهيز معاينة التذكرة." : "I need a title and description before preparing the ticket preview.";
@@ -351,64 +430,89 @@ async function executeTool(toolCall: any, language: string): Promise<string> {
     }
 }
 
-function parseToolCall(text: string): any | null {
-    // First try standard JSON tool calls: {"tool":"name",...}
-    const jsonMatches = text.match(/\{[\s\S]*?\}/g);
-    if (jsonMatches) {
-        for (const match of jsonMatches) {
-            try {
-                const parsed = JSON.parse(match);
-                if (parsed?.tool) return parsed;
-            } catch { /* keep scanning */ }
-        }
-    }
-
-    // Fallback: handle XML-style tool calls some models emit
-    // e.g. <tool_call>get_specializations</tool_call>
-    // or   <longcat_tool_call>get_specializations {"specializationId":"..."}</longcat_tool_call>
-    // or   <function_calls><invoke name="get_specializations">...</invoke></function_calls>
-    const xmlTagMatch = text.match(/<(?:tool_call|longcat_tool_call|function_call|invoke)[^>]*>([\s\S]*?)<\/(?:tool_call|longcat_tool_call|function_call|invoke)>/i);
-    if (xmlTagMatch) {
-        const inner = xmlTagMatch[1].trim();
-        // Try to parse the inner content as JSON first
-        try {
-            const parsed = JSON.parse(inner);
-            if (parsed?.tool) return parsed;
-        } catch { /* not JSON */ }
-
-        // Otherwise try to extract tool name and any JSON args on the same line
-        // Format: "tool_name" or "tool_name {args}" or "tool_name\n{args}"
-        const nameMatch = inner.match(/^(\w+)\s*([\s\S]*)/);
-        if (nameMatch) {
-            const toolName = nameMatch[1].trim();
-            const remainder = nameMatch[2].trim();
-            const result: any = { tool: toolName };
-
-            // Try to parse remainder as JSON args
-            if (remainder) {
-                try {
-                    const args = JSON.parse(remainder.startsWith("{") ? remainder : `{${remainder}}`);
-                    Object.assign(result, args);
-                } catch {
-                    // Extract key=value or key:"value" pairs
-                    const kvPairs = remainder.matchAll(/(\w+)\s*[:=]\s*"([^"]+)"/g);
-                    for (const [, key, value] of kvPairs) {
-                        result[key] = value;
-                    }
-                }
-            }
-
-            if (result.tool) return result;
-        }
-    }
-
-    // Also handle markdown code block tool calls: ```json\n{"tool":...}\n```
+export function parseToolCall(text: string): any | null {
+    // 1. Try markdown code blocks first as they are most explicit
     const codeBlockMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
     if (codeBlockMatch) {
         try {
             const parsed = JSON.parse(codeBlockMatch[1]);
             if (parsed?.tool) return parsed;
         } catch { /* ignore */ }
+    }
+
+    // 2. Try raw JSON extraction with balanced braces (more robust than original regex)
+    const extractJson = (str: string): any | null => {
+        let depth = 0;
+        let start = -1;
+        let inString = false;
+        let escapeNext = false;
+        
+        for (let i = 0; i < str.length; i++) {
+            const c = str[i];
+            if (escapeNext) { escapeNext = false; continue; }
+            if (c === '\\') { escapeNext = true; continue; }
+            if (c === '"') { inString = !inString; continue; }
+            
+            if (!inString) {
+                if (c === '{') {
+                    if (depth === 0) start = i;
+                    depth++;
+                } else if (c === '}') {
+                    depth--;
+                    if (depth === 0 && start !== -1) {
+                        try {
+                            // Basic repair for trailing commas common in LLM outputs
+                            let jsonStr = str.substring(start, i + 1);
+                            jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
+                            const parsed = JSON.parse(jsonStr);
+                            if (parsed?.tool) return parsed;
+                        } catch { /* ignore */ }
+                        start = -1;
+                    }
+                }
+            }
+        }
+        return null;
+    };
+    
+    const rawParsed = extractJson(text);
+    if (rawParsed) return rawParsed;
+
+    // 3. Fallback: handle XML-style tool calls
+    const xmlTagMatch = text.match(/<(?:tool_call|longcat_tool_call|function_call|invoke)[^>]*>([\s\S]*?)<\/(?:tool_call|longcat_tool_call|function_call|invoke)>/i);
+    if (xmlTagMatch) {
+        const inner = xmlTagMatch[1].trim();
+        try {
+            const parsed = JSON.parse(inner);
+            if (parsed?.tool) return parsed;
+        } catch { /* not JSON */ }
+
+        const nameMatch = inner.match(/^(\w+)\s*([\s\S]*)/);
+        if (nameMatch) {
+            const toolName = nameMatch[1].trim();
+            const remainder = nameMatch[2].trim();
+            const result: any = { tool: toolName };
+
+            if (remainder) {
+                try {
+                    const args = JSON.parse(remainder.startsWith("{") ? remainder : `{${remainder}}`);
+                    Object.assign(result, args);
+                } catch {
+                    // Extract key="value" style args
+                    const kvPairs = remainder.matchAll(/(\w+)\s*[:=]\s*"([^"]+)"/g);
+                    for (const [, key, value] of kvPairs) {
+                        result[key] = value;
+                    }
+                    
+                    // Extract LongCat format args
+                    const longcatMatches = remainder.matchAll(/<longcat_arg_key>([\s\S]*?)<\/longcat_arg_key>\s*<longcat_arg_value>([\s\S]*?)<\/longcat_arg_value>/gi);
+                    for (const [, key, value] of longcatMatches) {
+                        result[key.trim()] = value.trim();
+                    }
+                }
+            }
+            if (result.tool) return result;
+        }
     }
 
     return null;
@@ -449,12 +553,45 @@ export const aiAssistantChat = async (req: Request, res: Response) => {
 
         let pendingTicket: any = null;
         const MAX_TOOL_CALLS = 4;
+        const executedTools = new Set<string>();
 
         for (let i = 0; i < MAX_TOOL_CALLS; i++) {
-            const llmResponse = await callAi(conversation, aiSettings, { temperature: 0.2, maxTokens: 512 });
+            // Use deterministic temperature: 0 for tool calling phases
+            const llmResponse = await callAi(conversation, aiSettings, { temperature: 0, maxTokens: 512 });
             const toolCall = parseToolCall(llmResponse);
 
             if (!toolCall) {
+                // Safeguard: Malformed XML
+                if (llmResponse.includes("<longcat_tool_call>") || llmResponse.includes("<tool_call>")) {
+                    logger.warn({ message: "[ai-assistant] XML detected, injecting corrective prompt", language });
+                    conversation.push({ role: "assistant", content: llmResponse });
+                    const correctivePrompt = language === "ar"
+                        ? "خطأ حرج: قمت بإخراج تنسيق XML. يجب عليك إخراج كائن JSON فقط ولا شيء غيره."
+                        : "CRITICAL ERROR: You output XML format. You MUST output a raw JSON object ONLY.";
+                    conversation.push({ role: "user", content: correctivePrompt });
+                    continue;
+                }
+
+                // Safeguard: Detect if the model described a tool but failed to output JSON
+                const descMatch = llmResponse.match(/(create_ticket|get_problems|get_specializations|search_kb)/i);
+                if (descMatch && i < MAX_TOOL_CALLS - 1) {
+                    logger.warn({
+                        message: "[ai-assistant] Tool description without JSON detected, applying recovery prompt",
+                        language,
+                        model: aiSettings.modelName,
+                        rawResponse: llmResponse,
+                        detectedTool: descMatch[1]
+                    });
+                    
+                    conversation.push({ role: "assistant", content: llmResponse });
+                    const correctivePrompt = language === "ar" 
+                        ? `لقد ذكرت أداة (${descMatch[1]}) ولكنك لم تقم بإخراج كائن JSON الصحيح. من فضلك أخرج كائن JSON فقط للقيام بالعملية، دون كتابة أي نص آخر.`
+                        : `You described a tool (${descMatch[1]}) but did not output the required JSON format. Please output ONLY the JSON object to execute the tool.`;
+                    conversation.push({ role: "user", content: correctivePrompt });
+                    continue;
+                }
+
+                // Normal exit logic
                 for (const word of llmResponse.split(/(\s+)/)) {
                     if (word) res.write(`data: ${JSON.stringify({ content: word })}\n\n`);
                 }
@@ -463,7 +600,25 @@ export const aiAssistantChat = async (req: Request, res: Response) => {
                 return res.end();
             }
 
-            logger.info(`[ai-assistant] Tool call: ${toolCall.tool}`);
+            if (executedTools.has(toolCall.tool) && toolCall.tool !== "search_kb") {
+                logger.warn({ message: "[ai-assistant] Prevented infinite tool loop", tool: toolCall.tool });
+                conversation.push({ role: "assistant", content: llmResponse });
+                const loopPrompt = language === "ar"
+                    ? "لقد قمت باستدعاء هذه الأداة مسبقاً. لا تكرر الاستدعاء. اقرأ سجل المحادثة واستمر."
+                    : "You already called this tool. Do not call it again. Look at the conversation history and proceed.";
+                conversation.push({ role: "user", content: loopPrompt });
+                continue;
+            }
+            executedTools.add(toolCall.tool);
+
+            // Structured logging
+            logger.info({
+                message: `[ai-assistant] Executing tool: ${toolCall.tool}`,
+                language,
+                model: aiSettings.modelName,
+                rawResponse: llmResponse,
+                parsedTool: toolCall
+            });
             const toolName = toolCall.tool === "search_kb" ? (language === "ar" ? "حلول" : "solutions")
                 : toolCall.tool === "get_specializations" ? (language === "ar" ? "التخصصات" : "specializations")
                 : toolCall.tool === "get_problems" ? (language === "ar" ? "المشاكل" : "problems")
@@ -497,7 +652,14 @@ export const aiAssistantChat = async (req: Request, res: Response) => {
         res.end();
 
     } catch (error: any) {
-        logger.error("[ai-assistant] Chat error:", error?.message || error);
+        logger.error({
+            message: "[ai-assistant] Chat error during execution",
+            errorMsg: error?.message || String(error),
+            stack: error?.stack,
+            cause: error?.cause,
+            language,
+            conversationState: req.body.messages?.map((c: any) => ({ role: c.role, length: c.content?.length, preview: c.content?.substring(0, 100) }))
+        });
         const isConnectionError = error?.message?.includes("fetch") || error?.message?.includes("ECONNREFUSED") || error?.message?.includes("timeout") || error?.cause?.code === "ECONNREFUSED";
         const fallback = language === "ar"
             ? (isConnectionError

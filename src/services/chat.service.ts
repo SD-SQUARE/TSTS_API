@@ -347,71 +347,87 @@ export const getPersonalMessages = async (
 export const listPersonalConversations = async (currentUserId: string) => {
   const lastMessages = await chatRepository.query(
     `
-    SELECT DISTINCT ON (
-      LEAST(m."senderId", m."recipientId"),
-      GREATEST(m."senderId", m."recipientId")
+    WITH last_messages AS (
+      SELECT DISTINCT ON (
+        LEAST(m."senderId", m."recipientId"),
+        GREATEST(m."senderId", m."recipientId")
+      )
+        m.id,
+        m.content,
+        m."createdAt",
+        m."senderId",
+        m."recipientId",
+        CASE 
+          WHEN m."senderId" = $1 THEN u.id
+          ELSE s.id
+        END as "otherUserId",
+        CASE
+          WHEN m."senderId" = $1 THEN u.email
+          ELSE s.email
+        END as "otherUserEmail",
+        CASE
+          WHEN m."senderId" = $1 THEN u.image
+          ELSE s.image
+        END as "otherUserImage",
+        CASE 
+          WHEN m."senderId" = $1 THEN COALESCE(
+            NULLIF(TRIM(CONCAT_WS(' ',
+              NULLIF(COALESCE(u."firstName"->>'en', ''), ''),
+              NULLIF(COALESCE(u."midName"->>'en', ''), ''),
+              NULLIF(COALESCE(u."lastName"->>'en', ''), '')
+            )), ''),
+            u.email
+          )
+          ELSE COALESCE(
+            NULLIF(TRIM(CONCAT_WS(' ',
+              NULLIF(COALESCE(s."firstName"->>'en', ''), ''),
+              NULLIF(COALESCE(s."midName"->>'en', ''), ''),
+              NULLIF(COALESCE(s."lastName"->>'en', ''), '')
+            )), ''),
+            s.email
+          )
+        END as "otherUserNameEn",
+        CASE 
+          WHEN m."senderId" = $1 THEN COALESCE(
+            NULLIF(TRIM(CONCAT_WS(' ',
+              NULLIF(COALESCE(u."firstName"->>'ar', ''), ''),
+              NULLIF(COALESCE(u."midName"->>'ar', ''), ''),
+              NULLIF(COALESCE(u."lastName"->>'ar', ''), '')
+            )), ''),
+            u.email
+          )
+          ELSE COALESCE(
+            NULLIF(TRIM(CONCAT_WS(' ',
+              NULLIF(COALESCE(s."firstName"->>'ar', ''), ''),
+              NULLIF(COALESCE(s."midName"->>'ar', ''), ''),
+              NULLIF(COALESCE(s."lastName"->>'ar', ''), '')
+            )), ''),
+            s.email
+          )
+        END as "otherUserNameAr"
+      FROM chat_messages m
+      LEFT JOIN "users" s ON m."senderId" = s.id
+      LEFT JOIN "users" u ON m."recipientId" = u.id
+      WHERE m."senderId" = $1 OR m."recipientId" = $1
+      ORDER BY
+        LEAST(m."senderId", m."recipientId"),
+        GREATEST(m."senderId", m."recipientId"),
+        m."createdAt" DESC
+    ),
+    unread_counts AS (
+      SELECT
+        m."senderId" AS "otherUserId",
+        COUNT(m.id)::int AS "unreadCount"
+      FROM chat_messages m
+      WHERE m."recipientId" = $1
+        AND m."isRead" = false
+      GROUP BY m."senderId"
     )
-      m.id,
-      m.content,
-      m."createdAt",
-      m."senderId",
-      m."recipientId",
-      CASE 
-        WHEN m."senderId" = $1 THEN u.id
-        ELSE s.id
-      END as "otherUserId",
-      CASE
-        WHEN m."senderId" = $1 THEN u.email
-        ELSE s.email
-      END as "otherUserEmail",
-      CASE
-        WHEN m."senderId" = $1 THEN u.image
-        ELSE s.image
-      END as "otherUserImage",
-      CASE 
-        WHEN m."senderId" = $1 THEN COALESCE(
-          NULLIF(TRIM(CONCAT_WS(' ',
-            NULLIF(COALESCE(u."firstName"->>'en', ''), ''),
-            NULLIF(COALESCE(u."midName"->>'en', ''), ''),
-            NULLIF(COALESCE(u."lastName"->>'en', ''), '')
-          )), ''),
-          u.email
-        )
-        ELSE COALESCE(
-          NULLIF(TRIM(CONCAT_WS(' ',
-            NULLIF(COALESCE(s."firstName"->>'en', ''), ''),
-            NULLIF(COALESCE(s."midName"->>'en', ''), ''),
-            NULLIF(COALESCE(s."lastName"->>'en', ''), '')
-          )), ''),
-          s.email
-        )
-      END as "otherUserNameEn",
-      CASE 
-        WHEN m."senderId" = $1 THEN COALESCE(
-          NULLIF(TRIM(CONCAT_WS(' ',
-            NULLIF(COALESCE(u."firstName"->>'ar', ''), ''),
-            NULLIF(COALESCE(u."midName"->>'ar', ''), ''),
-            NULLIF(COALESCE(u."lastName"->>'ar', ''), '')
-          )), ''),
-          u.email
-        )
-        ELSE COALESCE(
-          NULLIF(TRIM(CONCAT_WS(' ',
-            NULLIF(COALESCE(s."firstName"->>'ar', ''), ''),
-            NULLIF(COALESCE(s."midName"->>'ar', ''), ''),
-            NULLIF(COALESCE(s."lastName"->>'ar', ''), '')
-          )), ''),
-          s.email
-        )
-      END as "otherUserNameAr"
-    FROM chat_messages m
-    LEFT JOIN "users" s ON m."senderId" = s.id
-    LEFT JOIN "users" u ON m."recipientId" = u.id
-    WHERE m."senderId" = $1 OR m."recipientId" = $1
-    ORDER BY
-      LEAST(m."senderId", m."recipientId"),
-      GREATEST(m."senderId", m."recipientId"),
-      m."createdAt" DESC
+    SELECT 
+      lm.*,
+      COALESCE(uc."unreadCount", 0) AS "unreadCount"
+    FROM last_messages lm
+    LEFT JOIN unread_counts uc ON uc."otherUserId" = lm."otherUserId"
     `,
     [currentUserId],
   );
@@ -422,14 +438,6 @@ export const listPersonalConversations = async (currentUserId: string) => {
       if (!otherUserId || otherUserId === currentUserId) {
         return null;
       }
-
-      const unreadCount = await chatRepository.count({
-        where: {
-          recipient: { id: currentUserId },
-          sender: { id: otherUserId },
-          isRead: false,
-        },
-      });
 
       return {
         userId: otherUserId,
@@ -451,7 +459,7 @@ export const listPersonalConversations = async (currentUserId: string) => {
         image: await buildPresignedImage(msg.otherUserImage),
         lastMessage: msg.content,
         lastMessageAt: msg.createdAt,
-        unreadCount,
+        unreadCount: msg.unreadCount,
       };
     }),
   );
@@ -641,86 +649,114 @@ export const getGroupMessages = async (
 };
 
 export const listGroupConversations = async (userId: string) => {
-  logger.info("[server][chat][service] listGroupConversations start", {
-    userId,
-  });
+  logger.info("[server][chat][service] listGroupConversations start", { userId });
 
-  const groups = await groupRepository
-    .createQueryBuilder("group")
-    .leftJoinAndSelect("group.chat", "chat") // all messages
-    .leftJoinAndSelect("chat.sender", "sender") // message sender
-    .leftJoinAndSelect("group.heads", "groupHead")
-    .leftJoinAndSelect("groupHead.user", "headUser")
-    .leftJoinAndSelect("group.technicians", "tg")
-    .leftJoinAndSelect("tg.user", "technician")
-    .leftJoinAndSelect("group.teams", "team")
-    .leftJoinAndSelect("team.leads", "teamLead")
-    .leftJoinAndSelect("teamLead.user", "teamLeadUser")
-    .leftJoinAndSelect("team.technicians", "teamTechnician")
-    .leftJoinAndSelect("teamTechnician.user", "teamTechnicianUser")
-    .where(
-      `(
-        headUser.id = :userId
-        OR technician.id = :userId
-        OR teamLeadUser.id = :userId
-        OR teamTechnicianUser.id = :userId
-      )`,
-      { userId },
+  const tStart = performance.now();
+
+  // ── Single CTE query ─────────────────────────────────────────────────────
+  // BEFORE: getMany() hydrated ALL chat history + member relations (9 joins),
+  //         then N×getCount() for unread (one query per group).
+  //         Cost: 188-202ms for only 15 message rows (8-13x SQL cost).
+  //
+  // AFTER:  One parameterized query.
+  //   - user_groups  : resolves membership via 4 UNION paths (no entity load)
+  //   - last_messages: DISTINCT ON gets latest message per group in-DB
+  //   - unread_counts: aggregated LEFT JOIN anti-join, one row per group
+  // Zero entity objects allocated; zero N+1 queries.
+  const tQueryStart = performance.now();
+  const rows = await chatRepository.query(
+    `
+    WITH user_groups AS (
+      SELECT "groupId" FROM group_heads
+        WHERE "userId" = $1 AND "deletedAt" IS NULL
+      UNION
+      SELECT "groupId" FROM technician_groups
+        WHERE "userId" = $1 AND "deletedAt" IS NULL
+      UNION
+      SELECT t."groupId"
+      FROM team_leads tl
+      INNER JOIN teams t ON t.id = tl."teamId" AND t."deletedAt" IS NULL
+      WHERE tl."userId" = $1 AND tl."deletedAt" IS NULL
+      UNION
+      SELECT t."groupId"
+      FROM team_technicians tt
+      INNER JOIN teams t ON t.id = tt."teamId" AND t."deletedAt" IS NULL
+      WHERE tt."userId" = $1 AND tt."deletedAt" IS NULL
+    ),
+    last_messages AS (
+      SELECT DISTINCT ON (m."groupId")
+        m."groupId",
+        m.content,
+        m."createdAt"
+      FROM chat_messages m
+      WHERE m."groupId" IN (SELECT "groupId" FROM user_groups)
+      ORDER BY m."groupId", m."createdAt" DESC
+    ),
+    unread_counts AS (
+      SELECT
+        m."groupId",
+        COUNT(m.id)::int AS "unreadCount"
+      FROM chat_messages m
+      LEFT JOIN chat_message_reads r
+        ON r."messageId" = m.id AND r."userId" = $1
+      WHERE m."groupId" IN (SELECT "groupId" FROM user_groups)
+        AND m."senderId" != $1
+        AND r.id IS NULL
+      GROUP BY m."groupId"
     )
-    .distinct(true)
-    .getMany();
+    SELECT
+      g.id                                         AS "groupId",
+      COALESCE(g.name->>'en', g.name->>'ar', '')   AS "name_en",
+      COALESCE(g.name->>'ar', g.name->>'en', '')   AS "name_ar",
+      COALESCE(lm.content, '')                     AS "lastMessage",
+      lm."createdAt"                               AS "lastMessageAt",
+      COALESCE(uc."unreadCount", 0)                AS "unreadCount"
+    FROM user_groups ug
+    INNER JOIN groups g ON g.id = ug."groupId" AND g."deletedAt" IS NULL
+    LEFT JOIN last_messages lm ON lm."groupId" = g.id
+    LEFT JOIN unread_counts uc ON uc."groupId" = g.id
+    `,
+    [userId],
+  ) as Array<{
+    groupId: string;
+    name_en: string | null;
+    name_ar: string | null;
+    lastMessage: string;
+    lastMessageAt: Date | null;
+    unreadCount: number | string;
+  }>;
 
-  const conversations = groups.map((group) => {
-    // Sort messages by createdAt descending
-    const sortedMessages = group.chat?.sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  const tQueryEnd = performance.now();
+  const queryMs = tQueryEnd - tQueryStart;
+
+  if (queryMs > 50) {
+    console.warn(
+      `[POOL WARNING] listGroupConversations: query took ${queryMs.toFixed(2)}ms ` +
+      `(threshold 50ms). Possible pool contention or slow query. userId=${userId}`,
     );
+  }
 
-    const lastMessage = sortedMessages?.[0];
-
-    // Count unread messages where sender is not the current user
-    return {
-      groupId: group.id,
-      name: group.name?.en ?? group.name?.ar ?? "",
-      name_en: group.name?.en ?? group.name?.ar ?? "",
-      name_ar: group.name?.ar ?? group.name?.en ?? "",
-      lastMessage: lastMessage?.content ?? "",
-      lastMessageAt: lastMessage?.createdAt ?? null,
-      unreadCount: 0,
-    };
-  });
-
-  const conversationsWithUnread = await Promise.all(
-    conversations.map(async (conversation) => {
-      const unreadCount = await chatRepository
-        .createQueryBuilder("message")
-        .leftJoin("message.sender", "sender")
-        .leftJoin(
-          ChatMessageRead,
-          "read",
-          'read."messageId" = message.id AND read."userId" = :userId',
-          { userId },
-        )
-        .where('message."groupId" = :groupId', {
-          groupId: conversation.groupId,
-        })
-        .andWhere("sender.id != :userId", { userId })
-        .andWhere("read.id IS NULL")
-        .getCount();
-
-      return {
-        ...conversation,
-        unreadCount,
-      };
-    }),
-  );
+  const result = rows.map((row) => ({
+    groupId: row.groupId,
+    name: row.name_en ?? row.name_ar ?? "",
+    name_en: row.name_en ?? row.name_ar ?? "",
+    name_ar: row.name_ar ?? row.name_en ?? "",
+    lastMessage: row.lastMessage ?? "",
+    lastMessageAt: row.lastMessageAt ?? null,
+    unreadCount:
+      typeof row.unreadCount === "string"
+        ? parseInt(row.unreadCount, 10) || 0
+        : (row.unreadCount ?? 0),
+  }));
 
   logger.info("[server][chat][service] listGroupConversations completed", {
     userId,
-    count: conversationsWithUnread.length,
+    groupCount: result.length,
+    poolAndSqlMs: queryMs.toFixed(2),
+    totalMs: (performance.now() - tStart).toFixed(2),
   });
 
-  return conversationsWithUnread;
+  return result;
 };
 
 export const sendTeamMessage = async (
@@ -866,80 +902,121 @@ export const getTeamMessages = async (
 };
 
 export const listTeamConversations = async (userId: string) => {
-  const teams = await teamRepository
-    .createQueryBuilder("team")
-    .leftJoinAndSelect("team.chat", "chat")
-    .leftJoinAndSelect("chat.sender", "sender")
-    .leftJoinAndSelect("team.group", "group")
-    .leftJoinAndSelect("group.heads", "groupHead")
-    .leftJoinAndSelect("groupHead.user", "headUser")
-    .leftJoinAndSelect("team.leads", "teamLead")
-    .leftJoinAndSelect("teamLead.user", "teamLeadUser")
-    .leftJoinAndSelect("team.technicians", "teamTechnician")
-    .leftJoinAndSelect("teamTechnician.user", "teamTechnicianUser")
-    .where(
-      `(
-        headUser.id = :userId
-        OR teamLeadUser.id = :userId
-        OR teamTechnicianUser.id = :userId
-      )`,
-      { userId },
+  const tStart = performance.now();
+
+  // ── Single CTE query ─────────────────────────────────────────────────────
+  // BEFORE: getMany() hydrated ALL team chat history + 6 member-relation joins,
+  //         then N×getCount() for unread. Same hydration anti-pattern as groups.
+  //
+  // AFTER:  One parameterized query.
+  //   - user_teams   : membership via 3 UNION paths (group heads own all teams)
+  //   - last_messages: DISTINCT ON latest message per team, in-DB
+  //   - unread_counts: aggregated LEFT JOIN anti-join, one row per team
+  const tQueryStart = performance.now();
+  const rows = await teamRepository.query(
+    `
+    WITH user_teams AS (
+      SELECT t.id AS "teamId"
+      FROM group_heads gh
+      INNER JOIN teams t ON t."groupId" = gh."groupId" AND t."deletedAt" IS NULL
+      WHERE gh."userId" = $1 AND gh."deletedAt" IS NULL
+      UNION
+      SELECT "teamId" FROM team_leads
+        WHERE "userId" = $1 AND "deletedAt" IS NULL
+      UNION
+      SELECT "teamId" FROM team_technicians
+        WHERE "userId" = $1 AND "deletedAt" IS NULL
+    ),
+    last_messages AS (
+      SELECT DISTINCT ON (m."teamId")
+        m."teamId",
+        m.content,
+        m."createdAt"
+      FROM chat_messages m
+      WHERE m."teamId" IN (SELECT "teamId" FROM user_teams)
+      ORDER BY m."teamId", m."createdAt" DESC
+    ),
+    unread_counts AS (
+      SELECT
+        m."teamId",
+        COUNT(m.id)::int AS "unreadCount"
+      FROM chat_messages m
+      LEFT JOIN chat_message_reads r
+        ON r."messageId" = m.id AND r."userId" = $1
+      WHERE m."teamId" IN (SELECT "teamId" FROM user_teams)
+        AND m."senderId" != $1
+        AND r.id IS NULL
+      GROUP BY m."teamId"
     )
-    .distinct(true)
-    .getMany();
+    SELECT
+      t.id                                         AS "teamId",
+      COALESCE(t.name->>'en', t.name->>'ar', '')   AS "name_en",
+      COALESCE(t.name->>'ar', t.name->>'en', '')   AS "name_ar",
+      COALESCE(lm.content, '')                     AS "lastMessage",
+      lm."createdAt"                               AS "lastMessageAt",
+      COALESCE(uc."unreadCount", 0)                AS "unreadCount"
+    FROM user_teams ut
+    INNER JOIN teams t ON t.id = ut."teamId" AND t."deletedAt" IS NULL
+    LEFT JOIN last_messages lm ON lm."teamId" = t.id
+    LEFT JOIN unread_counts uc ON uc."teamId" = t.id
+    `,
+    [userId],
+  ) as Array<{
+    teamId: string;
+    name_en: string | null;
+    name_ar: string | null;
+    lastMessage: string;
+    lastMessageAt: Date | null;
+    unreadCount: number | string;
+  }>;
 
-  const conversations = teams.map((team) => {
-    const sortedMessages = team.chat?.sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  const tQueryEnd = performance.now();
+  const queryMs = tQueryEnd - tQueryStart;
+
+  if (queryMs > 50) {
+    console.warn(
+      `[POOL WARNING] listTeamConversations: query took ${queryMs.toFixed(2)}ms ` +
+      `(threshold 50ms). Possible pool contention or slow query. userId=${userId}`,
     );
+  }
 
-    const lastMessage = sortedMessages?.[0];
+  const result = rows.map((row) => ({
+    teamId: row.teamId,
+    name: row.name_en ?? row.name_ar ?? "",
+    name_en: row.name_en ?? row.name_ar ?? "",
+    name_ar: row.name_ar ?? row.name_en ?? "",
+    lastMessage: row.lastMessage ?? "",
+    lastMessageAt: row.lastMessageAt ?? null,
+    unreadCount:
+      typeof row.unreadCount === "string"
+        ? parseInt(row.unreadCount, 10) || 0
+        : (row.unreadCount ?? 0),
+  }));
 
-    return {
-      teamId: team.id,
-      name: team.name?.en ?? team.name?.ar ?? "",
-      name_en: team.name?.en ?? team.name?.ar ?? "",
-      name_ar: team.name?.ar ?? team.name?.en ?? "",
-      lastMessage: lastMessage?.content ?? "",
-      lastMessageAt: lastMessage?.createdAt ?? null,
-      unreadCount: 0,
-    };
+  logger.info("[server][chat][service] listTeamConversations completed", {
+    userId,
+    teamCount: result.length,
+    poolAndSqlMs: queryMs.toFixed(2),
+    totalMs: (performance.now() - tStart).toFixed(2),
   });
 
-  return Promise.all(
-    conversations.map(async (conversation) => {
-      const unreadCount = await chatRepository
-        .createQueryBuilder("message")
-        .leftJoin("message.sender", "sender")
-        .leftJoin(
-          ChatMessageRead,
-          "read",
-          'read."messageId" = message.id AND read."userId" = :userId',
-          { userId },
-        )
-        .where('message."teamId" = :teamId', {
-          teamId: conversation.teamId,
-        })
-        .andWhere("sender.id != :userId", { userId })
-        .andWhere("read.id IS NULL")
-        .getCount();
-
-      return {
-        ...conversation,
-        unreadCount,
-      };
-    }),
-  );
+  return result;
 };
 
 export const getCombinedChatInbox = async (userId: string) => {
-  logger.info("[server][chat][service] getCombinedChatInbox start", {
-    userId,
-  });
+  logger.info("[server][chat][service] getCombinedChatInbox start", { userId });
 
-  const personalConversations = await listPersonalConversations(userId);
+  const tStart = performance.now();
 
-  // Map to combined DTO
+  // ── Run all three inbox queries concurrently ──────────────────────────────
+  // BEFORE: sequential awaits → total time = personal + groups + teams
+  // AFTER:  Promise.all → total time = max(personal, groups, teams)
+  const [personalConversations, groupConversations, teamConversations] = await Promise.all([
+    listPersonalConversations(userId),
+    listGroupConversations(userId),
+    listTeamConversations(userId),
+  ]);
+
   const personalMapped = personalConversations.map((conv) => ({
     type: "personal",
     id: conv.userId,
@@ -952,9 +1029,6 @@ export const getCombinedChatInbox = async (userId: string) => {
     unreadCount: conv.unreadCount,
   }));
 
-  const groupConversations = await listGroupConversations(userId);
-
-  // Flatten name object to string for inbox
   const groupMapped = groupConversations.map((conv) => ({
     type: "group",
     id: conv.groupId,
@@ -967,7 +1041,6 @@ export const getCombinedChatInbox = async (userId: string) => {
     unreadCount: conv.unreadCount,
   }));
 
-  const teamConversations = await listTeamConversations(userId);
   const teamMapped = teamConversations.map((conv) => ({
     type: "team",
     id: conv.teamId,
@@ -989,6 +1062,7 @@ export const getCombinedChatInbox = async (userId: string) => {
   logger.info("[server][chat][service] getCombinedChatInbox completed", {
     userId,
     count: combined.length,
+    totalMs: (performance.now() - tStart).toFixed(2),
   });
 
   return combined;

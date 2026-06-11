@@ -1,4 +1,4 @@
-﻿import { Router } from "express";
+import { Router } from "express";
 import {
   broadcastNotificationController,
   deleteNotificationsController,
@@ -7,6 +7,7 @@ import {
   getUnreadCountController,
   markAllNotificationsAsReadController,
   markNotificationAsReadController,
+  getBootstrapInboxController,
 } from "../controllers/notifications.controller.js";
 import { authMiddleware } from "../middleware/auth.js";
 
@@ -72,6 +73,20 @@ router.delete("/", deleteNotificationsController);
  *           count: 7
  */
 router.get("/unread-count", getUnreadCountController);
+
+/**
+ * @openapi
+ * /api/v1/notifications/bootstrap/inbox:
+ *   get:
+ *     summary: Bootstrap inbox payload
+ *     tags: [Notifications]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Inbox state bootstrapped
+ */
+router.get("/bootstrap/inbox", getBootstrapInboxController);
 
 /**
  * @openapi

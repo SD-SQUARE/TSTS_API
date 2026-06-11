@@ -10,6 +10,7 @@ import {
   markAllNotificationsAsRead,
   markNotificationAsRead,
 } from "../services/notification.service.js";
+import { getCombinedChatInbox } from "../services/chat.service.js";
 import { getNotificationsSchema } from "../validation/notification.schema.js";
 import { NotificationType } from "../enums/NotificationType.enum.js";
 
@@ -216,4 +217,48 @@ export const deleteNotificationsController = async (
 
     throw error;
   }
+};
+
+export const getBootstrapInboxController = async (req: Request, res: Response) => {
+  const t = req.t;
+  const userId = (req as any).user?.id;
+
+  if (!userId) {
+    throw new AppError(t("unauthorized"), 401);
+  }
+
+  logger.info("[server][bootstrap][controller] getBootstrapInbox request received", { userId });
+
+  // ── Event-Loop Delay Monitor ─────────────────────────────────────────────────
+  // Samples event-loop lag every 10ms. High mean/max here is causation proof
+  // that chat hydration is blocking the JS thread.
+  const { monitorEventLoopDelay } = await import("perf_hooks");
+  const histogram = monitorEventLoopDelay({ resolution: 10 });
+  histogram.enable();
+
+  const tStart = performance.now();
+  const [unreadCount, notifications, chatInbox] = await Promise.all([
+    countUnreadNotifications(userId),
+    listNotifications(userId, undefined, 1, 10),
+    getCombinedChatInbox(userId),
+  ]);
+  const totalMs = (performance.now() - tStart).toFixed(2);
+
+  histogram.disable();
+
+  // histogram values are in nanoseconds
+  const nsToMs = (ns: number) => (ns / 1e6).toFixed(2);
+  logger.info("[server][bootstrap][controller] getBootstrapInbox completed", {
+    userId,
+    totalMs,
+    eventLoop: {
+      meanMs: nsToMs(histogram.mean),
+      maxMs: nsToMs(histogram.max),
+      p95Ms: nsToMs(histogram.percentile(95)),
+      p99Ms: nsToMs(histogram.percentile(99)),
+      stddevMs: nsToMs(histogram.stddev),
+    },
+  });
+
+  return res.status(200).json({ unreadCount, notifications, chatInbox });
 };

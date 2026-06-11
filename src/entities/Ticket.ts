@@ -39,6 +39,7 @@ export class Ticket {
   @Column({ type: "text" })
   description: string;
 
+  @Index()
   @ManyToOne(() => User, (user) => user.requestedTickets, { nullable: false })
   requester: any;
 
@@ -48,6 +49,7 @@ export class Ticket {
   @ManyToOne(() => Problem, (prop) => prop.ticket, { nullable: true })
   problem: any | null;
 
+  @Index()
   @Column({ type: "enum", enum: TicketStatus, default: TicketStatus.OPEN })
   status: TicketStatus;
 
@@ -68,6 +70,7 @@ export class Ticket {
   @OneToMany(() => Media, (media) => media.ticket)
   media: any[];
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 

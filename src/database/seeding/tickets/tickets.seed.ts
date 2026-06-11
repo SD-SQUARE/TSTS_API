@@ -34,27 +34,58 @@ function getRandomSubset<T>(arr: T[], maxCount: number): T[] {
   return shuffled.slice(0, count);
 }
 
+// const getSeedTicketTimeline = (index: number, status: TicketStatus) => {
+//   const now = Date.now();
+//   const createdAt = new Date(
+//     now - ((index + 1) * 6 * 60 + (index % 11) * 13) * 60 * 1000,
+//   );
+//   const terminalStatus =
+//     status === TicketStatus.CLOSED || status === TicketStatus.RESOLVED;
+//   const elapsedMinutes = terminalStatus
+//     ? 90 + (index % 16) * 45
+//     : 15 + (index % 8) * 20;
+//   const intendedModifiedAt = new Date(
+//     createdAt.getTime() + elapsedMinutes * 60 * 1000,
+//   );
+//   const latestAllowedModifiedAt = new Date(now - (index % 5) * 60 * 1000);
+
+//   return {
+//     createdAt,
+//     modifiedAt:
+//       intendedModifiedAt.getTime() > latestAllowedModifiedAt.getTime()
+//         ? latestAllowedModifiedAt
+//         : intendedModifiedAt,
+//   };
+// };
 const getSeedTicketTimeline = (index: number, status: TicketStatus) => {
-  const now = Date.now();
-  const createdAt = new Date(
-    now - ((index + 1) * 6 * 60 + (index % 11) * 13) * 60 * 1000,
-  );
+  const now = new Date();
+
+  const createdAt = new Date(now);
+
+  createdAt.setFullYear(createdAt.getFullYear() - (index % 3)); // 0-2 years
+  createdAt.setMonth(createdAt.getMonth() - (index % 12)); // 0-11 months
+  createdAt.setDate(createdAt.getDate() - ((index * 7) % 365)); // up to 364 days
+  createdAt.setHours(createdAt.getHours() - (index % 24));
+  createdAt.setMinutes(createdAt.getMinutes() - ((index * 13) % 60));
+
   const terminalStatus =
     status === TicketStatus.CLOSED || status === TicketStatus.RESOLVED;
-  const elapsedMinutes = terminalStatus
-    ? 90 + (index % 16) * 45
-    : 15 + (index % 8) * 20;
-  const intendedModifiedAt = new Date(
-    createdAt.getTime() + elapsedMinutes * 60 * 1000,
-  );
-  const latestAllowedModifiedAt = new Date(now - (index % 5) * 60 * 1000);
+
+  const modifiedAt = new Date(createdAt);
+
+  if (terminalStatus) {
+    modifiedAt.setDate(modifiedAt.getDate() + ((index % 30) + 1));
+  } else {
+    modifiedAt.setHours(modifiedAt.getHours() + ((index % 48) + 1));
+  }
+
+  if (modifiedAt > now) {
+    modifiedAt.setTime(now.getTime());
+  }
 
   return {
     createdAt,
-    modifiedAt:
-      intendedModifiedAt.getTime() > latestAllowedModifiedAt.getTime()
-        ? latestAllowedModifiedAt
-        : intendedModifiedAt,
+    modifiedAt,
   };
 };
 

@@ -42,6 +42,10 @@ export const PostgresDataSource = new DataSource({
   migrations: [migrationsGlob],
   entities: Object.values(entities),
   metadataTableName: "typeorm_metadata",
+  extra: {
+    max: 40,
+    statement_timeout: 5000,
+  },
 });
 
 /**

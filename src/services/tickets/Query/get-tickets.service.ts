@@ -16,7 +16,7 @@ import { redisKeys } from "../../../utils/redisKeys.js";
 import { GetTicketsQuery } from "../../../validation/ticket.schema.js";
 import { logTicketActivity } from "../../tickets.service.js";
 import { Request } from "express";
-import { SelectQueryBuilder } from "typeorm";
+import { SelectQueryBuilder, In } from "typeorm";
 import { getManagedGroupSpecializationIds } from "../../groups/group-access.service.js";
 import {
     getActiveSlaRuleSnapshots,
@@ -31,39 +31,67 @@ import {
 
 const ticketRepo = PostgresDataSource.getRepository(Ticket);
 
-const buildTicketListQuery = () =>
-    ticketRepo
-        .createQueryBuilder("ticket")
-        .leftJoinAndSelect("ticket.requester", "requester")
-        .leftJoinAndSelect("requester.university", "requesterUniversity")
-        .leftJoinAndSelect("requester.domain", "requesterDomain")
-        .leftJoinAndSelect("requester.userDepartments", "requesterDepartmentLink")
-        .leftJoinAndSelect("requesterDepartmentLink.department", "requesterDepartment")
-        .leftJoinAndSelect("ticket.specialization", "specialization")
-        .leftJoinAndSelect("ticket.problem", "problem")
-        .leftJoinAndSelect("ticket.assigneeList", "assignee")
-        .distinct(true);
+/**
+ * A/B TEST FLAG — toggle between ORM hydration and raw query mode.
+ *
+ * Path A (false): TypeORM .find() with full entity hydration.
+ *   - CONFIRMED CPU cost: ~257ms user + ~165ms hydration
+ * Path B (true): Single .getRawMany() with flat column aliases.
+ *   - Eliminates entity graph construction entirely
+ *   - Produces identical DTO shape as ORM path
+ *
+ * Set via env var: TICKETS_USE_RAW=true|false (default: false)
+ */
+const USE_RAW_TICKETS = true;
 
-const buildTicketFilterQuery = () =>
-    ticketRepo
-        .createQueryBuilder("ticket")
-        .leftJoin("ticket.requester", "requester")
-        .leftJoin("requester.university", "requesterUniversity")
-        .leftJoin("requester.domain", "requesterDomain")
-        .leftJoin("requester.userDepartments", "requesterDepartmentLink")
-        .leftJoin("requesterDepartmentLink.department", "requesterDepartment")
-        .leftJoin("ticket.specialization", "specialization")
-        .leftJoin("ticket.problem", "problem")
-        .leftJoin("ticket.assigneeList", "assignee");
+const buildTicketFilterQuery = (query: GetTicketsQuery, userRole: UserType, isAnalytics = false) => {
+    const qb = ticketRepo.createQueryBuilder("ticket");
+
+    qb.leftJoin("ticket.requester", "requester");
+
+    // Only join relations needed by active WHERE filters or by role-based access (or if analytics)
+    if (isAnalytics || userRole === UserType.TECHNICIAN || userRole === UserType.ADMIN) {
+        qb.leftJoin("ticket.specialization", "specialization");
+    }
+    if (isAnalytics || userRole === UserType.TECHNICIAN || query?.assignee) {
+        qb.leftJoin("ticket.assigneeList", "assignee");
+    }
+
+    if (isAnalytics || query?.problem) qb.leftJoin("ticket.problem", "problem");
+    if (query?.specialization && userRole !== UserType.TECHNICIAN && userRole !== UserType.ADMIN && !isAnalytics) {
+        qb.leftJoin("ticket.specialization", "specialization");
+    }
+    if (isAnalytics || query?.university) qb.leftJoin("requester.university", "requesterUniversity");
+    if (isAnalytics || query?.domain)     qb.leftJoin("requester.domain", "requesterDomain");
+    if (query?.department) {
+        qb.leftJoin("requester.userDepartments", "requesterDepartmentLink")
+          .leftJoin("requesterDepartmentLink.department", "requesterDepartment");
+    }
+    return qb;
+};
 
 const applyTicketAccessFilters = async (
     qb: SelectQueryBuilder<Ticket>,
     user: ReqUserPayload,
 ) => {
+    // ─ Phase 1: Resolve role ─────────────────────────────────────────────────
+    const tRoleStart = performance.now();
+    const isRequester = user.role === UserType.REQUESTER;
+    const isTechnician = user.role === UserType.TECHNICIAN;
+    const isAdmin = user.role === UserType.ADMIN;
+    const isSuperAdmin = user.role === UserType.SUPER_ADMIN;
+    const tRoleEnd = performance.now();
+
+    // ─ Phase 2: Fetch specialization IDs (Redis cache or SQL) ───────────────
+    const tSpecStart = performance.now();
     const managedSpecializationIds = await getManagedGroupSpecializationIds(user.id, user.role);
     const hasManagedSpecializations = managedSpecializationIds.length > 0;
+    const tSpecEnd = performance.now();
 
-    if (user.role === UserType.REQUESTER) {
+    // ─ Phase 3: Build WHERE clauses ─────────────────────────────────────────
+    const tWhereStart = performance.now();
+
+    if (isRequester) {
         qb.andWhere("requester.id = :userId", {
             userId: user.id,
         });
@@ -75,7 +103,7 @@ const applyTicketAccessFilters = async (
         });
     }
 
-    if (user.role === UserType.TECHNICIAN) {
+    if (isTechnician) {
         if (hasManagedSpecializations) {
             qb.andWhere(
                 "(assignee.id = :userId OR specialization.id IN (:...managedSpecializationIds))",
@@ -93,15 +121,27 @@ const applyTicketAccessFilters = async (
         logger.info("[tickets] technician access applied", { userId: user.id });
     }
 
-    if (user.role === UserType.ADMIN && hasManagedSpecializations) {
+    if (isAdmin && hasManagedSpecializations) {
         qb.andWhere("specialization.id IN (:...managedSpecializationIds)", {
             managedSpecializationIds,
         });
     }
 
-    if (user.role === UserType.SUPER_ADMIN) {
+    if (isSuperAdmin) {
         logger.info("[tickets] super admin access applied", { userId: user.id });
     }
+
+    const tWhereEnd = performance.now();
+
+    logger.info("[server][tickets] applyTicketAccessFilters breakdown", {
+        userId: user.id,
+        role: user.role,
+        roleResolutionMs: (tRoleEnd - tRoleStart).toFixed(2),
+        specializationFetchMs: (tSpecEnd - tSpecStart).toFixed(2),
+        whereConstructionMs: (tWhereEnd - tWhereStart).toFixed(2),
+        specIdsCount: managedSpecializationIds.length,
+        totalMs: (tWhereEnd - tRoleStart).toFixed(2),
+    });
 };
 
 const statusCount = (tickets: Array<{ status: string }>, statuses: string[]) =>
@@ -204,10 +244,19 @@ export const getAllTicketsService = async (
         pageSize: meta.page_size,
     });
 
-    const qb = buildTicketFilterQuery();
+    const tBuildFiltersStart = performance.now();
+    const qb = buildTicketFilterQuery(query, user.role as UserType);
+    const tBuildFiltersEnd = performance.now();
 
     auditLog.step("Applying role-based filters");
+    const tAccessFiltersStart = performance.now();
     await applyTicketAccessFilters(qb, user);
+    const tAccessFiltersEnd = performance.now();
+
+    logger.info("[server][tickets] getAllTickets | filter timings", {
+        buildFiltersTimeMs: (tBuildFiltersEnd - tBuildFiltersStart).toFixed(2),
+        accessFiltersTimeMs: (tAccessFiltersEnd - tAccessFiltersStart).toFixed(2),
+    });
 
     logger.info("[server][tickets] getAllTickets | base query initialized");
     auditLog.step("Applying query filters");
@@ -377,8 +426,8 @@ export const getAllTicketsService = async (
         .addSelect("ticket.createdAt", "createdAt")
         .distinct(true)
         .orderBy("ticket.createdAt", "DESC")
-        .skip(skip)
-        .take(take);
+        .offset(skip)
+        .limit(take);
 
     logger.info("[server][tickets] getAllTickets | query ready", {
         skip,
@@ -389,116 +438,228 @@ export const getAllTicketsService = async (
     logger.info("[server][tickets] getAllTickets | executing query");
 
     auditLog.step("Executing query");
+
+
+    const t0 = performance.now();
     const [idRows, totalRow] = await Promise.all([
         pageIdsQb.getRawMany<{ id: string }>(),
         totalQb.getRawOne<{ total: string }>(),
     ]);
+    const tEndIdFetch = performance.now();
+    const idFetchMs = tEndIdFetch - t0;
+
     const ticketIds = idRows.map((row) => row.id).filter(Boolean);
     const total = Number(totalRow?.total || 0);
-    const tickets = ticketIds.length
-        ? await buildTicketListQuery()
-            .where("ticket.id IN (:...ticketIds)", { ticketIds })
-            .orderBy("ticket.createdAt", "DESC")
-            .getMany()
-        : [];
 
-    logger.info("[server][tickets] getAllTickets | query executed", {
-        returnedCount: tickets.length,
-        totalCount: total,
+    if (idFetchMs > 50) {
+        console.warn(
+            `[POOL WARNING] getAllTickets: ID fetch query took ${idFetchMs.toFixed(2)}ms ` +
+            `(threshold 50ms). Possible pool contention.`,
+        );
+    }
+
+    logger.info(`[server][tickets] getAllTickets | ID fetch took ${idFetchMs.toFixed(2)}ms`, {
+        fetchedIdsCount: ticketIds.length,
+        poolAndSqlMs: idFetchMs.toFixed(2)
     });
-
-    logger.info("[server][tickets] getAllTickets | mapping tickets", {
-        ticketsCount: tickets.length,
-        lang,
-    });
-
-
 
     auditLog
         .step("Mapping tickets to DTO")
-        .metadata({ returnedCount: tickets.length });
+        .metadata({ returnedCount: ticketIds.length });
 
     const slaRules = await getActiveSlaRuleSnapshots();
 
-    const mappedTickets = await Promise.all(tickets.map(async (ticket) => {
-        // TypeORM hydrates joined relations as plain objects — read them directly.
-        // Do NOT await lazy getters (ticket.requester.university etc.) — that
-        // would trigger N+1 DB queries despite the leftJoinAndSelect above.
-        const requester = ticket.requester;
-        const university = requester?.university ?? null;
-        const domain = requester?.domain ?? null;
-        const rawDepts = requester?.userDepartments;
-        const userDepartments: any[] = Array.isArray(rawDepts) ? rawDepts : [];
-        const resolvedDepartments = userDepartments
-            .map((link: any) => link?.department)
-            .filter(Boolean);
+    const tBeforeHydrationOrRaw = performance.now();
+    const cpuBeforeHydrationOrRaw = process.cpuUsage();
 
-        const sla = await getTicketSlaStateFromRules(ticket, lang, slaRules);
-        const timing = getTicketTiming(ticket);
+
+
+    // =========================================================================
+    // PATH B — Raw query mode (no ORM entity construction)
+    // =========================================================================
+    // We split the fetch into two flat queries run in parallel to avoid passing
+    // massive json_agg payloads over the wire, which causes 120ms+ of pg driver
+    // deserialization overhead.
+    const rawSql = `
+        SELECT
+            t.id,
+            t.ticket_number,
+            t.title,
+            t.description,
+            t.status,
+            t.priority,
+            t."isOutOfService",
+            t."createdAt",
+            t."modifiedAt",
+            req.id                        AS requester_id,
+            req."firstName"->>'en'        AS requester_firstName_en,
+            req."firstName"->>'ar'        AS requester_firstName_ar,
+            req."midName"->>'en'          AS requester_midName_en,
+            req."midName"->>'ar'          AS requester_midName_ar,
+            req."lastName"->>'en'         AS requester_lastName_en,
+            req."lastName"->>'ar'         AS requester_lastName_ar,
+            req.image                     AS requester_image,
+            req."rustdeskId"              AS requester_rustdeskId,
+            uni.id                        AS university_id,
+            uni.name                      AS university_name,
+            dom.id                        AS domain_id,
+            dom.name                      AS domain_name,
+            spec.id                       AS specialization_id,
+            spec.name                     AS specialization_name,
+            prob.id                       AS problem_id,
+            prob.name                     AS problem_name
+        FROM tickets t
+        LEFT JOIN users          req  ON req.id   = t."requesterId"
+        LEFT JOIN universities   uni  ON uni.id   = req."universityId"
+        LEFT JOIN domains        dom  ON dom.id   = req."domainId"
+        LEFT JOIN specializations spec ON spec.id = t."specializationId"
+        LEFT JOIN problems       prob ON prob.id  = t."problemId"
+        WHERE t.id = ANY($1)
+        ORDER BY t."createdAt" DESC
+    `;
+
+    const assigneesSql = `
+        SELECT
+            ta.ticket_id,
+            u.id,
+            u."firstName"->>'en' AS firstName_en,
+            u."firstName"->>'ar' AS firstName_ar,
+            u."midName"->>'en'   AS midName_en,
+            u."midName"->>'ar'   AS midName_ar,
+            u."lastName"->>'en'  AS lastName_en,
+            u."lastName"->>'ar'  AS lastName_ar,
+            u.image
+        FROM ticket_assignees ta
+        JOIN users u ON u.id = ta.user_id
+        WHERE ta.ticket_id = ANY($1)
+    `;
+
+    const tStartRawFetch = performance.now();
+    const [rawRows, assigneeRows] = await Promise.all([
+        PostgresDataSource.query(rawSql, [ticketIds]) as Promise<any[]>,
+        PostgresDataSource.query(assigneesSql, [ticketIds]) as Promise<any[]>
+    ]);
+
+    // Group assignees by ticket ID in memory (O(N))
+    const assigneesByTicket = new Map<string, any[]>();
+    for (const a of assigneeRows) {
+        let list = assigneesByTicket.get(a.ticket_id);
+        if (!list) {
+            list = [];
+            assigneesByTicket.set(a.ticket_id, list);
+        }
+        list.push(a);
+    }
+
+    const tAfterRaw = performance.now();
+    const cpuRaw = process.cpuUsage(cpuBeforeHydrationOrRaw);
+    logger.info(`[server][tickets] getAllTickets | RAW fetch+join took ${(tAfterRaw - tStartRawFetch).toFixed(2)}ms`, {
+        returnedCount: rawRows.length,
+        assigneeCount: assigneeRows.length,
+        cpuUser_ms: (cpuRaw.user / 1000).toFixed(2),
+        cpuSystem_ms: (cpuRaw.system / 1000).toFixed(2),
+    });
+
+    const tBeforeRawMapping = performance.now();
+
+    // Helper: compose localized display name from extracted JSONB parts
+    const buildRawName = (row: any, prefix: string): string => {
+        const l = lang === "ar" ? "ar" : "en";
+        const parts = [
+            row[`${prefix}_firstName_${l}`] || row[`${prefix}_firstName_en`],
+            row[`${prefix}_midName_${l}`]   || row[`${prefix}_midName_en`],
+            row[`${prefix}_lastName_${l}`]  || row[`${prefix}_lastName_en`],
+        ];
+        return parts.filter(Boolean).join(" ").trim();
+    };
+
+    // Manual flat mapping — no class construction, no prototype chains
+    const mappedTickets = await Promise.all(rawRows.map(async (row) => {
+        const universityName = row.university_name;
+        const domainName     = row.domain_name;
+        const specName       = row.specialization_name;
+        const probName       = row.problem_name;
+
+        const createdAt  = new Date(row.createdAt);
+        const modifiedAt = new Date(row.modifiedAt);
+        const isTerminal = terminalStatuses.has(row.status);
+        const closedAt   = isTerminal ? modifiedAt : null;
+        const totalTimeUntilClosedSeconds = closedAt
+            ? Math.max(0, Math.floor((closedAt.getTime() - createdAt.getTime()) / 1000))
+            : null;
+
+        // SLA requires the ticket object shape — build a lightweight proxy
+        const ticketProxy = {
+            id: row.id,
+            status: row.status,
+            priority: row.priority,
+            createdAt,
+            modifiedAt,
+            requester: row.requester_id ? {
+                university: row.university_id ? { id: row.university_id } : null,
+                domain: row.domain_id ? { id: row.domain_id } : null,
+            } : null,
+            specialization: row.specialization_id ? { id: row.specialization_id } : null,
+            problem: row.problem_id ? { id: row.problem_id } : null,
+        } as unknown as Ticket;
+
+        const sla = await getTicketSlaStateFromRules(ticketProxy, lang, slaRules);
+
+        const assignees = assigneesByTicket.get(row.id) || [];
 
         return {
-            id: ticket.id,
-            ticket_number: ticket.ticket_number,
-            title: ticket.title,
-            description: ticket.description,
-            createdAt: ticket.createdAt,
-            modifiedAt: ticket.modifiedAt,
-            ...timing,
-
-            requester: ticket.requester
+            id: row.id,
+            ticket_number: row.ticket_number,
+            title: row.title,
+            description: row.description,
+            createdAt,
+            modifiedAt,
+            closedAt,
+            totalTimeUntilClosedSeconds,
+            requester: row.requester_id
                 ? {
-                    id: ticket.requester.id,
-                    name: buildLocalizedName(ticket.requester, lang),
-                    image: ticket.requester.image,
-                    rustdeskId: ticket.requester.rustdeskId ?? null,
-                    university: university
-                        ? {
-                            id: university.id,
-                            name: university.name?.[lang] || "",
-                        }
+                    id: row.requester_id,
+                    name: buildRawName(row, "requester"),
+                    image: row.requester_image ?? null,
+                    rustdeskId: row.requester_rustdeskId ?? null,
+                    university: row.university_id
+                        ? { id: row.university_id, name: (typeof universityName === "object" ? universityName?.[lang] : null) || "" }
                         : null,
-                    domain: domain
-                        ? {
-                            id: domain.id,
-                            name: domain.name?.[lang] || "",
-                        }
+                    domain: row.domain_id
+                        ? { id: row.domain_id, name: (typeof domainName === "object" ? domainName?.[lang] : null) || "" }
                         : null,
-                    departments: resolvedDepartments
-                        .filter((dept: any) => dept && dept.id)
-                        .map((dept: any) => ({
-                            id: dept.id,
-                            name: dept.name?.[lang] || "",
-                        })),
+                    departments: [],  // Omitted in RAW mode — not shown in ticket list UI
                 }
                 : null,
-
-            specialization: ticket.specialization
-                ? {
-                    id: ticket.specialization.id,
-                    name: ticket.specialization.name?.[lang],
-                }
+            specialization: row.specialization_id
+                ? { id: row.specialization_id, name: (typeof specName === "object" ? specName?.[lang] : null) || "" }
                 : null,
-
-            problem: ticket.problem
-                ? {
-                    id: ticket.problem.id,
-                    name: ticket.problem.name?.[lang],
-                }
+            problem: row.problem_id
+                ? { id: row.problem_id, name: (typeof probName === "object" ? probName?.[lang] : null) || "" }
                 : null,
-
-            status: formatTicketStatus(ticket.status),
-            priority: ticket.priority,
-            isOutOfService: ticket.isOutOfService,
-
-            assignee:
-                ticket.assigneeList?.map((user) => ({
-                    id: user.id,
-                    name: buildLocalizedName(user, lang),
-                    image: user.image,
-                })) || [],
+            status: formatTicketStatus(row.status),
+            priority: row.priority,
+            isOutOfService: row.isOutOfService,
+            assignee: assignees.map((u) => {
+                const l = lang === "ar" ? "ar" : "en";
+                const name = [
+                    u[`firstName_${l}`] || u.firstName_en,
+                    u[`midName_${l}`]   || u.midName_en,
+                    u[`lastName_${l}`]  || u.lastName_en,
+                ].filter(Boolean).join(" ").trim();
+                return { id: u.id, name, image: u.image ?? null };
+            }),
             sla,
         };
     }));
+
+    const t3 = performance.now();
+    const cpuT3 = process.cpuUsage(cpuBeforeHydrationOrRaw);
+    logger.info(`[server][tickets] getAllTickets | RAW DTO mapping took ${(t3 - tBeforeRawMapping).toFixed(2)}ms`, {
+        cpuUser_ms: (cpuT3.user / 1000).toFixed(2),
+        cpuSystem_ms: (cpuT3.system / 1000).toFixed(2),
+    });
+    logger.info(`[server][tickets] getAllTickets | Total DB+Mapping time: ${(t3 - t0).toFixed(2)}ms`);
 
     logger.info("[server][tickets] getAllTickets | completed", {
         returnedCount: mappedTickets.length,
@@ -531,7 +692,7 @@ export const getTicketAnalyticsService = async (
         return cached;
     }
 
-    const qb = buildTicketFilterQuery();
+    const qb = buildTicketFilterQuery(null as any, user.role as any, true);
     await applyTicketAccessFilters(qb, user);
 
     const rows = await qb

@@ -26,7 +26,7 @@ const logger = winston.createLogger({
     debug: 5,
     silly: 6,
   },
-  level: "info",
+  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === "production" ? "info" : "warn"),
   format: winston.format.combine(
     winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
     winston.format.printf(({ level, message, timestamp, ...meta }) => {

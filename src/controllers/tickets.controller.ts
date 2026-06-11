@@ -63,12 +63,19 @@ export const createTicketController = async (req: Request, res: Response) => {
 };
 
 export const getAllTicketsController = async (req: Request, res: Response) => {
+  const tStart = performance.now();
   const lang = (req.language || "en") as Lang;
   const user = (req as any).user;
 
   const result = await getAllTicketsService(req.query, lang, user, req);
+  const tEndService = performance.now();
 
-  return res.status(200).json(result);
+  res.status(200).json(result);
+  
+  const tEndJson = performance.now();
+  console.log(`[benchmark] Controller Service execution: ${(tEndService - tStart).toFixed(2)}ms`);
+  console.log(`[benchmark] Controller JSON serialization: ${(tEndJson - tEndService).toFixed(2)}ms`);
+  console.log(`[benchmark] Total Controller time: ${(tEndJson - tStart).toFixed(2)}ms`);
 };
 
 export const getTicketAnalyticsController = async (
