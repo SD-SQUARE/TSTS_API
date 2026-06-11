@@ -1,0 +1,24 @@
+{
+  "id": "intro",
+  "title": "TSTS API Documentation",
+  "description": "The TSTS API is a RESTful service built with Express.js, TypeORM, and PostgreSQL that powers a comprehensive Ticketing & Service Tracking System. It manages tickets, users, groups, knowledge base, chat, notifications, reporting, and AI-assisted support.",
+  "source": "@site/../docs/intro.md",
+  "sourceDirName": ".",
+  "slug": "/intro",
+  "permalink": "/intro",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "intro",
+    "title": "TSTS API Documentation",
+    "sidebar_label": "Overview"
+  },
+  "sidebar": "docs",
+  "next": {
+    "title": "Auth v1",
+    "permalink": "/authentication/auth-v1"
+  }
+}

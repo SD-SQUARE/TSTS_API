@@ -1,7 +1,14 @@
 import winston from "winston";
+import fs from "fs";
+import path from "path";
+
+const logDir = path.join(process.cwd(), "logs");
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
 
 const transports: winston.transport[] = [
-  new winston.transports.File({ filename: "logs/app.log" }),
+  new winston.transports.File({ filename: path.join(logDir, "app.log") }),
 ];
 
 // Add console transport only if not in test mode
@@ -19,7 +26,7 @@ const logger = winston.createLogger({
     debug: 5,
     silly: 6,
   },
-  level: "info",
+  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === "production" ? "info" : "warn"),
   format: winston.format.combine(
     winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
     winston.format.printf(({ level, message, timestamp, ...meta }) => {
@@ -33,7 +40,7 @@ const logger = winston.createLogger({
 });
 
 logger.exceptions.handle(
-  new winston.transports.File({ filename: "logs/exceptions.log" })
+  new winston.transports.File({ filename: path.join(logDir, "exceptions.log") })
 );
 
 process.on("unhandledRejection", (reason) => {

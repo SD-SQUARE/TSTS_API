@@ -1,0 +1,75 @@
+# ─── AI Assistant Stack (Ollama) ─────────────────────────────────────────────
+#
+# Usage:
+#   Start AI stack only:
+#     docker compose -f ./docker/compose.ai.yml up -d
+#
+#   Start full stack with AI:
+#     docker compose -f ./docker/compose.prod.yml -f ./docker/compose.ai.yml up -d
+#
+# First-time model pull (run once after starting Ollama):
+#     docker exec ollama ollama pull llama3.2
+#
+# Check available models:
+#     docker exec ollama ollama list
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - tsts-network
+    # Ollama has its own CLI — use it for the health check (no curl needed)
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 20s
+    # ── GPU support (uncomment if you have an NVIDIA GPU) ──────────────────
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # ── One-time model pull job ─────────────────────────────────────────────────
+  # Pulls the configured model on first startup, then exits.
+  # Uses the Ollama CLI directly — no curl dependency.
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: ollama-pull
+    restart: "no"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - tsts-network
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
+    entrypoint: >
+      sh -c "
+        echo 'Pulling model: ${OLLAMA_MODEL:-llama3.2}...';
+        ollama pull ${OLLAMA_MODEL:-llama3.2};
+        echo 'Model pull completed.';
+      "
+
+volumes:
+  ollama_data:
+    name: ollama_data
+
+networks:
+  tsts-network:
+    external: true

@@ -1,0 +1,28 @@
+{
+  "id": "management/work-hours",
+  "title": "Work Hours",
+  "description": "Define working hours for scheduling and SLA calculations.",
+  "source": "@site/../docs/management/work-hours.md",
+  "sourceDirName": "management",
+  "slug": "/management/work-hours",
+  "permalink": "/management/work-hours",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "work-hours",
+    "title": "Work Hours",
+    "sidebar_label": "Work Hours"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "SLA Rules",
+    "permalink": "/management/sla"
+  },
+  "next": {
+    "title": "Permission Profiles",
+    "permalink": "/management/permission-profiles"
+  }
+}

@@ -10,7 +10,9 @@ export const mapTechnicianToUserEntity = async (
   const user = new User();
 
   user.email = dto.email;
-  user.password = await hashPassword(dto.password);
+  if (dto.password) {
+    user.password = await hashPassword(dto.password);
+  }
 
   user.user_type = dto.userType as UserType;
 
@@ -27,6 +29,11 @@ export const mapTechnicianToUserEntity = async (
   user.lastName = {
     en: dto.lastNameEn,
     ar: dto.lastNameAr,
+  };
+
+  user.fullName = {
+    en: dto.fullNameEn,
+    ar: dto.fullNameAr,
   };
 
   user.ssn = dto.ssn;

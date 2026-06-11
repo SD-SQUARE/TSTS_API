@@ -1,108 +1,424 @@
-import { KPRepo } from "../repositories/KnowlegeBaseRepo.js";
 import { Request, Response } from "express";
+import { In } from "typeorm";
+import { KPRepo } from "../repositories/KnowlegeBaseRepo.js";
 import { KnowledgeItem } from "../entities/KnowledgeItem.js";
 import logger from "../utils/logger.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 import { KnowledgeBaseItemResponse } from "../interfaces/response/KnowledgeBaseItemResponse.js";
+import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
+import { TicketFinalReport } from "../entities/TicketFinalReport.js";
+import { getPresignedUrl } from "../utils/storage.js";
+
 const kpRepo = new KPRepo();
 const repo = kpRepo.returnRepo();
+const finalReportRepo = kpRepo.returnRepo().manager.getRepository(TicketFinalReport);
 
+type KnowledgeBasePayload = {
+  title_en?: string;
+  title_ar?: string;
+  description_en?: string;
+  description_ar?: string;
+  specialization_en?: string;
+  specialization_ar?: string;
+  content_en?: string;
+  content_ar?: string;
+};
+
+export const getKnowledgeBaseCategories = async (req: Request, res: Response) => {
+  const rows = await repo
+    .createQueryBuilder("item")
+    .select("item.specialization_en", "specialization_en")
+    .addSelect("item.specialization_ar", "specialization_ar")
+    .where("item.deletedAt IS NULL")
+    .groupBy("item.specialization_en")
+    .addGroupBy("item.specialization_ar")
+    .orderBy("item.specialization_en", "ASC")
+    .getRawMany();
+
+  return res.status(ResponseStatus.SUCCESS).json({
+    items: rows.map((row) => ({
+      value: row.specialization_en,
+      specialization_en: row.specialization_en,
+      specialization_ar: row.specialization_ar,
+    })),
+  });
+};
+
+const mapKnowledgeAttachment = async (item: any) => ({
+  id: item.id,
+  fileName: item.name,
+  mime: item.mime ?? null,
+  url: await getPresignedUrl(process.env.MINIO_BUCKET, item.url, 3600),
+});
+
+const loadKnowledgeAttachments = async (knowledgeItemIds: string[]) => {
+  if (!knowledgeItemIds.length) {
+    return new Map<string, KnowledgeBaseItemResponse["attachments"]>();
+  }
+
+  const reports = await finalReportRepo.find({
+    where: {
+      publishedKnowledgeItemId: In(knowledgeItemIds),
+    } as any,
+    relations: {
+      attachments: true,
+    } as any,
+  });
+
+  const attachmentEntries = await Promise.all(
+    reports.map(async (report) => [
+      report.publishedKnowledgeItemId as string,
+      await Promise.all((report.attachments || []).map(mapKnowledgeAttachment)),
+    ] as const),
+  );
+
+  return new Map<string, KnowledgeBaseItemResponse["attachments"]>(attachmentEntries);
+};
+
+const mapKnowledgeItemResponse = async (
+  item: KnowledgeItem,
+  attachmentsMap?: Map<string, KnowledgeBaseItemResponse["attachments"]>,
+): Promise<KnowledgeBaseItemResponse> => ({
+  id: item.id,
+  title_en: item.title_en,
+  title_ar: item.title_ar,
+  description_en: item.description_en,
+  description_ar: item.description_ar,
+  specialization_en: item.specialization_en,
+  specialization_ar: item.specialization_ar,
+  content_en: item.content_en,
+  content_ar: item.content_ar,
+  attachments: attachmentsMap?.get(item.id) ?? [],
+  createdAt: item.createdAt,
+  updatedAt: item.updatedAt,
+});
+
+const extractPayload = (body: Record<string, unknown>): KnowledgeBasePayload => ({
+  title_en: typeof body.title_en === "string" ? body.title_en.trim() : undefined,
+  title_ar: typeof body.title_ar === "string" ? body.title_ar.trim() : undefined,
+  description_en:
+    typeof body.description_en === "string"
+      ? body.description_en.trim()
+      : undefined,
+  description_ar:
+    typeof body.description_ar === "string"
+      ? body.description_ar.trim()
+      : undefined,
+  specialization_en:
+    typeof body.specialization_en === "string"
+      ? body.specialization_en.trim()
+      : undefined,
+  specialization_ar:
+    typeof body.specialization_ar === "string"
+      ? body.specialization_ar.trim()
+      : undefined,
+  content_en:
+    typeof body.content_en === "string" ? body.content_en.trim() : undefined,
+  content_ar:
+    typeof body.content_ar === "string" ? body.content_ar.trim() : undefined,
+});
+
+const hasAtLeastOneUpdate = (payload: KnowledgeBasePayload) =>
+  Object.values(payload).some((value) => value !== undefined);
 
 export const getKnowledgeBaseItems = async (req: Request, res: Response) => {
-    const search =
-    (req.query.search as string | undefined) ||
-    (req.query.title as string | undefined) ||
-    (req.query.description as string | undefined) ||
-    (req.query.specialization as string | undefined) ||
-    (req.query.content as string | undefined);
-    const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const result = await KnowledgeItem.paginateAndSearch(repo, { search, page, limit });
-    logger.info("[server][knowledgebase][controller] getKnowledgeItems request processed", { search, page, limit });
-    return res.status(ResponseStatus.SUCCESS).json(result);
-};
-export const createKnowledgeBaseItem = async (req: Request, res: Response): Promise<Response<KnowledgeBaseItemResponse>> => {
-    const { title, description, specialization, content } = req.body;
-    if (!title || !description || !specialization) {
-        logger.info("[server][knowledgebase][controller] createKnowledgeItem missing required fields", { body: req.body });
-        return res.status(ResponseStatus.BAD_REQUEST).json({ message: "Title, description, and specialization are required." });
+  const parsePositiveInt = (value: unknown) => {
+    if (typeof value !== "string") {
+      return undefined;
     }
-    const existingItem = await repo.findOne({ where: { title } });
-    if (existingItem) {
-        logger.info("[server][knowledgebase][controller] createKnowledgeItem duplicate title", { title });
-        return res.status(ResponseStatus.CONFLICT).json({ message: "A knowledge item with this title already exists." });
-    }
-    const newItem = repo.create({ title, description, specialization, content });
-    const savedItem = await repo.save(newItem);
-    const result: KnowledgeBaseItemResponse = {
-        id: savedItem.id,
-        title: savedItem.title,
-        description: savedItem.description,
-        specialization: savedItem.specialization,
-        content: savedItem.content,
-        createdAt: savedItem.createdAt,
-        updatedAt: savedItem.updatedAt,
-    };
 
-    logger.info("[server][knowledgebase][controller] createKnowledgeItem request processed", { itemId: savedItem.id });
-    return res.status(ResponseStatus.CREATED).json(result);
-}
-export const getKnowledgeBaseItemById = async (req: Request, res: Response): Promise<Response<KnowledgeBaseItemResponse>> =>{
-    const { id } = req.params;
-    const item = await repo.findOne({ where: { id } });
-    if (!item) {
-        logger.info("[server][knowledgebase][controller] getKnowledgeItemById item not found", { itemId: id });
-        return res.status(ResponseStatus.NOT_FOUND).json({ message: "Knowledge item not found." });
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  };
+
+  const search =
+    (req.query.search as string | undefined) ||
+    (req.query.title_en as string | undefined) ||
+    (req.query.title_ar as string | undefined) ||
+    (req.query.description_en as string | undefined) ||
+    (req.query.description_ar as string | undefined) ||
+    (req.query.specialization_en as string | undefined) ||
+    (req.query.specialization_ar as string | undefined) ||
+    (req.query.content_en as string | undefined) ||
+    (req.query.content_ar as string | undefined);
+  const category =
+    (req.query.category as string | undefined) ||
+    (req.query.specialization as string | undefined);
+  const page = parsePositiveInt(req.query.page);
+  const limit =
+    parsePositiveInt(req.query.page_size) ||
+    parsePositiveInt(req.query.limit);
+
+  const auditLog = audit(req)
+    .summary("Fetch knowledge base items")
+    .action(AuditAction.GET_KNOWLEDGE_ITEMS)
+    .metadata({ search, category, page, limit });
+
+  const result = await KnowledgeItem.paginateAndSearch(repo, {
+    search,
+    category,
+    page,
+    limit,
+  });
+  const attachmentsMap = await loadKnowledgeAttachments(
+    result.items.map((item) => item.id),
+  );
+  const items = await Promise.all(
+    result.items.map((item) => mapKnowledgeItemResponse(item, attachmentsMap)),
+  );
+
+  auditLog
+    .step(`Knowledge base items fetched: ${result.items.length} items`)
+    .metadata({ total: result.meta.total });
+
+  logger.info(
+    "[server][knowledgebase][controller] getKnowledgeItems request processed",
+    { search, category, page, limit },
+  );
+  return res.status(ResponseStatus.SUCCESS).json({
+    ...result,
+    items,
+  });
+};
+
+export const createKnowledgeBaseItem = async (
+  req: Request,
+  res: Response,
+): Promise<Response<KnowledgeBaseItemResponse>> => {
+  const payload = extractPayload(req.body);
+
+  const auditLog = audit(req)
+    .summary("Create knowledge base item")
+    .action(AuditAction.CREATE_KNOWLEDGE_ITEM)
+    .metadata(payload);
+
+  if (
+    !payload.title_en ||
+    !payload.title_ar ||
+    !payload.description_en ||
+    !payload.description_ar ||
+    !payload.specialization_en ||
+    !payload.specialization_ar
+  ) {
+    auditLog.step("Missing required fields");
+    logger.info(
+      "[server][knowledgebase][controller] createKnowledgeItem missing required fields",
+      { body: req.body },
+    );
+    return res.status(ResponseStatus.BAD_REQUEST).json({
+      message:
+        "title_en, title_ar, description_en, description_ar, specialization_en, and specialization_ar are required.",
+    });
+  }
+
+  const existingItem = await repo
+    .createQueryBuilder("item")
+    .where("item.deletedAt IS NULL")
+    .andWhere("(item.title_en = :titleEn OR item.title_ar = :titleAr)", {
+      titleEn: payload.title_en,
+      titleAr: payload.title_ar,
+    })
+    .getOne();
+
+  if (existingItem) {
+    auditLog.step("Duplicate title detected");
+    logger.info(
+      "[server][knowledgebase][controller] createKnowledgeItem duplicate title",
+      { title_en: payload.title_en, title_ar: payload.title_ar },
+    );
+    return res.status(ResponseStatus.CONFLICT).json({
+      message: "A knowledge item with one of these titles already exists.",
+    });
+  }
+
+  const newItem = repo.create({
+    ...payload,
+  });
+  const savedItem = await repo.save(newItem);
+
+  auditLog
+    .step("Knowledge base item created successfully")
+    .resource("knowledge_item", savedItem.id);
+
+  logger.info(
+    "[server][knowledgebase][controller] createKnowledgeItem request processed",
+    { itemId: savedItem.id },
+  );
+  return res
+    .status(ResponseStatus.CREATED)
+    .json(await mapKnowledgeItemResponse(savedItem));
+};
+
+export const getKnowledgeBaseItemById = async (
+  req: Request,
+  res: Response,
+): Promise<Response<KnowledgeBaseItemResponse>> => {
+  const { id } = req.params;
+
+  const auditLog = audit(req)
+    .summary("Fetch knowledge base item by ID")
+    .action(AuditAction.GET_KNOWLEDGE_ITEM_BY_ID)
+    .metadata({ id });
+
+  const item = await repo.findOne({ where: { id } });
+  if (!item) {
+    auditLog.step("Knowledge base item not found");
+    logger.info(
+      "[server][knowledgebase][controller] getKnowledgeItemById item not found",
+      { itemId: id },
+    );
+    return res
+      .status(ResponseStatus.NOT_FOUND)
+      .json({ message: "Knowledge item not found." });
+  }
+
+  auditLog
+    .step("Knowledge base item fetched successfully")
+    .resource("knowledge_item", item.id);
+
+  logger.info(
+    "[server][knowledgebase][controller] getKnowledgeItemById request processed",
+    { itemId: id },
+  );
+  const attachmentsMap = await loadKnowledgeAttachments([item.id]);
+  return res
+    .status(ResponseStatus.SUCCESS)
+    .json(await mapKnowledgeItemResponse(item, attachmentsMap));
+};
+
+export const updateKnowledgeBaseItem = async (
+  req: Request,
+  res: Response,
+): Promise<Response<KnowledgeBaseItemResponse>> => {
+  const { id } = req.params;
+  const payload = extractPayload(req.body);
+
+  const auditLog = audit(req)
+    .summary("Update knowledge base item")
+    .action(AuditAction.UPDATE_KNOWLEDGE_ITEM)
+    .metadata({ itemId: id, newValue: payload });
+
+  if (!hasAtLeastOneUpdate(payload)) {
+    auditLog.step("No fields provided for update");
+    logger.info(
+      "[server][knowledgebase][controller] updateKnowledgeItem no fields to update",
+      { itemId: id, body: req.body },
+    );
+    return res.status(ResponseStatus.BAD_REQUEST).json({
+      message:
+        "At least one bilingual field must be provided for update.",
+    });
+  }
+
+  const item = await repo.findOne({ where: { id } });
+  if (!item) {
+    auditLog.step("Knowledge base item not found");
+    logger.info(
+      "[server][knowledgebase][controller] updateKnowledgeItem item not found",
+      { itemId: id },
+    );
+    return res
+      .status(ResponseStatus.NOT_FOUND)
+      .json({ message: "Knowledge item not found." });
+  }
+
+  if (
+    (payload.title_en && payload.title_en !== item.title_en) ||
+    (payload.title_ar && payload.title_ar !== item.title_ar)
+  ) {
+    const duplicate = await repo
+      .createQueryBuilder("existing")
+      .where("existing.deletedAt IS NULL")
+      .andWhere("existing.id != :id", { id })
+      .andWhere(
+        "(existing.title_en = :titleEn OR existing.title_ar = :titleAr)",
+        {
+          titleEn: payload.title_en ?? item.title_en,
+          titleAr: payload.title_ar ?? item.title_ar,
+        },
+      )
+      .getOne();
+
+    if (duplicate) {
+      auditLog.step("Duplicate title detected");
+      return res.status(ResponseStatus.CONFLICT).json({
+        message: "A knowledge item with one of these titles already exists.",
+      });
     }
-    const result: KnowledgeBaseItemResponse = {
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        specialization: item.specialization,
-        content: item.content,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-    };
-    logger.info("[server][knowledgebase][controller] getKnowledgeItemById request processed", { itemId: id });
-    return res.status(ResponseStatus.SUCCESS).json(result);
-}
-export const updateKnowledgeBaseItem = async (req: Request, res: Response): Promise<Response<KnowledgeBaseItemResponse>> => {
-    const { id } = req.params;
-    const { title, description, specialization, content } = req.body;
-    if (!title && !description && !specialization && !content) {
-        logger.info("[server][knowledgebase][controller] updateKnowledgeItem no fields to update", { itemId: id, body: req.body });
-        return res.status(ResponseStatus.BAD_REQUEST).json({ message: "At least one field (title, description, specialization, content) must be provided for update." });
-    }
-    const item = await repo.findOne({ where: { id } });
-    if (!item) {
-        logger.info("[server][knowledgebase][controller] updateKnowledgeItem item not found", { itemId: id });
-        return res.status(ResponseStatus.NOT_FOUND).json({ message: "Knowledge item not found." });
-    }
-    item.title = title ?? item.title;
-    item.description = description ?? item.description;
-    item.specialization = specialization ?? item.specialization;
-    item.content = content ?? item.content;
-    const updatedItem = await repo.save(item);
-    const result: KnowledgeBaseItemResponse = {
-        id: updatedItem.id,
-        title: updatedItem.title,
-        description: updatedItem.description,
-        specialization: updatedItem.specialization,
-        content: updatedItem.content,
-        createdAt: updatedItem.createdAt,
-        updatedAt: updatedItem.updatedAt,
-    };
-    logger.info("[server][knowledgebase][controller] updateKnowledgeItem request processed", { itemId: id });
-    return res.status(ResponseStatus.SUCCESS).json(result);
-}
+  }
+
+  auditLog.metadata({
+    oldValue: {
+      title_en: item.title_en,
+      title_ar: item.title_ar,
+      description_en: item.description_en,
+      description_ar: item.description_ar,
+      specialization_en: item.specialization_en,
+      specialization_ar: item.specialization_ar,
+      content_en: item.content_en,
+      content_ar: item.content_ar,
+    },
+  });
+
+  item.title_en = payload.title_en ?? item.title_en;
+  item.title_ar = payload.title_ar ?? item.title_ar;
+  item.description_en = payload.description_en ?? item.description_en;
+  item.description_ar = payload.description_ar ?? item.description_ar;
+  item.specialization_en =
+    payload.specialization_en ?? item.specialization_en;
+  item.specialization_ar =
+    payload.specialization_ar ?? item.specialization_ar;
+  item.content_en = payload.content_en ?? item.content_en;
+  item.content_ar = payload.content_ar ?? item.content_ar;
+
+  const updatedItem = await repo.save(item);
+
+  auditLog
+    .step("Knowledge base item updated successfully")
+    .resource("knowledge_item", updatedItem.id);
+
+  logger.info(
+    "[server][knowledgebase][controller] updateKnowledgeItem request processed",
+    { itemId: id },
+  );
+  return res
+    .status(ResponseStatus.SUCCESS)
+    .json(await mapKnowledgeItemResponse(updatedItem));
+};
+
 export const deleteKnowledgeBaseItem = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const item = await repo.findOne({ where: { id } });
-    if (!item) {
-        logger.info("[server][knowledgebase][controller] deleteKnowledgeItem item not found", { itemId: id });
-        return res.status(ResponseStatus.NOT_FOUND).json({ message: "Knowledge item not found." });
-    }
-    await repo.softRemove(item);
-    logger.info("[server][knowledgebase][controller] deleteKnowledgeItem request processed", { itemId: id });
-    return res.status(ResponseStatus.SUCCESS).send({success: true, message: "Knowledge item deleted successfully." });
-}
+  const { id } = req.params;
+
+  const auditLog = audit(req)
+    .summary("Delete knowledge base item")
+    .action(AuditAction.DELETE_KNOWLEDGE_ITEM)
+    .metadata({ itemId: id });
+
+  const item = await repo.findOne({ where: { id } });
+  if (!item) {
+    auditLog.step("Knowledge base item not found");
+    logger.info(
+      "[server][knowledgebase][controller] deleteKnowledgeItem item not found",
+      { itemId: id },
+    );
+    return res
+      .status(ResponseStatus.NOT_FOUND)
+      .json({ message: "Knowledge item not found." });
+  }
+
+  await repo.softRemove(item);
+
+  auditLog
+    .step("Knowledge base item deleted successfully")
+    .resource("knowledge_item", item.id);
+
+  logger.info(
+    "[server][knowledgebase][controller] deleteKnowledgeItem request processed",
+    { itemId: id },
+  );
+  return res.status(ResponseStatus.SUCCESS).send({
+    success: true,
+    message: "Knowledge item deleted successfully.",
+  });
+};

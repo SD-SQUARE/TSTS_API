@@ -13,6 +13,7 @@ import {
   GroupHead,
   Specialization,
 } from "../entities/index.js";
+import { Lang } from "../types/lang.types.js";
 
 export class UserRepository {
   private repo = PostgresDataSource.getRepository(User);
@@ -92,23 +93,40 @@ export class UserRepository {
     qb.andWhere("user.user_type = :userType", { userType: UserType.REQUESTER });
     qb.andWhere("user.deletedAt IS NULL");
     qb.orderBy("user.createdAt", "DESC");
-
     const fn = `"user"."firstName"->>'${lang}'`;
     const mn = `"user"."midName"->>'${lang}'`;
     const ln = `"user"."lastName"->>'${lang}'`;
+    const fullNameExpr = `
+    CONCAT_WS(
+      ' ',
+      "user"."firstName"->>'${lang}',
+      "user"."midName"->>'${lang}',
+      "user"."lastName"->>'${lang}'
+      )
+      `;
 
     // Text search filters
     if (query.first_name) {
-      qb.andWhere(`${fn} ILIKE :fn`, { fn: `%${query.first_name}%` });
-    }
+      const fullNameValue = query.first_name;
 
-    if (query.mid_name) {
-      qb.andWhere(`${mn} ILIKE :mn`, { mn: `%${query.mid_name}%` });
+      if (fullNameValue) {
+        qb.andWhere(`${fullNameExpr} ILIKE :fullName`, {
+          fullName: `%${fullNameValue}%`,
+        });
+      }
     }
+    // // Text search filters
+    // if (query.first_name) {
+    //   qb.andWhere(`${fn} ILIKE :fn`, { fn: `%${query.first_name}%` });
+    // }
 
-    if (query.last_name) {
-      qb.andWhere(`${ln} ILIKE :ln`, { ln: `%${query.last_name}%` });
-    }
+    // if (query.mid_name) {
+    //   qb.andWhere(`${mn} ILIKE :mn`, { mn: `%${query.mid_name}%` });
+    // }
+
+    // if (query.last_name) {
+    //   qb.andWhere(`${ln} ILIKE :ln`, { ln: `%${query.last_name}%` });
+    // }
 
     if (query.ssn) {
       qb.andWhere("user.ssn = :ssn", { ssn: query.ssn });
@@ -120,6 +138,32 @@ export class UserRepository {
 
     if (query.departments) {
       qb.andWhere("department.id = :dep", { dep: query.departments });
+    }
+
+    if (query.email) {
+      qb.andWhere("user.email ILIKE :email", { email: `%${query.email}%` });
+    }
+
+    if (query.phone) {
+      qb.andWhere("\"user\".contacts->>'phone' ILIKE :phone", { phone: `%${query.phone}%` });
+    }
+
+    if (query.mobile) {
+      qb.andWhere("\"user\".contacts->>'mobile' ILIKE :mobile", { mobile: `%${query.mobile}%` });
+    }
+
+    if (query.job_title) {
+      qb.andWhere("(\"user\".job->>'en' ILIKE :job OR \"user\".job->>'ar' ILIKE :job)", { job: `%${query.job_title}%` });
+    }
+
+    if (query.status) {
+      qb.andWhere("user.status = :status", { status: query.status });
+    }
+
+    if (query.allow_profile_edit !== undefined) {
+      qb.andWhere("user.allowProfileEdit = :allowProfileEdit", {
+        allowProfileEdit: query.allow_profile_edit === "true",
+      });
     }
 
     if (query.universities && query.domains) {
@@ -144,7 +188,7 @@ export class UserRepository {
 
   async getAllTechniciansWithFilter(
     query: GetUsersQuery,
-    lang: "en" | "ar"
+    lang: Lang
   ): Promise<[User[], number]> {
     const repo = PostgresDataSource.getRepository(User);
 
@@ -152,8 +196,6 @@ export class UserRepository {
       .createQueryBuilder("user")
       .leftJoinAndSelect("user.university", "university")
       .leftJoinAndSelect("user.domain", "domain")
-      .leftJoinAndSelect("user.userDepartments", "userDepartments")
-      .leftJoinAndSelect("userDepartments.department", "department")
       .where("1 = 1");
 
     qb.andWhere("user.user_type = :userType", {
@@ -165,19 +207,38 @@ export class UserRepository {
     const fn = `"user"."firstName"->>'${lang}'`;
     const mn = `"user"."midName"->>'${lang}'`;
     const ln = `"user"."lastName"->>'${lang}'`;
+    const fullNameExpr = `
+    CONCAT_WS(
+      ' ',
+      "user"."firstName"->>'${lang}',
+      "user"."midName"->>'${lang}',
+      "user"."lastName"->>'${lang}'
+      )
+      `;
 
     // Text search filters
     if (query.first_name) {
-      qb.andWhere(`${fn} ILIKE :fn`, { fn: `%${query.first_name}%` });
+      const fullNameValue = query.first_name;
+
+      if (fullNameValue) {
+        qb.andWhere(`${fullNameExpr} ILIKE :fullName`, {
+          fullName: `%${fullNameValue}%`,
+        });
+      }
     }
 
-    if (query.mid_name) {
-      qb.andWhere(`${mn} ILIKE :mn`, { mn: `%${query.mid_name}%` });
-    }
+    // // Text search filters
+    // if (query.first_name) {
+    //   qb.andWhere(`${fn} ILIKE :fn`, { fn: `%${query.first_name}%` });
+    // }
 
-    if (query.last_name) {
-      qb.andWhere(`${ln} ILIKE :ln`, { ln: `%${query.last_name}%` });
-    }
+    // if (query.mid_name) {
+    //   qb.andWhere(`${mn} ILIKE :mn`, { mn: `%${query.mid_name}%` });
+    // }
+
+    // if (query.last_name) {
+    //   qb.andWhere(`${ln} ILIKE :ln`, { ln: `%${query.last_name}%` });
+    // }
 
     if (query.ssn) {
       qb.andWhere("user.ssn = :ssn", { ssn: query.ssn });
@@ -187,8 +248,30 @@ export class UserRepository {
       qb.andWhere("user.user_type = :ut", { ut: query.user_type });
     }
 
-    if (query.departments) {
-      qb.andWhere("department.id = :dep", { dep: query.departments });
+    if (query.email) {
+      qb.andWhere("user.email ILIKE :email", { email: `%${query.email}%` });
+    }
+
+    if (query.phone) {
+      qb.andWhere("\"user\".contacts->>'phone' ILIKE :phone", { phone: `%${query.phone}%` });
+    }
+
+    if (query.mobile) {
+      qb.andWhere("\"user\".contacts->>'mobile' ILIKE :mobile", { mobile: `%${query.mobile}%` });
+    }
+
+    if (query.job_title) {
+      qb.andWhere("(\"user\".job->>'en' ILIKE :job OR \"user\".job->>'ar' ILIKE :job)", { job: `%${query.job_title}%` });
+    }
+
+    if (query.status) {
+      qb.andWhere("user.status = :status", { status: query.status });
+    }
+
+    if (query.allow_profile_edit !== undefined) {
+      qb.andWhere("user.allowProfileEdit = :allowProfileEdit", {
+        allowProfileEdit: query.allow_profile_edit === "true",
+      });
     }
 
     if (query.universities && query.domains) {
@@ -213,7 +296,7 @@ export class UserRepository {
 
   async getAllAdminsWithFilter(
     query: GetUsersQuery,
-    lang: "en" | "ar"
+    lang: Lang
   ): Promise<[User[], number]> {
     const repo = PostgresDataSource.getRepository(User);
 
@@ -221,32 +304,48 @@ export class UserRepository {
       .createQueryBuilder("user")
       .leftJoinAndSelect("user.university", "university")
       .leftJoinAndSelect("user.domain", "domain")
-      .leftJoinAndSelect("user.userDepartments", "userDepartments")
-      .leftJoinAndSelect("userDepartments.department", "department")
       .where("1 = 1");
 
-    qb.andWhere("user.user_type = :userType", {
-      userType: UserType.ADMIN,
+    qb.andWhere("user.user_type IN (:...userTypes)", {
+      userTypes: [UserType.ADMIN, UserType.SUPER_ADMIN],
     });
+
     qb.andWhere("user.deletedAt IS NULL");
     qb.orderBy("user.createdAt", "DESC");
 
     const fn = `"user"."firstName"->>'${lang}'`;
     const mn = `"user"."midName"->>'${lang}'`;
     const ln = `"user"."lastName"->>'${lang}'`;
+    const fullNameExpr = `
+    CONCAT_WS(
+      ' ',
+      "user"."firstName"->>'${lang}',
+      "user"."midName"->>'${lang}',
+      "user"."lastName"->>'${lang}'
+      )
+      `;
 
     // Text search filters
     if (query.first_name) {
-      qb.andWhere(`${fn} ILIKE :fn`, { fn: `%${query.first_name}%` });
-    }
+      const fullNameValue = query.first_name;
 
-    if (query.mid_name) {
-      qb.andWhere(`${mn} ILIKE :mn`, { mn: `%${query.mid_name}%` });
+      if (fullNameValue) {
+        qb.andWhere(`${fullNameExpr} ILIKE :fullName`, {
+          fullName: `%${fullNameValue}%`,
+        });
+      }
     }
+    // if (query.first_name) {
+    //   qb.andWhere(`${fn} ILIKE :fn`, { fn: `%${query.first_name}%` });
+    // }
 
-    if (query.last_name) {
-      qb.andWhere(`${ln} ILIKE :ln`, { ln: `%${query.last_name}%` });
-    }
+    // if (query.mid_name) {
+    //   qb.andWhere(`${mn} ILIKE :mn`, { mn: `%${query.mid_name}%` });
+    // }
+
+    // if (query.last_name) {
+    //   qb.andWhere(`${ln} ILIKE :ln`, { ln: `%${query.last_name}%` });
+    // }
 
     if (query.ssn) {
       qb.andWhere("user.ssn = :ssn", { ssn: query.ssn });
@@ -256,8 +355,30 @@ export class UserRepository {
       qb.andWhere("user.user_type = :ut", { ut: query.user_type });
     }
 
-    if (query.departments) {
-      qb.andWhere("department.id = :dep", { dep: query.departments });
+    if (query.email) {
+      qb.andWhere("user.email ILIKE :email", { email: `%${query.email}%` });
+    }
+
+    if (query.phone) {
+      qb.andWhere("\"user\".contacts->>'phone' ILIKE :phone", { phone: `%${query.phone}%` });
+    }
+
+    if (query.mobile) {
+      qb.andWhere("\"user\".contacts->>'mobile' ILIKE :mobile", { mobile: `%${query.mobile}%` });
+    }
+
+    if (query.job_title) {
+      qb.andWhere("(\"user\".job->>'en' ILIKE :job OR \"user\".job->>'ar' ILIKE :job)", { job: `%${query.job_title}%` });
+    }
+
+    if (query.status) {
+      qb.andWhere("user.status = :status", { status: query.status });
+    }
+
+    if (query.allow_profile_edit !== undefined) {
+      qb.andWhere("user.allowProfileEdit = :allowProfileEdit", {
+        allowProfileEdit: query.allow_profile_edit === "true",
+      });
     }
 
     if (query.universities && query.domains) {

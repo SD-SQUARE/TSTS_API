@@ -6,26 +6,37 @@ import {
   ChangeMap,
   fetchExistingTicket,
   handleAssigneeListUpdate,
+  handleProblemUpdate,
   handleSpecializationUpdate,
   logGeneralUpdateActivity,
   logSpecificActivities,
   maybeLogWebSocketIntent,
+  notifyTicketParticipantsOfChanges,
   saveTicketUpdates,
 } from "../common.js";
 import { IEditResponse } from "../../../interfaces/response/IEditResponse.js";
 import { UserData } from "../../../types/UserData.js";
+import { Request } from "express";
+import { audit } from "../../../helpers/auditBuilder.js";
+import { invalidateTicketAnalyticsCache } from "../ticket-cache.service.js";
 
 // todo  Emit WebSocket event
 export const editTicketForRequesterService = async (
   ticketId: string,
   updateData: any,
-  userData: UserData
+  userData: UserData,
+  req?: Request,
 ): Promise<IEditResponse> => {
+  const auditLog = audit(req);
   logger.info("[server][tickets] editTicket | start", { ticketId, updateData });
+
+  auditLog.step("Fetching existing ticket");
 
   const existingTicket = await fetchExistingTicket(ticketId);
 
   if (!existingTicket) {
+    auditLog.step("Ticket not found");
+
     logger.info("[server][tickets] editTicket | ticket not found", {
       ticketId,
     });
@@ -33,9 +44,19 @@ export const editTicketForRequesterService = async (
     return ticketNotFound("is_edited", ticketId) as IEditResponse;
   }
 
+  if (existingTicket.requester?.id !== userData.id) {
+    return {
+      is_edited: false,
+      message: t("action_not_allowed"),
+      errors: [{ key: "requester", message: "Requester cannot edit another user's ticket" }],
+    };
+  }
+
   const changes: ChangeMap = {};
   const updates: any = {};
   const wsFlag = { value: false };
+
+  auditLog.step("Applying allowed requester updates");
 
   applyPrimitiveUpdate(
     "title",
@@ -44,7 +65,7 @@ export const editTicketForRequesterService = async (
     updates,
     changes,
     wsFlag,
-    false
+    false,
   );
 
   applyPrimitiveUpdate(
@@ -54,18 +75,37 @@ export const editTicketForRequesterService = async (
     updates,
     changes,
     wsFlag,
-    false
+    false,
   );
+
+  auditLog
+    .metadata({ changedFields: Object.keys(changes) })
+    .step("Primitive updates applied");
 
   const specializationError = await handleSpecializationUpdate(
     updateData,
     existingTicket,
     updates,
-    changes
+    changes,
   );
-  if (specializationError) return specializationError;
+  if (specializationError) {
+    auditLog.step("Specialization update failed");
+    return specializationError;
+  }
+
+  const problemError = await handleProblemUpdate(
+    updateData,
+    existingTicket,
+    updates,
+    changes,
+  );
+  if (problemError) {
+    auditLog.step("Problem update failed");
+    return problemError;
+  }
 
   const updatedTicket = await saveTicketUpdates(existingTicket, updates);
+  await invalidateTicketAnalyticsCache();
 
   logger.info("[server][tickets] editTicket | ticket updated", {
     ticketId: updatedTicket.id,
@@ -73,15 +113,33 @@ export const editTicketForRequesterService = async (
     shouldEmitWebSocket: wsFlag.value,
   });
 
-  await logGeneralUpdateActivity(updatedTicket, changes, userData);
-  await logSpecificActivities(updatedTicket, changes, userData);
+  auditLog
+    .metadata({
+      changes,
+      shouldEmitWebSocket: wsFlag.value,
+    })
+    .step("Ticket updated in database");
+
+  await logGeneralUpdateActivity(updatedTicket, changes, userData, req);
+  await logSpecificActivities(updatedTicket, changes, userData,req);
+  await notifyTicketParticipantsOfChanges(updatedTicket, changes, userData);
+
+  auditLog.step("Activities logged");
 
   maybeLogWebSocketIntent(wsFlag.value, updatedTicket, changes);
+
+  if (wsFlag.value) {
+    auditLog.step("WebSocket event should be emitted");
+  }
 
   logger.info("[server][tickets] editTicket | completed", {
     ticketId: updatedTicket.id,
     updatedFields: Object.keys(changes),
   });
+
+  auditLog
+    .metadata({ updatedFields: Object.keys(changes) })
+    .step("Requester edit flow completed");
 
   return {
     is_edited: true,

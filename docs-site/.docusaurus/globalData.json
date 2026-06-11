@@ -1,0 +1,183 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/",
+          "mainDocId": "intro",
+          "docs": [
+            {
+              "id": "api-integrations",
+              "path": "/api-integrations",
+              "sidebar": "docs"
+            },
+            {
+              "id": "authentication/auth-v1",
+              "path": "/authentication/auth-v1",
+              "sidebar": "docs"
+            },
+            {
+              "id": "authentication/auth-v2",
+              "path": "/authentication/auth-v2",
+              "sidebar": "docs"
+            },
+            {
+              "id": "authentication/trusted-devices",
+              "path": "/authentication/trusted-devices",
+              "sidebar": "docs"
+            },
+            {
+              "id": "chat/chat",
+              "path": "/chat/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "chat/websockets",
+              "path": "/chat/websockets",
+              "sidebar": "docs"
+            },
+            {
+              "id": "database-migrations",
+              "path": "/database-migrations",
+              "sidebar": "docs"
+            },
+            {
+              "id": "intro",
+              "path": "/intro",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/academic-structure",
+              "path": "/management/academic-structure",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/ai-assistant",
+              "path": "/management/ai-assistant",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/audit-logs",
+              "path": "/management/audit-logs",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/custom-forms",
+              "path": "/management/custom-forms",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/desktop-app",
+              "path": "/management/desktop-app",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/groups",
+              "path": "/management/groups",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/knowledge-base",
+              "path": "/management/knowledge-base",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/lookups",
+              "path": "/management/lookups",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/notifications",
+              "path": "/management/notifications",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/permission-profiles",
+              "path": "/management/permission-profiles",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/problems",
+              "path": "/management/problems",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/recycle-bin",
+              "path": "/management/recycle-bin",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/site-settings",
+              "path": "/management/site-settings",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/sla",
+              "path": "/management/sla",
+              "sidebar": "docs"
+            },
+            {
+              "id": "management/work-hours",
+              "path": "/management/work-hours",
+              "sidebar": "docs"
+            },
+            {
+              "id": "reports/reports",
+              "path": "/reports/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tickets/ticket-chat",
+              "path": "/tickets/ticket-chat",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tickets/ticket-final-report",
+              "path": "/tickets/ticket-final-report",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tickets/ticket-media",
+              "path": "/tickets/ticket-media",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tickets/ticket-reviews",
+              "path": "/tickets/ticket-reviews",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tickets/tickets",
+              "path": "/tickets/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "users/user-profile",
+              "path": "/users/user-profile",
+              "sidebar": "docs"
+            },
+            {
+              "id": "users/users",
+              "path": "/users/",
+              "sidebar": "docs"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "docs": {
+              "link": {
+                "path": "/intro",
+                "label": "intro"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

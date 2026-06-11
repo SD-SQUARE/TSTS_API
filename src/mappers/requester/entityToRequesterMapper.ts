@@ -16,16 +16,27 @@ type RequesterDto = {
   last_name_en: string | null;
   last_name_ar: string | null;
 
+  full_name_en: string | null;
+  full_name_ar: string | null;
+
   ssn: string | null;
   university: { id: string; name: string } | null;
   domain: { id: string; name: string } | null;
   departments: { id: string; name: string }[];
+  permission_profile: {
+    id: string;
+    name: string;
+    name_en: string;
+    name_ar: string;
+  } | null;
   specializations: { id: string; name: string }[];
   contacts: {
     phones: string[];
     mobiles: string[];
   };
+  rustdeskId: string | null;
   status: string;
+  allow_profile_edit: boolean;
 
   job_ar: string;
   job_en: string;
@@ -40,9 +51,18 @@ export const toRequester = async (
   const userDepartments = entity.userDepartments
     ? await entity.userDepartments
     : [];
+  const usersPermissions = entity.usersPermissions
+    ? await entity.usersPermissions
+    : [];
   const userspecializations = entity.allowedSpecializations
     ? await entity.allowedSpecializations
     : [];
+  const userPermission = Array.isArray(usersPermissions)
+    ? usersPermissions[0]
+    : null;
+  const permissionProfile = userPermission?.permissionProfile
+    ? await userPermission.permissionProfile
+    : null;
 
   // 2) for each userDepartment, load department (lazy) and map it
   const departments = await Promise.all(
@@ -93,6 +113,9 @@ export const toRequester = async (
     last_name_en: entity.lastName.en ?? null,
     last_name_ar: entity.lastName.ar ?? null,
 
+    full_name_en: entity.fullName?.en ?? null,
+    full_name_ar: entity.fullName?.ar ?? null,
+
     ssn: entity.ssn ?? null,
 
     university: university
@@ -113,14 +136,25 @@ export const toRequester = async (
       (d): d is { id: string; name: string } => d !== null,
     ),
 
+    permission_profile: permissionProfile
+      ? {
+          id: permissionProfile.id,
+          name: permissionProfile.name?.[lang] ?? "",
+          name_en: permissionProfile.name?.en ?? "",
+          name_ar: permissionProfile.name?.ar ?? "",
+        }
+      : null,
+
     specializations: specializations,
 
     contacts: {
       phones: entity.contacts?.phone ?? [],
       mobiles: entity.contacts?.mobile ?? [],
     },
+    rustdeskId: entity.rustdeskId ?? null,
 
     status: entity.status,
+    allow_profile_edit: entity.allowProfileEdit ?? false,
 
     job_ar: entity.job.ar ?? "",
     job_en: entity.job.en ?? "",

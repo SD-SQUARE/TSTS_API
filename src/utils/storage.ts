@@ -119,6 +119,11 @@ export const getPresignedUrl = async (
 ) => {
   const command = new GetObjectCommand({ Bucket: bucket, Key: key });
   const url = await getSignedUrl(s3Client, command, { expiresIn }); // URL valid for 60 seconds
+  if (!url) {
+    throw new Error("Failed to generate presigned URL");
+  }
+  
+  
   return url;
 };
 

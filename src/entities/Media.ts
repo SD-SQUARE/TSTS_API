@@ -27,6 +27,12 @@ export class Media {
   })
   ticket: any;
 
+  @ManyToOne("TicketFinalReport", "attachments", {
+    nullable: true,
+    onDelete: "CASCADE",
+  })
+  finalReport?: any | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

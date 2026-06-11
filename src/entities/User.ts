@@ -10,13 +10,14 @@ import { University } from "./University.js";
 import { Domain } from "./Domain.js";
 import { UserStatus } from "../enums/UserStatus.enum.js";
 import { UserType } from "../enums/UserType.enum.js";
-import { Group } from "./Group.js";
 import { Ticket } from "./Ticket.js";
 import { TicketChat } from "./TicketChat.js";
 import { TicketListener } from "./TicketListener.js";
 import { NotificationRead } from "./NotificationRead.js";
 import { ChatMessage } from "./ChatMessage.js";
 import { TrustedDevice } from "./TrustedDevice.js";
+import { TeamLead } from "./TeamLead.js";
+import { TeamTechnician } from "./TeamTechnician.js";
 
 @Entity({ name: "users" })
 @Unique(["email"])
@@ -40,6 +41,9 @@ export class User extends BaseEntity {
   @Column({ type: "jsonb", nullable: true })
   lastName?: { en?: string; ar?: string };
 
+  @Column({ type: "jsonb", nullable: true })
+  fullName?: { en?: string; ar?: string };
+
   @Index("IDX_USER_SSN")
   @Column({ type: "varchar", length: 14, nullable: true })
   ssn?: string;
@@ -50,6 +54,9 @@ export class User extends BaseEntity {
   // contacts as jsonb: { mobile: [".."], phone: [".."] } or arbitrary json
   @Column({ type: "jsonb", nullable: true })
   contacts?: { mobile?: string[]; phone?: string[] };
+
+  @Column({ type: "varchar", length: 64, nullable: true })
+  rustdeskId?: string | null;
 
   @ManyToOne(() => University, (u) => u.domains, { nullable: true, lazy: true })
   university?: any;
@@ -62,6 +69,9 @@ export class User extends BaseEntity {
 
   @Column({ type: "enum", enum: UserStatus, default: UserStatus.INACTIVE })
   status!: UserStatus;
+
+  @Column({ type: "boolean", default: false })
+  allowProfileEdit!: boolean;
 
   @Column({ type: "jsonb", nullable: true })
   job?: { en?: string; ar?: string };
@@ -81,8 +91,11 @@ export class User extends BaseEntity {
   @OneToMany(() => UserDepartment, (ud) => ud.user, { lazy: true })
   userDepartments!: any[];
 
-  @OneToMany(() => Group, (g) => g.teamLeader)
-  ledGroups!: any[];
+  @OneToMany(() => TeamLead, (lead) => lead.user)
+  teamLeadAssignments!: any[];
+
+  @OneToMany(() => TeamTechnician, (assignment) => assignment.user)
+  teamTechnicianAssignments!: any[];
 
   @OneToMany(() => Ticket, (ticket) => ticket.requester)
   requestedTickets: any[];

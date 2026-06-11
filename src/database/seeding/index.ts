@@ -1,16 +1,22 @@
-import { seedUniversities } from "./universities.seed.js";
-import { seedDomains } from "./domains.seed.js";
-import { seedDepartments } from "./departments.seed.js";
 import { PostgresDataSource } from "../postgres-data-source.js";
-import { seedPermissionProfiles } from "./permission-profiles.seed.js";
-import { seedPermissions } from "./permissions.seed.js";
-import { seedAdmins } from "./admins.seed.js";
-import { seedTechnicians } from "./technicians.seed.js";
-import { seedRequesters } from "./requesters.seed.js";
-import { seedGroups } from "./groups.seed.js";
-import { seedGroupRelations } from "./group-relations.seed.js";
-import { addAvatarsToUsers } from "./seedAvatars.js";
-import { seedSpecializations } from "./specializations.seed.js";
+import { seedCapitalUniversityDomains } from "./domains/capital-university/capitalUniversityDomainSeeder.js";
+import { seedUniversities } from "./university/universities.seed.js";
+import { seedSpecializations } from "./specializations/specializations.seed.js";
+import { seedHelwanNationalUniversityDomains } from "./domains/helwan-national-university/helwanNationalUniversityDomainSeeder.js";
+import { seedSuperAdmin } from "./users/super-admin.seed.js";
+import { seedAdmins } from "./users/admins.seed.js";
+import { seedRequesters } from "./users/requesters.seed.js";
+import { seedTechnicians } from "./users/technicians.seed.js";
+import { seedGroups } from "./groups/groups.seed.js";
+import { seedGroupRelations } from "./groups/group-relations.seed.js";
+import { seedPermissions } from "./permissions/permissions.seed.js";
+import { seedPermissionProfiles } from "./permissions/permission-profiles.seed.js";
+import { seedProblems } from "./problems/problems.seed.js";
+import { seedKnowledgeBase } from "./knowledge-base/knowledge-base.seed.js";
+import { seedTickets } from "./tickets/tickets.seed.js";
+import { seedAuditActions } from "./auditActions/seedAuditActions.js";
+import { MongoDataSource } from "../mongo-data-source.js";
+import { seedSysData } from "./sys-data.seed.js";
 
 export async function runSeeds() {
   try {
@@ -18,33 +24,61 @@ export async function runSeeds() {
       await PostgresDataSource.initialize();
     }
 
+    if(!MongoDataSource.isInitialized) {
+      await MongoDataSource.initialize();
+    }
+
     console.log("🚀 Starting database seeding...");
 
     // Order is important because of FK dependencies
 
-
+    console.log("📋 Seeding specializations...");
     await seedSpecializations(PostgresDataSource);
-    await seedUniversities(PostgresDataSource);
-    await seedDomains(PostgresDataSource);
-    await seedDepartments(PostgresDataSource);
 
+    console.log("🔧 Seeding problems...");
+    await seedProblems(PostgresDataSource);
+
+    // Small pause after problems seeding to help with memory
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    console.log("🏫 Seeding universities...");
+    await seedUniversities(PostgresDataSource);
+
+    console.log("🏛️  Seeding university domains...");
+    await seedCapitalUniversityDomains(PostgresDataSource);
+    await seedHelwanNationalUniversityDomains(PostgresDataSource);
+
+    console.log("🔐 Seeding permissions...");
     await seedPermissions(PostgresDataSource);
     await seedPermissionProfiles(PostgresDataSource);
 
+    console.log("👥 Seeding groups...");
     await seedGroups(PostgresDataSource);
 
-    // 2) dynamic admins (random uni/domain/dept/profile/specs)
-    await seedAdmins(PostgresDataSource, 50);
-
+    console.log("👤 Seeding users...");
+    await seedSuperAdmin(PostgresDataSource);
+    await seedAdmins(PostgresDataSource, 10);
     await seedTechnicians(PostgresDataSource, 50);
     await seedRequesters(PostgresDataSource, 50);
 
-    // await addAvatarsToUsers(PostgresDataSource);
-
-    // 4) group ↔ specs & group ↔ heads
+    console.log("🔗 Seeding group relations...");
     await seedGroupRelations(PostgresDataSource);
 
+    console.log("Seeding sys_data files...");
+    await seedSysData(PostgresDataSource);
+
+    console.log("📚 Seeding knowledge base...");
+    await seedKnowledgeBase(PostgresDataSource);
+
+    console.log("🎫 Seeding tickets...");
+    await seedTickets(PostgresDataSource, 50);
+
+    console.log("📃 seeding audit actions...");
+    await seedAuditActions(MongoDataSource);
+    
+
     console.log("🎉 Seeding completed successfully!");
+    process.exit(0);
   } catch (error) {
     console.error("❌ Error during seeding:", error);
     process.exitCode = 1;

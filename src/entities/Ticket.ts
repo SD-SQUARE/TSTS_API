@@ -9,6 +9,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
+  Generated,
+  Index,
 } from "typeorm";
 import { User } from "./User.js";
 import { Specialization } from "./Specialization.js";
@@ -18,12 +20,18 @@ import { Media } from "./Media.js";
 import { TicketListener } from "./TicketListener.js";
 import { TicketActivity } from "./TicketActivity.js";
 import { TicketChat } from "./TicketChat.js";
-import { TicketReview } from "./TicketReview.js"
+import { TicketReview } from "./TicketReview.js";
+import { Problem } from "./problem.js";
 
 @Entity({ name: "tickets" })
 export class Ticket {
   @PrimaryGeneratedColumn("uuid")
   id: string;
+
+  @Index()
+  @Column({ type: "int", generated: "increment", unique: true })
+  @Generated("increment")
+  ticket_number: number;
 
   @Column({ type: "varchar", length: 100 })
   title: string;
@@ -31,12 +39,17 @@ export class Ticket {
   @Column({ type: "text" })
   description: string;
 
+  @Index()
   @ManyToOne(() => User, (user) => user.requestedTickets, { nullable: false })
   requester: any;
 
   @ManyToOne(() => Specialization, (spec) => spec.tickets, { nullable: true })
   specialization: any | null;
 
+  @ManyToOne(() => Problem, (prop) => prop.ticket, { nullable: true })
+  problem: any | null;
+
+  @Index()
   @Column({ type: "enum", enum: TicketStatus, default: TicketStatus.OPEN })
   status: TicketStatus;
 
@@ -57,6 +70,7 @@ export class Ticket {
   @OneToMany(() => Media, (media) => media.ticket)
   media: any[];
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 
@@ -65,6 +79,9 @@ export class Ticket {
 
   @DeleteDateColumn()
   deletedAt?: Date;
+
+  @Column({ type: "timestamptz", nullable: true })
+  unassignedAlertedAt?: Date | null;
 
   @OneToMany(() => TicketListener, (listener) => listener.ticket)
   listeners: any[];
@@ -81,4 +98,5 @@ export class Ticket {
   // close count
   @Column({ type: "int", default: 0 }) 
   closeCount: number;
+
 }

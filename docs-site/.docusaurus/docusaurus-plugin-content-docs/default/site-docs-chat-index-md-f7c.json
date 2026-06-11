@@ -1,0 +1,28 @@
+{
+  "id": "chat/chat",
+  "title": "System Chat",
+  "description": "Real-time messaging system with personal, group, and team conversations. All endpoints require authentication and are restricted to ADMIN, TECHNICIAN, and SUPER_ADMIN roles.",
+  "source": "@site/../docs/chat/index.md",
+  "sourceDirName": "chat",
+  "slug": "/chat/",
+  "permalink": "/chat/",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "chat",
+    "title": "System Chat",
+    "sidebar_label": "Chat"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Profile",
+    "permalink": "/users/user-profile"
+  },
+  "next": {
+    "title": "WebSockets",
+    "permalink": "/chat/websockets"
+  }
+}

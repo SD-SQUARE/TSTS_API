@@ -1,0 +1,60 @@
+# RustDesk self-hosted server stack.
+#
+# Usage:
+#   docker compose -f ./docker/compose.rustdesk.yml up -d
+#
+# First-time setup:
+#   1. Start this stack.
+#   2. Read the server public key:
+#      docker exec rustdesk-hbbs cat /root/id_ed25519.pub
+#   3. Use that key and the public host/IP to build the RustDesk client config.
+#   4. Put the config string in the Electron app RUSTDESK_CONFIG value/env.
+#
+# Required public ports:
+#   21115/tcp - NAT type test
+#   21116/tcp - ID registration and heartbeat
+#   21116/udp - ID server UDP heartbeat
+#   21117/tcp - relay
+#   21118/tcp - ID server websocket
+#   21119/tcp - relay websocket
+
+version: "3.9"
+
+services:
+  hbbs:
+    image: rustdesk/rustdesk-server:latest
+    container_name: rustdesk-hbbs
+    command: hbbs -r ${RUSTDESK_HOST:-${HOST:-localhost}}:21117
+    restart: unless-stopped
+    depends_on:
+      - hbbr
+    ports:
+      - "${RUSTDESK_NAT_PORT:-21115}:21115"
+      - "${RUSTDESK_ID_PORT:-21116}:21116"
+      - "${RUSTDESK_ID_PORT:-21116}:21116/udp"
+      - "${RUSTDESK_ID_WS_PORT:-21118}:21118"
+    volumes:
+      - rustdesk_data:/root
+    networks:
+      - tsts-network
+
+  hbbr:
+    image: rustdesk/rustdesk-server:latest
+    container_name: rustdesk-hbbr
+    command: hbbr
+    restart: unless-stopped
+    ports:
+      - "${RUSTDESK_RELAY_PORT:-21117}:21117"
+      - "${RUSTDESK_RELAY_WS_PORT:-21119}:21119"
+    volumes:
+      - rustdesk_data:/root
+    networks:
+      - tsts-network
+
+volumes:
+  rustdesk_data:
+    name: rustdesk_data
+
+networks:
+  tsts-network:
+    external: true

@@ -1,0 +1,28 @@
+{
+  "id": "management/desktop-app",
+  "title": "Desktop App",
+  "description": "Endpoints supporting the TSTS Electron desktop application for requesters.",
+  "source": "@site/../docs/management/desktop-app.md",
+  "sourceDirName": "management",
+  "slug": "/management/desktop-app",
+  "permalink": "/management/desktop-app",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "desktop-app",
+    "title": "Desktop App",
+    "sidebar_label": "Desktop App"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "AI Assistant",
+    "permalink": "/management/ai-assistant"
+  },
+  "next": {
+    "title": "Database Migrations",
+    "permalink": "/database-migrations"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "management/permission-profiles",
+  "title": "Permission Profiles",
+  "description": "Assign granular permission sets to users via profiles.",
+  "source": "@site/../docs/management/permission-profiles.md",
+  "sourceDirName": "management",
+  "slug": "/management/permission-profiles",
+  "permalink": "/management/permission-profiles",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "permission-profiles",
+    "title": "Permission Profiles",
+    "sidebar_label": "Permission Profiles"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Work Hours",
+    "permalink": "/management/work-hours"
+  },
+  "next": {
+    "title": "Custom Forms",
+    "permalink": "/management/custom-forms"
+  }
+}

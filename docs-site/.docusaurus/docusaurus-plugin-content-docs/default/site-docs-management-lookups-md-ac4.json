@@ -1,0 +1,28 @@
+{
+  "id": "management/lookups",
+  "title": "Lookups",
+  "description": "Lookup endpoints provide lightweight reference data for dropdowns, filters, and autocomplete fields.",
+  "source": "@site/../docs/management/lookups.md",
+  "sourceDirName": "management",
+  "slug": "/management/lookups",
+  "permalink": "/management/lookups",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "lookups",
+    "title": "Lookups",
+    "sidebar_label": "Lookups"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Reports",
+    "permalink": "/reports/"
+  },
+  "next": {
+    "title": "Groups",
+    "permalink": "/management/groups"
+  }
+}

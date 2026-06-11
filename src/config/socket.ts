@@ -6,19 +6,20 @@ import { listening } from "../middleware/listening.js";
 
 export let io: Server;
 
-
+const HOST = process.env.HOST;
 export function initSocket(server: any) {
   io = new Server(server, {
     cors: {
-      origin: "*",
+      origin: true,
+      credentials: true,
     },
+    allowRequest: (_req, callback) => callback(null, true),
   });
   logger.info("[Socket]: initialized");
   logger.info(
-    `[Socket]: listening on wss://${server.address().address}:${
+    `[Socket]: listening on wss://${HOST}:${
       server.address().port
-    }`,
-    server.address()
+    }` 
   );
 
   io.use(socketAuth);

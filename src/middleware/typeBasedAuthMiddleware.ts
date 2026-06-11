@@ -19,7 +19,10 @@ export const typeBasedAuthMiddleware = (allowedTypes: UserType[]) => {
         .json({ message: t("auth.user_not_authenticated") });
     }
 
-    if (allowedTypes.includes(req.user.role as UserType)) {
+    if (
+      req.user.role === UserType.SUPER_ADMIN ||
+      allowedTypes.includes(req.user.role as UserType)
+    ) {
       return next();
     } else {
       return res.status(403).json({ message: t("auth.permissions_error") });

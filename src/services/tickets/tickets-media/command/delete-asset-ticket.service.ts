@@ -9,22 +9,28 @@ import { logTicketActivity } from "../../../tickets.service.js";
 import { TicketActivityType } from "../../../../enums/TicketActivity.enum.js";
 import { IDeleteResponse } from "../../../../interfaces/response/IDeleteResponse.js";
 import { deleteFile } from "../../../../utils/storage.js";
+import { Request } from "express";
+import { audit } from "../../../../helpers/auditBuilder.js";
 
 export const deleteSingleTicketAssetService = async (
   ticketId: string,
   assetId: string,
-  userData: UserData
+  userData: UserData,
+  req?: Request,
 ): Promise<IDeleteResponse> => {
+  const auditLog = audit(req);
   logger.info(
     "[server][tickets-media] deleteSingleTicketAssetService | start",
     {
       ticketId,
       assetId,
-    }
+    },
   );
 
   const existingTicket = await fetchExistingTicket(ticketId);
   if (!existingTicket) {
+    auditLog.step("Ticket not found");
+
     return {
       is_deleted: false,
       message: t("ticket.not_found"),
@@ -39,6 +45,8 @@ export const deleteSingleTicketAssetService = async (
   });
 
   if (!asset) {
+    auditLog.step("Ticket not found");
+
     logger.warn("[server][tickets-media] Asset not found for ticket", {
       ticketId,
       assetId,
@@ -68,8 +76,16 @@ export const deleteSingleTicketAssetService = async (
     "Asset Deleted",
     TicketActivityType.INFO,
     `Asset "${asset.name}" was deleted by ${actorText}.`,
-    { actor, assetId: asset.id, assetName: asset.name }
+    actor.id,
+    { actor, assetId: asset.id, assetName: asset.name },
   );
+
+  auditLog
+    .metadata({
+      assetId: asset.id,
+      fileName: asset.name,
+    })
+    .step("Ticket asset deleted");
 
   // Return success response
   logger.info("[server][tickets-media] Asset deleted successfully", {

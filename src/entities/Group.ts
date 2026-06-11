@@ -1,18 +1,11 @@
 // src/entities/Group.ts
-import {
-  Entity,
-  Column,
-  OneToMany,
-  ManyToOne,
-  JoinColumn,
-  Index,
-} from "typeorm";
+import { Entity, Column, OneToMany } from "typeorm";
 import { BaseEntity } from "./BaseEntity.js";
 import { TechnicianGroup } from "./TechnicianGroup.js";
 import { GroupHead } from "./GroupHead.js";
 import { GroupSpecialization } from "./GroupSpecialization.js";
-import { User } from "./User.js";
 import { ChatMessage } from "./ChatMessage.js";
+import { Team } from "./Team.js";
 
 @Entity({ name: "groups" })
 export class Group extends BaseEntity {
@@ -34,9 +27,8 @@ export class Group extends BaseEntity {
   @OneToMany(() => GroupSpecialization, (gs) => gs.group, )
   specializations!: any[];
 
-  @ManyToOne(() => User, { nullable: true, lazy: true })
-  @JoinColumn({ name: "teamLeaderId" })
-  teamLeader?: any;
+  @OneToMany(() => Team, (team) => team.group)
+  teams!: any[];
 
   @OneToMany(() => ChatMessage, (msg) => msg.group)
   chat: any[];

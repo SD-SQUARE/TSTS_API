@@ -18,11 +18,15 @@ import { IEditResponse } from "../../../interfaces/response/IEditResponse.js";
 import { uploadFilesWithUniqueKey } from "../../../helpers/ImagesHelper.js";
 import { IDeleteResponse } from "../../../interfaces/response/IDeleteResponse.js";
 import { CreateRequesterMapped } from "../../../interfaces/requester/ICreateRequester.js";
+import { audit } from "../../../helpers/auditBuilder.js";
+import { Request } from "express";
 
 export const createRequesterService = async (
   requesterDto: CreateRequesterMapped,
-  imageFile?: Express.Multer.File
+  imageFile?: Express.Multer.File,
+  req?: any,
 ): Promise<ICreateResponse> => {
+  const auditLog = audit(req);
   // 2) university + domain + departments in ONE helper
   const entitiesResult = await validateEntities(
     requesterDto.university,
@@ -31,6 +35,10 @@ export const createRequesterService = async (
   );
 
   if (!entitiesResult.is_valid) {
+     auditLog
+      .metadata({ errors: entitiesResult.errors })
+      .step("Invalid university/domain/departments");
+
     return {
       is_added: false,
       message: "",
@@ -52,6 +60,10 @@ export const createRequesterService = async (
   );
 
   if (!permResult.is_valid) {
+     auditLog
+      .metadata({ errors: permResult.errors })
+      .step("Invalid permission configuration");
+
     return {
       is_added: false,
       message: "",
@@ -59,17 +71,7 @@ export const createRequesterService = async (
     };
   }
 
-  const specsResult = await validateExistingSpecializations(
-    requesterDto.allowedSpecializations
-  );
-
-  if (!specsResult.is_valid) {
-    return {
-      is_added: false,
-      message: "",
-      errors: specsResult.errors,
-    };
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   // 7) Set user type
   requesterDto.userType = UserType.REQUESTER;
@@ -87,11 +89,24 @@ export const createRequesterService = async (
       imageFile
     );
     userData.image = safeKey;
+
+    auditLog.step("User image uploaded");
   }
 
   // 10) Save user
   const user = await userRepository.createAndSave(userData);
   logger.info(`[server] [user] Creating user ${userData.email}`);
+
+  auditLog
+    .resource("User", user.id)
+    .metadata({
+      email: user.email,
+      hasImage: !!imageFile,
+      departmentsCount: existingDepartments.length,
+      specializationsCount: 0,
+    })
+    .step("User entity created");
+
   const userDepartmentsRepo = PostgresDataSource.getRepository(UserDepartment);
   const usersPermissionsRepo =
     PostgresDataSource.getRepository(UsersPermissions);
@@ -108,6 +123,7 @@ export const createRequesterService = async (
       })
     );
     await userDepartmentsRepo.save(userDepartments);
+    auditLog.step("User departments assigned");
   }
 
   const profile = permResult.profile!;
@@ -121,18 +137,9 @@ export const createRequesterService = async (
       revokedPermissions: requesterDto.revokedPermissions,
     })
   );
+  auditLog.step("User permissions assigned");
 
-  // 13) Save allowedSpecializations
-  if (requesterDto.allowedSpecializations?.length > 0) {
-    await allowedSpecializationsRepo.save(
-      requesterDto.allowedSpecializations.map((specId) =>
-        allowedSpecializationsRepo.create({
-          user,
-          specialization: { id: specId } as any,
-        })
-      )
-    );
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   return { is_added: true, message: t("user_created") };
 };
@@ -140,8 +147,11 @@ export const createRequesterService = async (
 export const editRequesterService = async (
   id: string,
   requesterDto: CreateRequesterMapped,
-  imageFile?: Express.Multer.File
+  imageFile?: Express.Multer.File,
+  req?: Request,
 ): Promise<IEditResponse> => {
+   const auditLog = audit(req);
+
   const userRepo = PostgresDataSource.getRepository(User);
   const userDepartmentsRepo = PostgresDataSource.getRepository(UserDepartment);
   const usersPermissionsRepo =
@@ -161,8 +171,40 @@ export const editRequesterService = async (
   });
 
   if (!userEntity) {
+    auditLog.step("Requester not found");
     return { is_edited: false, message: t("user_not_found"), errors: [] };
   }
+
+  const userDepartments = await Promise.resolve(userEntity.userDepartments ?? []);
+  const usersPermissions = await Promise.resolve(
+    userEntity.usersPermissions ?? [],
+  );
+  const allowedSpecializations = await Promise.resolve(
+    userEntity.allowedSpecializations ?? [],
+  );
+  const isSelfProfileEdit = req?.user?.id === id;
+
+  const oldValues = {
+    email: userEntity.email,
+    university: userEntity.university?.id,
+    domain: userEntity.domain?.id,
+    departments: await Promise.all(
+      (Array.isArray(userDepartments) ? userDepartments : []).map(
+        async (d) => (await d.department)?.id ?? null,
+      ),
+    ),
+    permissions: await Promise.all(
+      (Array.isArray(usersPermissions) ? usersPermissions : []).map(
+        async (up) => (await up.permissionProfile)?.id ?? null,
+      ),
+    ),
+    specializations: await Promise.all(
+      (Array.isArray(allowedSpecializations) ? allowedSpecializations : []).map(
+        async (s) => (await s.specialization)?.id ?? null,
+      ),
+    ),
+    hasImage: !!userEntity.image,
+  };
 
   // 2) Validate university + domain + departments
   const entitiesResult = await validateEntities(
@@ -172,6 +214,8 @@ export const editRequesterService = async (
   );
 
   if (!entitiesResult.is_valid) {
+    auditLog.step("Invalid university/domain/departments");
+
     return {
       is_edited: false,
       message: "",
@@ -193,6 +237,8 @@ export const editRequesterService = async (
   );
 
   if (!permResult.is_valid) {
+    auditLog.step("Invalid permission configuration");
+
     return {
       is_edited: false,
       message: "",
@@ -200,24 +246,17 @@ export const editRequesterService = async (
     };
   }
 
-  // 4) Validate allowed specializations
-  const specsResult = await validateExistingSpecializations(
-    requesterDto.allowedSpecializations
-  );
-
-  if (!specsResult.is_valid) {
-    return {
-      is_edited: false,
-      message: "",
-      errors: specsResult.errors,
-    };
-  }
+  // Specialization assignment is intentionally not editable from user forms.
 
   // 5) Force user type
   requesterDto.userType = UserType.REQUESTER;
 
   // 6) Map DTO → partial User and merge into existing entity
   const userData = await mapRequesterToUserEntity(requesterDto);
+  if (isSelfProfileEdit) {
+    delete userData.email;
+    delete userData.password;
+  }
 
   userRepo.merge(userEntity, userData);
   userEntity.university = university;
@@ -235,6 +274,8 @@ export const editRequesterService = async (
       imageFile
     );
     userEntity.image = safeKey;
+
+    auditLog.step("User image updated");
   }
 
   // 8) Save updated user
@@ -258,44 +299,57 @@ export const editRequesterService = async (
   }
 
   // 9.2) UsersPermissions – assume one row per user, so delete & recreate
-  await usersPermissionsRepo.delete({ user: { id: user.id } as any });
+  if (!isSelfProfileEdit) {
+    await usersPermissionsRepo.delete({ user: { id: user.id } as any });
 
-  const profile = permResult.profile!;
-  await usersPermissionsRepo.save(
-    usersPermissionsRepo.create({
-      user,
-      permissionProfile: profile,
-      extraPermissions: requesterDto.extraPermissions,
-      revokedPermissions: requesterDto.revokedPermissions,
-    })
-  );
-
-  // 9.3) AllowedSpecializations – clear then add
-  await allowedSpecializationsRepo.delete({ user: { id: user.id } as any });
-
-  if (requesterDto.allowedSpecializations?.length > 0) {
-    await allowedSpecializationsRepo.save(
-      requesterDto.allowedSpecializations.map((specId) =>
-        allowedSpecializationsRepo.create({
-          user,
-          specialization: { id: specId } as any,
-        })
-      )
+    const profile = permResult.profile!;
+    await usersPermissionsRepo.save(
+      usersPermissionsRepo.create({
+        user,
+        permissionProfile: profile,
+        extraPermissions: requesterDto.extraPermissions,
+        revokedPermissions: requesterDto.revokedPermissions,
+      })
     );
   }
+
+  // 9.3) AllowedSpecializations – clear then add
+  // Specialization assignment is intentionally not editable from user forms.
+
+  const newValues = {
+    email: user.email,
+    university: university?.id,
+    domain: domain?.id,
+    departments: existingDepartments.map((d) => d.id),
+    permissions: isSelfProfileEdit ? oldValues.permissions : permResult.profile?.id,
+    specializations: oldValues.specializations,
+    hasImage: !!user.image,
+  };
+
+  auditLog
+    .resource("User", user.id)
+    .metadata({
+      oldValue: oldValues,
+      newValue: newValues,
+    })
+    .step("Requester updated");
 
   return { is_edited: true, message: "requester_edited_successfully" };
 };
 
 export const deleteRequesterService = async (
-  id: string
+  id: string,
+  req?: Request
 ): Promise<IDeleteResponse> => {
+  const auditLog = audit(req);
+
   const userRepo = PostgresDataSource.getRepository(User);
 
   // 0) Load existing user
   const userEntity = await userRepo.findOne({ where: { id } });
 
   if (!userEntity) {
+    auditLog.step("Requester not found");
     return { is_deleted: false, message: t("user_not_found") };
   }
 
@@ -303,6 +357,10 @@ export const deleteRequesterService = async (
   // await userRepo.softDelete(id);
   userEntity.deletedAt = new Date();
   await userRepo.update(id, userEntity);
+
+  auditLog
+    .resource("User", userEntity.id)
+    .step("Requester soft-deleted");
 
   logger.info(`[server] [user] Deleted user ${userEntity.email}`);
   return { is_deleted: true, message: t("user_deleted") };

@@ -18,7 +18,7 @@ export const editTicketForAdminAndTechniciansSchema = (t: Request["t"]) =>
     description: z
       .string()
       .min(1, { message: t("description_required") })
-      .max(2000, { message: t("description_too_long") })
+      // .max(2000, { message: t("description_too_long") })
       .optional(),
 
     status: z
@@ -40,6 +40,12 @@ export const editTicketForAdminAndTechniciansSchema = (t: Request["t"]) =>
     specialization: z
       .string()
       .uuid({ message: t("invalid_specialization") })
+      .nullable()
+      .optional(),
+
+    problem: z
+      .string()
+      .uuid({ message: t("invalid_problem") })
       .nullable()
       .optional(),
   });

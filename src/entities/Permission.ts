@@ -1,18 +1,26 @@
-// src/entities/Permission.ts
-import { Entity, Column } from "typeorm";
-import { BaseEntity } from "./BaseEntity.js";
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToMany, AfterInsert, Index } from "typeorm";
+import { PermissionProfile } from "./PermissionProfile.js";
+import { PostgresDataSource } from "../database/postgres-data-source.js"; // هنا DataSource
 
 @Entity({ name: "permissions" })
-export class Permission extends BaseEntity {
-  @Column({ type: "varchar", length: 255 })
-  code!: string;
+export class Permission {
 
-  @Column({ type: "varchar", length: 255, nullable: true })
-  category?: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @Index({ unique: true })
+  @Column({ type: "varchar", length: 100, nullable: true })
+  key!: string;
 
   @Column({ type: "jsonb", nullable: true })
-  error?: { en?: string; ar?: string };
+  name?: { en?: string; ar?: string };
 
-  @Column({ type: "jsonb", nullable: true })
-  description?: { en?: string; ar?: string };
+  @ManyToMany(() => PermissionProfile, (profile) => profile.permissions)
+  profiles!: PermissionProfile[];
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
 }

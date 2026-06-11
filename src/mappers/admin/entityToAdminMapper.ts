@@ -1,5 +1,6 @@
 import { User } from "../../entities/index.js";
 import { fetchAllAdminsGroupsAsHeadsService } from "../../services/users/profile/profileQueryService.js";
+import { Lang } from "../../types/lang.types.js";
 import { getPresignedUrl } from "../../utils/storage.js";
 import { GroupDto } from "../groups/toGroupDto.js";
 
@@ -18,10 +19,18 @@ type AdminDto = {
   last_name_en: string | null;
   last_name_ar: string | null;
 
+  full_name_en: string | null;
+  full_name_ar: string | null;
+
   ssn: string | null;
   university: { id: string; name: string } | null;
   domain: { id: string; name: string } | null;
-  departments: { id: string; name: string }[];
+  permission_profile: {
+    id: string;
+    name: string;
+    name_en: string;
+    name_ar: string;
+  } | null;
   specializations: { id: string; name: string }[];
 
   contacts: {
@@ -29,6 +38,7 @@ type AdminDto = {
     mobiles: string[];
   };
   status: string;
+  allow_profile_edit: boolean;
 
   job_ar: string;
   job_en: string;
@@ -36,48 +46,36 @@ type AdminDto = {
   groups: GroupDto[];
 };
 
-export const toAdmin = async (
-  entity: User,
-  lang: "en" | "ar",
-): Promise<AdminDto> => {
+export const toAdmin = async (entity: User, lang: Lang): Promise<AdminDto> => {
   const university = entity.university ? await entity.university : null;
   const domain = entity.domain ? await entity.domain : null;
-  const userDepartments = entity.userDepartments
-    ? await entity.userDepartments
+  const usersPermissions = entity.usersPermissions
+    ? await entity.usersPermissions
     : [];
   const userspecializations = entity.allowedSpecializations
     ? await entity.allowedSpecializations
     : [];
+  const userPermission = Array.isArray(usersPermissions)
+    ? usersPermissions[0]
+    : null;
+  const permissionProfile = userPermission?.permissionProfile
+    ? await userPermission.permissionProfile
+    : null;
 
-  // 2) for each userDepartment, load department (lazy) and map it
-  const departments = await Promise.all(
-    userDepartments.map(async (ud) => {
-      const dept = ud.department ? await ud.department : null;
+  const specializations = await Promise.all(
+    userspecializations.map(async (us) => {
+      const spec = us.specialization ? await us.specialization : null;
 
-      if (!dept) {
+      if (!spec) {
         return null;
       }
 
       return {
-        id: dept.id,
-        name: dept.name?.[lang], // dept.name is { en, ar }
+        id: spec.id,
+        name: spec.name?.[lang],
       };
     }),
   );
-
-  const specializations = (
-    await Promise.all(
-      userspecializations.map(async (us) => {
-        const spec = us.specialization ? await us.specialization : null;
-        if (!spec) return null;
-        return {
-          id: spec.id,
-          name: spec.name?.[lang],
-        };
-      })
-    )
-  ).filter(Boolean);
-
 
   return {
     id: entity.id,
@@ -97,6 +95,9 @@ export const toAdmin = async (
     last_name_en: entity.lastName.en ?? null,
     last_name_ar: entity.lastName.ar ?? null,
 
+    full_name_en: entity.fullName?.en ?? null,
+    full_name_ar: entity.fullName?.ar ?? null,
+
     ssn: entity.ssn ?? null,
 
     university: university
@@ -113,9 +114,14 @@ export const toAdmin = async (
         }
       : null,
 
-    departments: departments.filter(
-      (d): d is { id: string; name: string } => d !== null,
-    ),
+    permission_profile: permissionProfile
+      ? {
+          id: permissionProfile.id,
+          name: permissionProfile.name?.[lang] ?? "",
+          name_en: permissionProfile.name?.en ?? "",
+          name_ar: permissionProfile.name?.ar ?? "",
+        }
+      : null,
 
     specializations: specializations,
 
@@ -125,6 +131,7 @@ export const toAdmin = async (
     },
 
     status: entity.status,
+    allow_profile_edit: entity.allowProfileEdit ?? false,
 
     job_ar: entity.job.ar ?? "",
     job_en: entity.job.en ?? "",

@@ -1,0 +1,28 @@
+{
+  "id": "reports/reports",
+  "title": "Reports",
+  "description": "Report generation and dashboard analytics. All endpoints require authentication.",
+  "source": "@site/../docs/reports/index.md",
+  "sourceDirName": "reports",
+  "slug": "/reports/",
+  "permalink": "/reports/",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "reports",
+    "title": "Reports",
+    "sidebar_label": "Reports"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "WebSockets",
+    "permalink": "/chat/websockets"
+  },
+  "next": {
+    "title": "Lookups",
+    "permalink": "/management/lookups"
+  }
+}

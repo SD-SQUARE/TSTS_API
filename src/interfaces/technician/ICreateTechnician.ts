@@ -13,11 +13,13 @@ export interface CreateTechnicianBody {
   mid_name_ar: string;
   last_name_ar: string;
 
+  full_name_en: string;
+  full_name_ar: string;
+
   ssn: string;
 
   university: string; // now a plain string
   domain: string; // now a plain string
-  departments: string[]; // array of strings
 
   contacts: {
     phones: string[];
@@ -38,7 +40,7 @@ export interface CreateTechnicianMapped {
   image?: Express.Multer.File | undefined;
 
   email: string;
-  password: string;
+  password?: string;
   userType: string;
 
   firstNameEn: string;
@@ -49,11 +51,13 @@ export interface CreateTechnicianMapped {
   midNameAr: string;
   lastNameAr: string;
 
+  fullNameEn: string;
+  fullNameAr: string;
+
   ssn: string;
 
   university: string;
   domain: string;
-  departments: string[];
 
   phones: string[];
   mobiles: string[];

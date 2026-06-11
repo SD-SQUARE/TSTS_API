@@ -4,6 +4,7 @@ export type ReqUserPayload = {
   email: string;
   role: string;
   permission_profile?: Record<string, unknown>;
+  permissions?: string[];
 };
 
 type LangPair = { ar: string; en: string };

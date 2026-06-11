@@ -1,0 +1,139 @@
+{
+  "/-be3": {
+    "__comp": "5e95c892",
+    "__context": {
+      "plugin": "aba21aa0"
+    }
+  },
+  "/-1f3": {
+    "__comp": "a7bd4aaa",
+    "__props": "22dd74f7"
+  },
+  "/-704": {
+    "__comp": "a94703ab"
+  },
+  "/api-integrations-4b1": {
+    "__comp": "17896441",
+    "content": "ba98cad1"
+  },
+  "/authentication/auth-v1-d7a": {
+    "__comp": "17896441",
+    "content": "419a79e9"
+  },
+  "/authentication/auth-v2-ec3": {
+    "__comp": "17896441",
+    "content": "083d4c11"
+  },
+  "/authentication/trusted-devices-971": {
+    "__comp": "17896441",
+    "content": "19e3bf4a"
+  },
+  "/chat/-f00": {
+    "__comp": "17896441",
+    "content": "f7ca9cae"
+  },
+  "/chat/websockets-665": {
+    "__comp": "17896441",
+    "content": "d642b977"
+  },
+  "/database-migrations-913": {
+    "__comp": "17896441",
+    "content": "aebb16b5"
+  },
+  "/intro-935": {
+    "__comp": "17896441",
+    "content": "f6d69ff8"
+  },
+  "/management/academic-structure-d3c": {
+    "__comp": "17896441",
+    "content": "3904955f"
+  },
+  "/management/ai-assistant-701": {
+    "__comp": "17896441",
+    "content": "30cfaba8"
+  },
+  "/management/audit-logs-8d7": {
+    "__comp": "17896441",
+    "content": "0c13afd8"
+  },
+  "/management/custom-forms-513": {
+    "__comp": "17896441",
+    "content": "526ca703"
+  },
+  "/management/desktop-app-cd9": {
+    "__comp": "17896441",
+    "content": "a7cfc422"
+  },
+  "/management/groups-87c": {
+    "__comp": "17896441",
+    "content": "52bc6074"
+  },
+  "/management/knowledge-base-bb9": {
+    "__comp": "17896441",
+    "content": "21ad8a3e"
+  },
+  "/management/lookups-aa6": {
+    "__comp": "17896441",
+    "content": "ac43fc78"
+  },
+  "/management/notifications-cae": {
+    "__comp": "17896441",
+    "content": "6080c6b0"
+  },
+  "/management/permission-profiles-0b2": {
+    "__comp": "17896441",
+    "content": "a9bbd065"
+  },
+  "/management/problems-aab": {
+    "__comp": "17896441",
+    "content": "17fed5b0"
+  },
+  "/management/recycle-bin-e8c": {
+    "__comp": "17896441",
+    "content": "9c2d914b"
+  },
+  "/management/site-settings-bb6": {
+    "__comp": "17896441",
+    "content": "8ab05b40"
+  },
+  "/management/sla-00d": {
+    "__comp": "17896441",
+    "content": "c5ee56af"
+  },
+  "/management/work-hours-92f": {
+    "__comp": "17896441",
+    "content": "33749f60"
+  },
+  "/reports/-5c9": {
+    "__comp": "17896441",
+    "content": "bf4c2dc5"
+  },
+  "/tickets/-b51": {
+    "__comp": "17896441",
+    "content": "bfb9b866"
+  },
+  "/tickets/ticket-chat-d57": {
+    "__comp": "17896441",
+    "content": "decad423"
+  },
+  "/tickets/ticket-final-report-2b1": {
+    "__comp": "17896441",
+    "content": "13b969d3"
+  },
+  "/tickets/ticket-media-7cf": {
+    "__comp": "17896441",
+    "content": "a5946894"
+  },
+  "/tickets/ticket-reviews-f36": {
+    "__comp": "17896441",
+    "content": "64e9fc4c"
+  },
+  "/users/-ee2": {
+    "__comp": "17896441",
+    "content": "f790986c"
+  },
+  "/users/user-profile-5f5": {
+    "__comp": "17896441",
+    "content": "d138a5ca"
+  }
+}

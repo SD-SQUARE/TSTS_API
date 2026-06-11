@@ -1,10 +1,9 @@
-// English letters and spaces
-export const ENGLISH_REGEX = /^[A-Za-z\s]+$/;
-
-// Arabic Unicode ranges (common set) - allow spaces
+// English text used by entity names/descriptions.
+export const ENGLISH_REGEX = /^[\p{L}\p{N}\s.,!?'"()@&$\/-]+$/u;
+// Arabic Unicode ranges (common set), numbers, and common punctuation.
 export const ARABIC_REGEX =
  
-  /^[\u0600-\u06FF\s\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+$/u;
+  /^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\p{N}\s.,!?'"()@&$\/-]+$/u;
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

@@ -13,6 +13,9 @@ export interface CreateAdminBody {
   mid_name_ar: string;
   last_name_ar: string;
 
+  full_name_en: string;
+  full_name_ar: string;
+
   ssn: string;
 
   university: string;
@@ -39,7 +42,7 @@ export interface CreateAdminMapped {
   image?: Express.Multer.File | undefined;
 
   email: string;
-  password: string;
+  password?: string;
   userType: string;
 
   firstNameEn: string;
@@ -50,11 +53,13 @@ export interface CreateAdminMapped {
   midNameAr: string;
   lastNameAr: string;
 
+  fullNameEn: string;
+  fullNameAr: string;
+
   ssn: string;
 
   university: string;
   domain: string;
-  departments: string[];
 
   phones: string[];
   mobiles: string[];

@@ -1,0 +1,28 @@
+{
+  "id": "management/knowledge-base",
+  "title": "Knowledge Base",
+  "description": "Self-service articles that can be generated from final reports using AI.",
+  "source": "@site/../docs/management/knowledge-base.md",
+  "sourceDirName": "management",
+  "slug": "/management/knowledge-base",
+  "permalink": "/management/knowledge-base",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "knowledge-base",
+    "title": "Knowledge Base",
+    "sidebar_label": "Knowledge Base"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Problems",
+    "permalink": "/management/problems"
+  },
+  "next": {
+    "title": "SLA Rules",
+    "permalink": "/management/sla"
+  }
+}

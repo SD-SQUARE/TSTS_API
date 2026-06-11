@@ -5,16 +5,45 @@ import logger from "../utils/logger.js";
 import { User } from "../entities/User.js";
 import { NotificationType } from "../enums/NotificationType.enum.js";
 import { In } from "typeorm";
+import { notificationUser } from "./socket.service.js";
 
 const notificationRepo = PostgresDataSource.getRepository(Notification);
 const userRepo = PostgresDataSource.getRepository(User);
 const notificationReadRepo = PostgresDataSource.getRepository(NotificationRead);
 
-export const listNotifications = async (userId: string, isRead?: boolean) => {
+const mapNotificationReadDto = (nr: NotificationRead) => ({
+  id: nr.id,
+  notification: {
+    id: nr.notification.id,
+    type: nr.notification.type,
+    title: nr.notification.title,
+    content: nr.notification.content,
+    referenceId:
+      nr.notification.ticketId ??
+      nr.notification.chatMessageId ??
+      nr.notification.extraReference ??
+      null,
+    createdAt: nr.notification.createdAt,
+  },
+  isRead: nr.isRead,
+  createdAt: nr.createdAt,
+});
+
+export const listNotifications = async (
+  userId: string,
+  isRead?: boolean,
+  page = 1,
+  pageSize = 10,
+) => {
   logger.info("[server][notification][service] listNotifications start", {
     userId,
     isRead,
+    page,
+    pageSize,
   });
+
+  const safePage = Math.max(1, Math.floor(page));
+  const safePageSize = Math.max(1, Math.min(100, Math.floor(pageSize)));
 
   const query = notificationReadRepo
     .createQueryBuilder("nr")
@@ -25,32 +54,28 @@ export const listNotifications = async (userId: string, isRead?: boolean) => {
     query.andWhere("nr.isRead = :isRead", { isRead });
   }
 
+  const total = await query.getCount();
+
   const notifications = await query
     .orderBy("notification.createdAt", "DESC")
+    .skip((safePage - 1) * safePageSize)
+    .take(safePageSize)
     .getMany();
 
   logger.info("[server][notification][service] listNotifications fetched", {
     userId,
     count: notifications.length,
+    total,
   });
 
-  return notifications.map((nr) => ({
-    id: nr.id,
-    notification: {
-      id: nr.notification.id,
-      type: nr.notification.type,
-      title: nr.notification.title,
-      content: nr.notification.content,
-      referenceId:
-        nr.notification.ticketId ??
-        nr.notification.chatMessageId ??
-        nr.notification.extraReference ??
-        null,
-      createdAt: nr.notification.createdAt,
+  return {
+    data: notifications.map(mapNotificationReadDto),
+    pagination: {
+      page: safePage,
+      pageSize: safePageSize,
+      total,
     },
-    isRead: nr.isRead,
-    createdAt: nr.createdAt,
-  }));
+  };
 };
 
 /**
@@ -113,6 +138,12 @@ export const createNotification = async (
 
     if (notificationReads.length > 0) {
       await notificationReadRepo.save(notificationReads);
+      notificationReads.forEach((nr) => {
+        notificationUser("notification:new", {
+          userId: nr.user.id,
+          notification: mapNotificationReadDto(nr),
+        });
+      });
     }
   }
 
@@ -147,23 +178,7 @@ export const getNotificationById = async (
     return null;
   }
 
-  return {
-    id: nr.id,
-    notification: {
-      id: nr.notification.id,
-      type: nr.notification.type,
-      title: nr.notification.title,
-      content: nr.notification.content,
-      referenceId:
-        nr.notification.ticketId ??
-        nr.notification.chatMessageId ??
-        nr.notification.extraReference ??
-        null,
-      createdAt: nr.notification.createdAt,
-    },
-    isRead: nr.isRead,
-    createdAt: nr.createdAt,
-  };
+  return mapNotificationReadDto(nr);
 };
 
 export const countUnreadNotifications = async (userId: string) => {
@@ -220,23 +235,47 @@ export const markNotificationAsRead = async (
     await notificationReadRepo.save(nr);
   }
 
-  return {
-    id: nr.id,
-    notification: {
-      id: nr.notification.id,
-      type: nr.notification.type,
-      title: nr.notification.title,
-      content: nr.notification.content,
-      referenceId:
-        nr.notification.ticketId ??
-        nr.notification.chatMessageId ??
-        nr.notification.extraReference ??
-        null,
-      createdAt: nr.notification.createdAt,
+  return mapNotificationReadDto(nr);
+};
+
+export const markAllNotificationsAsRead = async (userId: string) => {
+  logger.info("[server][notification][service] markAllNotificationsAsRead start", {
+    userId,
+  });
+
+  const unreadCount = await notificationReadRepo.count({
+    where: { user: { id: userId }, isRead: false },
+  });
+
+  if (!unreadCount) {
+    logger.info(
+      "[server][notification][service] markAllNotificationsAsRead completed",
+      {
+        userId,
+        updatedCount: 0,
+      },
+    );
+
+    return { updatedCount: 0 };
+  }
+
+  await notificationReadRepo
+    .createQueryBuilder()
+    .update(NotificationRead)
+    .set({ isRead: true })
+    .where('"userId" = :userId', { userId })
+    .andWhere('"isRead" = :isRead', { isRead: false })
+    .execute();
+
+  logger.info(
+    "[server][notification][service] markAllNotificationsAsRead completed",
+    {
+      userId,
+      updatedCount: unreadCount,
     },
-    isRead: nr.isRead,
-    createdAt: nr.createdAt,
-  };
+  );
+
+  return { updatedCount: unreadCount };
 };
 
 export const broadcastNotification = async (
@@ -284,6 +323,12 @@ export const broadcastNotification = async (
 
   if (notificationReads.length > 0) {
     await notificationReadRepo.save(notificationReads);
+    notificationReads.forEach((nr) => {
+      notificationUser("notification:new", {
+        userId: nr.user.id,
+        notification: mapNotificationReadDto(nr),
+      });
+    });
   }
 
   logger.info(
@@ -295,4 +340,59 @@ export const broadcastNotification = async (
   );
 
   return notification;
+};
+
+export const deleteNotifications = async (
+  userId: string,
+  notificationReadIds: string[],
+) => {
+  logger.info("[server][notification][service] deleteNotifications start", {
+    userId,
+    notificationReadIds,
+  });
+
+  const uniqueIds = Array.from(new Set(notificationReadIds.filter(Boolean)));
+
+  if (!uniqueIds.length) {
+    return { deletedCount: 0 };
+  }
+
+  const records = await notificationReadRepo.find({
+    where: uniqueIds.map((id) => ({
+      id,
+      user: { id: userId },
+    })) as any,
+    relations: ["notification"],
+  });
+
+  const unreadRecords = records.filter((record) => !record.isRead);
+
+  if (unreadRecords.length > 0) {
+    throw new Error("UNREAD_NOTIFICATIONS_CANNOT_BE_DELETED");
+  }
+
+  const notificationIds = Array.from(
+    new Set(records.map((record) => record.notification?.id).filter(Boolean)),
+  );
+
+  if (records.length > 0) {
+    await notificationReadRepo.remove(records);
+  }
+
+  for (const notificationId of notificationIds) {
+    const remainingReads = await notificationReadRepo.count({
+      where: { notification: { id: notificationId } },
+    });
+
+    if (!remainingReads) {
+      await notificationRepo.delete(notificationId);
+    }
+  }
+
+  logger.info("[server][notification][service] deleteNotifications completed", {
+    userId,
+    deletedCount: records.length,
+  });
+
+  return { deletedCount: records.length };
 };

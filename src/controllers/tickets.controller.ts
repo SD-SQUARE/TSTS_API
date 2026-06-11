@@ -3,10 +3,11 @@ import { createTicketSchema } from "../validation/ticket.schema.js";
 import logger from "../utils/logger.js";
 import { AppError } from "../utils/AppError.js";
 import {
+  changeTicketStatusService,
   createTicket,
-  getAllTicketsService,
-  getSingleTicketService,
+  createTicketReviewService,
   getTicketActivitiesService,
+  getTicketReviewsService,
 } from "../services/tickets.service.js";
 import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
@@ -29,13 +30,26 @@ import { uploadTicketChatMediaService } from "../services/tickets/tickets-chat/u
 import { createTicketChatMessageService } from "../services/tickets/tickets-chat/send-chat-message.service.js";
 import { ICreateResponse } from "../interfaces/response/ICreateResponse.js";
 import { getChatMessagesForTicketServices } from "../services/tickets/tickets-chat/get-chat-messages-for-ticket.service.js";
+import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
+import {
+  getAllTicketsService,
+  getSingleTicketService,
+  getTicketAnalyticsService,
+} from "../services/tickets/Query/get-tickets.service.js";
+import { Lang } from "../types/lang.types.js";
+import { PostgresDataSource } from "../database/postgres-data-source.js";
+import { TicketQuickMessage } from "../entities/TicketQuickMessage.js";
 
 export const createTicketController = async (req: Request, res: Response) => {
   const schema = createTicketSchema(req.t);
   const parsed = schema.safeParse(req.body);
 
   if (!parsed.success) {
-    logger.info("[server][tickets][controller] Validation with body: ", req.body);
+    logger.info(
+      "[server][tickets][controller] Validation with body: ",
+      req.body,
+    );
     logger.info(
       "[server][tickets][controller] Validation failed: " +
         parsed.error.issues.map((e) => e.message).join(", "),
@@ -43,16 +57,35 @@ export const createTicketController = async (req: Request, res: Response) => {
     throw new AppError(parsed.error.issues[0].message, 400);
   }
 
-  const result = await createTicket(parsed.data, req.files);
+  const result = await createTicket(parsed.data, req.files, req);
 
   return res.status(200).json(result);
 };
 
 export const getAllTicketsController = async (req: Request, res: Response) => {
-  const lang = (req.language || "en") as "ar" | "en";
+  const tStart = performance.now();
+  const lang = (req.language || "en") as Lang;
   const user = (req as any).user;
 
-  const result = await getAllTicketsService(req.query, lang, user);
+  const result = await getAllTicketsService(req.query, lang, user, req);
+  const tEndService = performance.now();
+
+  res.status(200).json(result);
+  
+  const tEndJson = performance.now();
+  console.log(`[benchmark] Controller Service execution: ${(tEndService - tStart).toFixed(2)}ms`);
+  console.log(`[benchmark] Controller JSON serialization: ${(tEndJson - tEndService).toFixed(2)}ms`);
+  console.log(`[benchmark] Total Controller time: ${(tEndJson - tStart).toFixed(2)}ms`);
+};
+
+export const getTicketAnalyticsController = async (
+  req: Request,
+  res: Response,
+) => {
+  const lang = (req.language || "en") as Lang;
+  const user = (req as any).user;
+
+  const result = await getTicketAnalyticsService(lang, user);
 
   return res.status(200).json(result);
 };
@@ -62,10 +95,15 @@ export const getSingleTicketController = async (
   res: Response,
 ) => {
   const { id } = req.params;
-  const lang = (req.language || "en") as "ar" | "en";
+  const ticket_number = req.query.ticket_number
+    ? Number(req.query.ticket_number)
+    : undefined;
+  const lang = (req.language || "en") as Lang;
   const userId = (req as any).user.id;
   const userFullName = (req as any).user.name;
-  logger.info(`[server][tickets] getSingleTicket | user: ${userFullName}`, { userFullName });
+  logger.info(`[server][tickets] getSingleTicket | user: ${userFullName}`, {
+    userFullName,
+  });
   const userName =
     userFullName.first["en"] +
     " " +
@@ -81,12 +119,31 @@ export const getSingleTicketController = async (
     " / role:  " +
     (req as any).user.role;
 
-  const ticket = await getSingleTicketService(id, lang, userId, userName);
+  const auditLog = audit()
+    .summary("Get Single Ticket")
+    .action(AuditAction.GET_TICKET)
+    .metadata({ userId, userName, ticketId: id, ticket_number })
+    .step("Start fetching ticket");
+
+  const ticket = await getSingleTicketService(
+    id,
+    ticket_number,
+    lang,
+    (req as any).user,
+    userName,
+    req,
+  );
 
   if (!ticket) {
+    auditLog.step("Ticket not found").metadata({ ticketId: id });
+
     logger.info(`[server][tickets] Ticket not found: ${id}`);
     throw new AppError("Ticket not found", 404);
   }
+
+  auditLog
+    .step("Ticket fetched successfully")
+    .metadata({ ticketId: ticket.id });
 
   return res.status(200).json(ticket);
 };
@@ -97,7 +154,19 @@ export const getTicketActivitiesController = async (
 ) => {
   const ticketId = req.params.id;
 
-  const activities = await getTicketActivitiesService(ticketId);
+  const auditLog = audit(req)
+    .summary("Get Ticket Activities")
+    .action(AuditAction.GET_TICKET_ACTIVITIES)
+    .resource("Ticket", ticketId);
+
+  auditLog.step("Start fetching ticket activities");
+
+  const activities = await getTicketActivitiesService(ticketId, req.query, req);
+
+  auditLog
+    .metadata({ activitiesCount: activities.length })
+    .step("Ticket activities fetched successfully");
+
   return res.status(200).json(activities);
 };
 
@@ -108,9 +177,19 @@ export const editTicketForAdminsAndTechniciansController = async (
   const userData = TokenHelper.getUserFromReqUser(req.user);
 
   const ticketId = req.params.id;
+
+  const auditLog = audit(req)
+    .summary("Edit Ticket (Admin/Technician)")
+    .action(AuditAction.EDIT_TICKET)
+    .resource("Ticket", ticketId)
+    .metadata({ userId: userData.id })
+    .step("Start ticket edit request");
+
   // Validate ticket ID
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
+    auditLog.metadata({ reason: "invalid_uuid" }).step("Invalid ticket ID");
+
     logger.info(
       "[server][tickets][editTicketForAdminsAndTechniciansController] Validation failed: invalid ticket id",
     );
@@ -128,11 +207,18 @@ export const editTicketForAdminsAndTechniciansController = async (
     ticketId,
     parsed.data,
     userData,
+    req,
   );
 
   if (!result.is_edited) {
+    auditLog
+      .metadata({ errors: parsed.error.issues })
+      .step("Validation failed for request body");
+
     return res.status(ResponseStatus.BAD_REQUEST).json(result);
   }
+
+  auditLog.step("Ticket edited successfully");
 
   return res.status(ResponseStatus.SUCCESS).json(result);
 };
@@ -144,9 +230,18 @@ export const editTicketForRequesterController = async (
   const userData = TokenHelper.getUserFromReqUser(req.user);
 
   const ticketId = req.params.id;
+  const auditLog = audit(req)
+    .summary("Edit Ticket (Requester)")
+    .action(AuditAction.EDIT_TICKET_REQUESTER)
+    .resource("Ticket", ticketId)
+    .metadata({ userId: userData.id })
+    .step("Start requester ticket edit");
+
   // Validate ticket ID
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
+    auditLog.metadata({ reason: "invalid_uuid" }).step("Invalid ticket ID");
+
     logger.info(
       "[server][tickets][editTicketForRequesterController] Validation failed: invalid ticket id",
     );
@@ -164,9 +259,14 @@ export const editTicketForRequesterController = async (
     ticketId,
     parsed.data,
     userData,
+    req,
   );
 
   if (!result.is_edited) {
+    auditLog
+      .metadata({ reason: result.message, errors: result.errors })
+      .step("Requester ticket edit failed");
+
     return res.status(ResponseStatus.BAD_REQUEST).json(result);
   }
 
@@ -176,8 +276,18 @@ export const editTicketForRequesterController = async (
 export const deleteTicketController = async (req: Request, res: Response) => {
   const id = req.params.id;
   const isValid = uuidValidationSchema.safeParse(id);
+  const userId = (req as any).user.id;
+
+  const auditLog = audit(req)
+    .summary("Delete Ticket")
+    .action(AuditAction.DELETE_TICKET)
+    .resource("Ticket", id)
+    .metadata({ userId })
+    .step("Start ticket deletion");
 
   if (!id || !isValid.success) {
+    auditLog.metadata({ reason: "invalid_uuid" }).step("Invalid ticket ID");
+
     logger.info(
       "[server][tickets][deleteTicketController] Validation failed: invalid ticket id",
     );
@@ -186,12 +296,18 @@ export const deleteTicketController = async (req: Request, res: Response) => {
       .json({ is_deleted: false, message: t("ticket.invalid_id") });
   }
 
-  const result = await deleteTicketService(id);
+  const result = await deleteTicketService(id, userId, req);
   if (!result.is_deleted) {
+    auditLog
+      .metadata({ reason: result.message })
+      .step("Ticket deletion failed");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ is_deleted: result.is_deleted, message: result.message });
   }
+
+  auditLog.step("Ticket deleted successfully");
 
   return res.status(ResponseStatus.SUCCESS).json(result);
 };
@@ -200,9 +316,18 @@ export const uploadTicketAssetController = async (req: any, res: Response) => {
   const userData = TokenHelper.getUserFromReqUser(req.user);
   const ticketId = req.params.id;
 
+  const auditLog = audit(req)
+    .summary("Upload ticket assets")
+    .action(AuditAction.UPLOAD_TICKET_ASSETS)
+    .resource("Ticket", ticketId);
+
   // Validate ticket ID
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
+    auditLog
+      .metadata({ reason: "invalid_ticket_id" })
+      .step("Invalid ticket ID");
+
     logger.info(
       "[server][tickets][uploadTicketAssetController] Validation failed: invalid ticket id",
     );
@@ -216,6 +341,8 @@ export const uploadTicketAssetController = async (req: any, res: Response) => {
   });
 
   if (!validation.success) {
+    auditLog.step("Validation failed: no files provided");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ message: t("ticket.at_least_one_file_required") });
@@ -223,7 +350,12 @@ export const uploadTicketAssetController = async (req: any, res: Response) => {
 
   const files = req.files;
 
-  const result = await uploadTicketAssetsService(ticketId, files, userData);
+  const result = await uploadTicketAssetsService(
+    ticketId,
+    files,
+    userData,
+    req,
+  );
 
   logger.info(
     `[server][tickets][uploadTicketAssetController] User ${
@@ -233,7 +365,19 @@ export const uploadTicketAssetController = async (req: any, res: Response) => {
       .join(", ")}`,
   );
 
-  if (!result.is_added) return res.status(ResponseStatus.BAD_REQUEST).json(res);
+  if (!result.is_added) {
+    auditLog
+      .metadata({ errors: result.errors })
+      .step("Ticket asset upload failed");
+
+    return res.status(ResponseStatus.BAD_REQUEST).json(result);
+  }
+
+  auditLog
+    .metadata({
+      filesCount: files.length,
+    })
+    .step("Ticket assets uploaded successfully");
 
   return res.status(ResponseStatus.SUCCESS).json(result);
 };
@@ -241,23 +385,43 @@ export const uploadTicketAssetController = async (req: any, res: Response) => {
 export const getAllTicketAssetsController = async (req: any, res: Response) => {
   const ticketId = req.params.id;
 
+  const auditLog = audit(req)
+    .summary("Fetch ticket assets")
+    .action(AuditAction.GET_TICKET_ASSETS)
+    .resource("Ticket", ticketId);
+
   // Validate ticket ID
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
     logger.info(
       "[server][tickets][getAllTicketAssetsController] Validation failed: invalid ticket id",
     );
+
+    auditLog
+      .metadata({ reason: "invalid_ticket_id" })
+      .step("Invalid ticket ID");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ message: t("ticket.invalid_id") });
   }
 
-  const result = await getTicketAssetsService(ticketId);
+  const result = await getTicketAssetsService(ticketId, req);
 
-  if (!result.ok)
+  if (!result.ok) {
+    auditLog
+      .metadata({ errors: result.errors })
+      .step("Failed to fetch ticket assets");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ message: result.message, errors: result.errors });
+  }
+
+  auditLog
+    .metadata({ assetsCount: result.data.length })
+    .step("Ticket assets fetched successfully");
+
   return res.status(ResponseStatus.SUCCESS).json(result.data);
 };
 
@@ -268,12 +432,23 @@ export const getSingleTicketAssetController = async (
   const ticketId = req.params.id;
   const aid = req.params.aid; // asset ID
 
+  const auditLog = audit(req)
+    .summary("Fetch single ticket asset")
+    .action(AuditAction.GET_SINGLE_TICKET_ASSET)
+    .resource("Ticket", ticketId)
+    .metadata({ assetId: aid });
+
   // Validate ticket ID
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
     logger.info(
       "[server][tickets][getSingleTicketAssetController] Validation failed: invalid ticket id",
     );
+
+    auditLog
+      .metadata({ reason: "invalid_ticket_id" })
+      .step("Invalid ticket ID");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ message: req.t("ticket.invalid_id") });
@@ -285,17 +460,28 @@ export const getSingleTicketAssetController = async (
     logger.info(
       "[server][tickets][getSingleTicketAssetController] Validation failed: invalid asset id",
     );
+
+    auditLog.metadata({ reason: "invalid_asset_id" }).step("Invalid asset ID");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ message: req.t("asset.invalid_id") });
   }
 
-  const result = await getSingleTicketAssetService(ticketId, aid);
+  const result = await getSingleTicketAssetService(ticketId, aid, req);
 
-  if (!result.ok)
+  if (!result.ok) {
+    auditLog
+      .metadata({ errors: result.errors })
+      .step("Failed to fetch ticket asset");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ message: result.message, errors: result.errors });
+  }
+
+  auditLog.metadata({ assetId: aid }).step("Ticket asset fetched successfully");
+
   return res.status(ResponseStatus.SUCCESS).json(result.data);
 };
 
@@ -305,12 +491,22 @@ export const deleteTicketAssetController = async (req: any, res: Response) => {
   const ticketId = req.params.id;
   const aid = req.params.aid; // asset ID
 
+  const auditLog = audit(req)
+    .summary("Delete ticket asset")
+    .action(AuditAction.DELETE_TICKET_ASSET)
+    .resource("Ticket", ticketId)
+    .metadata({ assetId: aid });
+
   // Validate ticket ID
   const idValidation = uuidValidationSchema.safeParse(ticketId);
   if (!ticketId || !idValidation.success) {
     logger.info(
       "[server][tickets][deleteTicketAssetController] Validation failed: invalid ticket id",
     );
+    auditLog
+      .metadata({ reason: "invalid_ticket_id" })
+      .step("Invalid ticket ID");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ message: req.t("ticket.invalid_id") });
@@ -322,17 +518,32 @@ export const deleteTicketAssetController = async (req: any, res: Response) => {
     logger.info(
       "[server][tickets][deleteTicketAssetController] Validation failed: invalid asset id",
     );
+
+    auditLog.metadata({ reason: "invalid_asset_id" }).step("Invalid asset ID");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ message: req.t("asset.invalid_id") });
   }
 
-  const result = await deleteSingleTicketAssetService(ticketId, aid, userData);
+  const result = await deleteSingleTicketAssetService(
+    ticketId,
+    aid,
+    userData,
+    req,
+  );
+
   if (!result.is_deleted) {
+    auditLog
+      .metadata({ reason: result.message })
+      .step("Ticket asset deletion failed");
+
     return res
       .status(ResponseStatus.BAD_REQUEST)
       .json({ is_deleted: result.is_deleted, message: result.message });
   }
+
+  auditLog.metadata({ assetId: aid }).step("Ticket asset deleted successfully");
 
   return res.status(ResponseStatus.SUCCESS).json(result);
 };
@@ -444,4 +655,188 @@ export const getChatMessagesForTicketController = async (
 
   const result = await getChatMessagesForTicketServices(ticketId, lang);
   return res.status(ResponseStatus.SUCCESS).json(result.data);
+};
+
+export const getQuickMessagesController = async (req: any, res: Response) => {
+  const userId = req.user?.id;
+
+  const quickMessageRepo = PostgresDataSource.getRepository(TicketQuickMessage);
+  const quickMessages = await quickMessageRepo.find({
+    where: {
+      user: { id: userId } as any,
+    } as any,
+    order: {
+      updatedAt: "DESC",
+      createdAt: "DESC",
+    },
+  });
+
+  return res.status(ResponseStatus.SUCCESS).json(
+    quickMessages.map((item) => ({
+      id: item.id,
+      title_en: item.title_en,
+      title_ar: item.title_ar,
+      content_en: item.content_en,
+      content_ar: item.content_ar,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    })),
+  );
+};
+
+export const createQuickMessageController = async (
+  req: any,
+  res: Response,
+) => {
+  const userId = req.user?.id;
+  const { title_en, title_ar, content_en, content_ar } = req.body;
+
+  const quickMessageRepo = PostgresDataSource.getRepository(TicketQuickMessage);
+  const quickMessage = quickMessageRepo.create({
+    title_en:
+      typeof title_en === "string" && title_en.trim().length > 0
+        ? title_en.trim()
+        : content_en.trim().slice(0, 60),
+    title_ar:
+      typeof title_ar === "string" && title_ar.trim().length > 0
+        ? title_ar.trim()
+        : content_ar.trim().slice(0, 60),
+    content_en: content_en.trim(),
+    content_ar: content_ar.trim(),
+    user: { id: userId } as any,
+  });
+
+  const savedQuickMessage = await quickMessageRepo.save(quickMessage);
+
+  return res.status(ResponseStatus.CREATED).json({
+    id: savedQuickMessage.id,
+    title_en: savedQuickMessage.title_en,
+    title_ar: savedQuickMessage.title_ar,
+    content_en: savedQuickMessage.content_en,
+    content_ar: savedQuickMessage.content_ar,
+    createdAt: savedQuickMessage.createdAt,
+    updatedAt: savedQuickMessage.updatedAt,
+  });
+};
+
+export const updateQuickMessageController = async (
+  req: any,
+  res: Response,
+) => {
+  const userId = req.user?.id;
+  const { title_en, title_ar, content_en, content_ar } = req.body;
+
+  const quickMessageRepo = PostgresDataSource.getRepository(TicketQuickMessage);
+  const quickMessage = await quickMessageRepo.findOne({
+    where: { id: req.params.quickMessageId, user: { id: userId } as any } as any,
+  });
+
+  if (!quickMessage) {
+    return res
+      .status(ResponseStatus.NOT_FOUND)
+      .json({ message: req.t ? req.t("quick_message_not_found") : "Quick message not found" });
+  }
+
+  quickMessage.title_en =
+    typeof title_en === "string" && title_en.trim().length > 0
+      ? title_en.trim()
+      : content_en.trim().slice(0, 60);
+  quickMessage.title_ar =
+    typeof title_ar === "string" && title_ar.trim().length > 0
+      ? title_ar.trim()
+      : content_ar.trim().slice(0, 60);
+  quickMessage.content_en = content_en.trim();
+  quickMessage.content_ar = content_ar.trim();
+
+  const savedQuickMessage = await quickMessageRepo.save(quickMessage);
+  return res.status(ResponseStatus.SUCCESS).json({
+    id: savedQuickMessage.id,
+    title_en: savedQuickMessage.title_en,
+    title_ar: savedQuickMessage.title_ar,
+    content_en: savedQuickMessage.content_en,
+    content_ar: savedQuickMessage.content_ar,
+    createdAt: savedQuickMessage.createdAt,
+    updatedAt: savedQuickMessage.updatedAt,
+  });
+};
+
+export const deleteQuickMessageController = async (
+  req: any,
+  res: Response,
+) => {
+  const userId = req.user?.id;
+  const quickMessageRepo = PostgresDataSource.getRepository(TicketQuickMessage);
+  const quickMessage = await quickMessageRepo.findOne({
+    where: { id: req.params.quickMessageId, user: { id: userId } as any } as any,
+  });
+
+  if (!quickMessage) {
+    return res
+      .status(ResponseStatus.NOT_FOUND)
+      .json({ message: req.t ? req.t("quick_message_not_found") : "Quick message not found" });
+  }
+
+  await quickMessageRepo.softRemove(quickMessage);
+  return res.status(ResponseStatus.SUCCESS).json({ is_deleted: true });
+};
+
+export const createTicketReviewController = async (req: any, res: Response) => {
+  const ticketId = req.params.id;
+  const user = req.user;
+
+  const { rating, note } = req.body;
+
+  const auditLog = audit(req)
+    .summary("Create ticket review")
+    .action(AuditAction.CREATE_TICKET_REVIEW)
+    .resource("Ticket", ticketId)
+    .metadata({ reviewerId: user.id, rating });
+
+  const result = await createTicketReviewService(
+    ticketId,
+    { rating, note },
+    user,
+    auditLog,
+  );
+
+  return res.status(result.status).json(result.payload);
+};
+
+export const getTicketReviewsController = async (req: any, res: any) => {
+  const ticketId = req.params.id;
+  const user = req.user;
+
+  const auditLog = audit(req)
+    .summary("Fetch ticket reviews")
+    .action(AuditAction.GET_TICKET_REVIEWS)
+    .resource("Ticket", ticketId)
+    .metadata({ userId: user.id });
+
+  const result = await getTicketReviewsService(ticketId, user, req.t, auditLog);
+
+  return res.status(result.status).json(result.payload);
+};
+
+export const changeTicketStatusController = async (req: any, res: Response) => {
+  const ticketId = req.params.id;
+  const user = req.user;
+
+  const { status } = req.body;
+
+  const auditLog = audit(req)
+    .summary("Change ticket status")
+    .action(AuditAction.CHANGE_TICKET_STATUS)
+    .resource("Ticket", ticketId)
+    .metadata({ userId: user.id, requestedStatus: status });
+
+  const result = await changeTicketStatusService(
+    ticketId,
+    { status },
+    user,
+    req.t,
+    auditLog,
+    req,
+  );
+
+  return res.status(result.status).json(result.payload);
 };

@@ -1,32 +1,51 @@
-import { DataSource } from "typeorm";
-import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 import path from "path";
+import dotenv from "dotenv";
+import { DataSource } from "typeorm";
 import logger from "../utils/logger.js";
-import { __dirname } from "../utils/paths.js";
 import * as entities from "../entities/index.js";
 
-dotenv.config({ path: path.join(__dirname, "src/.env") });
+dotenv.config();
 
 const HOST = process.env.DB_HOST ?? "localhost";
 const PORT = process.env.DB_PORT ?? 5432;
 const DATABASE = process.env.DB_NAME ?? "mydb";
 const USER = process.env.DB_USER ?? "postgres";
 const PASSWORD = process.env.DB_PASS ?? "postgres";
-const isSync = process.env.NODE_ENV === "development";
+const isProduction = process.env.NODE_ENV === "production";
+const shouldSynchronize = process.env.DB_SYNC === "true" && !isProduction;
+const shouldLogQueries = process.env.NODE_ENV === "development";
+const shouldRunMigrationsOnBoot = process.env.DB_RUN_MIGRATIONS === "true";
+
+const currentFilePath = fileURLToPath(import.meta.url);
+const runtimeDirectory = currentFilePath.includes(`${path.sep}dist${path.sep}`)
+  ? "dist"
+  : "src";
+const migrationsGlob = path.join(
+  process.cwd(),
+  runtimeDirectory,
+  "migrations",
+  "*.{ts,js}",
+);
 
 export const PostgresDataSource = new DataSource({
   type: "postgres",
-  host: HOST ?? "localhost",
-  port: Number(PORT ?? 5432),
-  username: USER ?? "postgres",
-  password: PASSWORD ?? "postgres",
-  database: DATABASE ?? "mydb",
-  synchronize: isSync, // true in dev only; use migrations in prod
-  logging: true,
-  logger: "file",
+  host: HOST,
+  port: Number(PORT),
+  username: USER,
+  password: PASSWORD,
+  database: DATABASE,
+  synchronize: shouldSynchronize,
+  logging: shouldLogQueries,
+  logger: "advanced-console",
   migrationsTableName: "migration",
-  migrations: [path.join(__dirname, "src/migrations/*.ts")],
+  migrations: [migrationsGlob],
   entities: Object.values(entities),
+  metadataTableName: "typeorm_metadata",
+  extra: {
+    max: 40,
+    statement_timeout: 5000,
+  },
 });
 
 /**
@@ -39,15 +58,26 @@ export async function initDataSource() {
     if (!PostgresDataSource.isInitialized) {
       await PostgresDataSource.initialize();
       logger.info(
-        `[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`
+        `[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`,
       );
       logger.info(
-        `[postgres] Database Connected: ${PostgresDataSource.options.database}`
+        `[postgres] Database Connected: ${PostgresDataSource.options.database}`,
       );
+
+      if (shouldRunMigrationsOnBoot) {
+        logger.info("[postgres] Running pending migrations...");
+        const executedMigrations = await PostgresDataSource.runMigrations({
+          transaction: "all",
+        });
+        logger.info(
+          `[postgres] Migrations completed: ${executedMigrations.length} applied`,
+        );
+      }
     }
     return PostgresDataSource;
   } catch (err) {
-    logger.error(`[postgres] Error initializing database: ${err.message}`);
+    const error = err as Error;
+    logger.error(`[postgres] Error initializing database: ${error.message}`);
     process.exit(1);
   }
 }
@@ -62,10 +92,10 @@ export async function destroyDataSource() {
   if (PostgresDataSource.isInitialized) {
     await PostgresDataSource.destroy();
     logger.info(
-      `[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`
+      `[postgres] Database HOST: pg://${process.env.DB_HOST}:${process.env.DB_PORT}`,
     );
     logger.info(
-      `[postgres] Database Disconnected: ${PostgresDataSource.options.database}`
+      `[postgres] Database Disconnected: ${PostgresDataSource.options.database}`,
     );
   }
 }

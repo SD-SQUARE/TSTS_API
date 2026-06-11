@@ -1,0 +1,28 @@
+{
+  "id": "tickets/ticket-chat",
+  "title": "Ticket Chat",
+  "description": "Internal chat within a ticket context. Messages can have file attachments.",
+  "source": "@site/../docs/tickets/chat.md",
+  "sourceDirName": "tickets",
+  "slug": "/tickets/ticket-chat",
+  "permalink": "/tickets/ticket-chat",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "ticket-chat",
+    "title": "Ticket Chat",
+    "sidebar_label": "Ticket Chat"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Media",
+    "permalink": "/tickets/ticket-media"
+  },
+  "next": {
+    "title": "Reviews",
+    "permalink": "/tickets/ticket-reviews"
+  }
+}

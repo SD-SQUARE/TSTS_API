@@ -13,6 +13,9 @@ export interface CreateRequesterBody {
   mid_name_ar: string;
   last_name_ar: string;
 
+  full_name_en: string;
+  full_name_ar: string;
+
   ssn: string;
 
   university: string;
@@ -39,7 +42,7 @@ export interface CreateRequesterMapped {
   image?: Express.Multer.File | undefined;
 
   email: string;
-  password: string;
+  password?: string;
   userType: string;
 
   firstNameEn: string;
@@ -49,6 +52,9 @@ export interface CreateRequesterMapped {
   firstNameAr: string;
   midNameAr: string;
   lastNameAr: string;
+
+  fullNameEn: string;
+  fullNameAr: string;
 
   ssn: string;
 

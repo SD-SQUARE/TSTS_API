@@ -5,14 +5,22 @@ import { PostgresDataSource } from "../../../../database/postgres-data-source.js
 import { Media } from "../../../../entities/Media.js";
 import { ITicketAssetDto } from "../../../../interfaces/ticket-media/ITicketAssetDto.js";
 import { getPresignedUrl } from "../../../../utils/storage.js";
+import { Request } from "express";
+import { audit } from "../../../../helpers/auditBuilder.js";
 
-export const getTicketAssetsService = async (ticketId: string) => {
+export const getTicketAssetsService = async (
+  ticketId: string,
+  req?: Request,
+) => {
+  const auditLog = audit(req);
   logger.info("[server][tickets-media] getTicketAssetsService | start", {
     ticketId,
   });
 
   const existingTicket = await fetchExistingTicket(ticketId);
   if (!existingTicket) {
+    auditLog.step("Ticket not found");
+
     return {
       ok: false,
       message: t("ticket.not_found"),
@@ -34,13 +42,19 @@ export const getTicketAssetsService = async (ticketId: string) => {
       fileName: m.name,
       mime: m.mime ?? null,
       url: await getPresignedUrl(process.env.MINIO_BUCKET, m.url, 3600),
-    }))
+    })),
   );
 
   logger.info("[server][tickets-media] getTicketAssetsService | completed", {
     ticketId,
     count: data.length,
   });
+
+  auditLog
+    .metadata({
+      assetsCount: data.length,
+    })
+    .step("Ticket assets retrieved");
 
   return {
     ok: true,
@@ -52,8 +66,11 @@ export const getTicketAssetsService = async (ticketId: string) => {
 
 export const getSingleTicketAssetService = async (
   ticketId: string,
-  assetId: string
+  assetId: string,
+  req?: Request,
 ) => {
+  const auditLog = audit(req);
+
   logger.info("[server][tickets-media] getSingleTicketAssetService | start", {
     ticketId,
     assetId,
@@ -61,6 +78,8 @@ export const getSingleTicketAssetService = async (
 
   const existingTicket = await fetchExistingTicket(ticketId);
   if (!existingTicket) {
+    auditLog.step("Ticket not found");
+
     return {
       ok: false,
       message: t("ticket.not_found"),
@@ -81,6 +100,8 @@ export const getSingleTicketAssetService = async (
       ticketId,
       assetId,
     });
+
+    auditLog.step("Asset not found for ticket");
 
     return {
       ok: false,
@@ -104,6 +125,13 @@ export const getSingleTicketAssetService = async (
 
   // Successfully found the asset
   logger.info("[server][tickets-media] Asset found", { ticketId, assetId });
+
+  auditLog
+    .metadata({
+      assetId: asset.id,
+      fileName: asset.name,
+    })
+    .step("Ticket asset retrieved");
 
   return {
     ok: true,

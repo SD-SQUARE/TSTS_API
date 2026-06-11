@@ -3,7 +3,10 @@ import { In } from "typeorm";
 import { UserData } from "../../../types/UserData.js";
 import { IServiceResponse } from "../../../interfaces/shared/IServiceResponse.js";
 import logger from "../../../utils/logger.js";
-import { fetchExistingTicket } from "../common.js";
+import {
+  fetchExistingTicket,
+  notifyTicketParticipantsOfChatMessage,
+} from "../common.js";
 import { PostgresDataSource } from "../../../database/postgres-data-source.js";
 import { Media } from "../../../entities/Media.js";
 import { getPresignedUrl } from "../../../utils/storage.js";
@@ -116,6 +119,17 @@ export const createTicketChatMessageService = async (
       ticketId,
       createdAt: (fullChat?.createdAt ?? savedChat.createdAt).toISOString(),
     };
+
+    await notifyTicketParticipantsOfChatMessage(
+      existingTicket,
+      {
+        id: sender.id,
+        email: sender.email,
+        fullNameEn: getFullNameByLang(sender, "en"),
+        fullNameAr: getFullNameByLang(sender, "ar"),
+      },
+      response.message,
+    );
 
     return {
       ok: true,

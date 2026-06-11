@@ -61,6 +61,8 @@ export const getChatMessagesForTicketServices = async (
           sender: {
             id: msg.sender.id,
             name: getFullNameByLang(msg.sender, lang),
+            job: msg.sender.job?.[lang ?? "en"] ?? msg.sender.job?.en ?? null,
+            user_type: msg.sender.user_type ?? null,
             image:
               msg.sender.image == null
                 ? null
@@ -70,7 +72,7 @@ export const getChatMessagesForTicketServices = async (
                     3600,
                   ),
           },
-          ticketId, // from param (or msg.ticket.id if you prefer)
+          ticketId,
           createdAt: msg.createdAt?.toISOString?.() ?? new Date().toISOString(),
         };
       }),
@@ -111,4 +113,3 @@ export const getChatMessagesForTicketServices = async (
     };
   }
 };
-

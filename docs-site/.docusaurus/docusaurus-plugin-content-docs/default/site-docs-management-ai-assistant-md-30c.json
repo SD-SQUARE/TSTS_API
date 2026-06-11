@@ -1,0 +1,28 @@
+{
+  "id": "management/ai-assistant",
+  "title": "AI Assistant",
+  "description": "Powered by Ollama (Llama 3.2), the AI assistant provides conversational support and automated ticket creation.",
+  "source": "@site/../docs/management/ai-assistant.md",
+  "sourceDirName": "management",
+  "slug": "/management/ai-assistant",
+  "permalink": "/management/ai-assistant",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "ai-assistant",
+    "title": "AI Assistant",
+    "sidebar_label": "AI Assistant"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Audit Logs",
+    "permalink": "/management/audit-logs"
+  },
+  "next": {
+    "title": "Desktop App",
+    "permalink": "/management/desktop-app"
+  }
+}

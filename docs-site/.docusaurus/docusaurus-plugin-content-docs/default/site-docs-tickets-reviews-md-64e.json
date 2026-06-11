@@ -1,0 +1,28 @@
+{
+  "id": "tickets/ticket-reviews",
+  "title": "Ticket Reviews",
+  "description": "Requesters can review tickets after resolution.",
+  "source": "@site/../docs/tickets/reviews.md",
+  "sourceDirName": "tickets",
+  "slug": "/tickets/ticket-reviews",
+  "permalink": "/tickets/ticket-reviews",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "ticket-reviews",
+    "title": "Ticket Reviews",
+    "sidebar_label": "Reviews"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Ticket Chat",
+    "permalink": "/tickets/ticket-chat"
+  },
+  "next": {
+    "title": "Final Reports",
+    "permalink": "/tickets/ticket-final-report"
+  }
+}

@@ -2,19 +2,43 @@ version: "3.9"
 
 services:
   api:
-    container_name: express_api
+    container_name: api
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: ./docker/DOCKERFILE
     restart: unless-stopped
     env_file:
-      - .env
+      - ../.env
+      
     ports:
-      - "5000:5000"
-    depends_on:
-      - postgres
+      - "${PORT}:${PORT}"
+    networks:
+      - tsts-network
+    environment:
+      HOST_METRICS_EXPORTER_URL: http://node-exporter:9100/metrics
     volumes:
-      - .:/app
-      - /app/node_modules
-    command: sh -c "npm run dev"
+      - /opt/tsts-project/certs:/certs:ro
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host/rootfs
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)
+    pid: host
+    ports:
+      - "9100:9100"
+    volumes:
+      - /:/host/rootfs:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    networks:
+      - tsts-network
+
+networks:
+  tsts-network:
+    external: true
 

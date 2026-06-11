@@ -1,0 +1,28 @@
+{
+  "id": "management/recycle-bin",
+  "title": "Recycle Bin",
+  "description": "Soft-deleted entities can be listed and restored.",
+  "source": "@site/../docs/management/recycle-bin.md",
+  "sourceDirName": "management",
+  "slug": "/management/recycle-bin",
+  "permalink": "/management/recycle-bin",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "recycle-bin",
+    "title": "Recycle Bin",
+    "sidebar_label": "Recycle Bin"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Notifications",
+    "permalink": "/management/notifications"
+  },
+  "next": {
+    "title": "Audit Logs",
+    "permalink": "/management/audit-logs"
+  }
+}

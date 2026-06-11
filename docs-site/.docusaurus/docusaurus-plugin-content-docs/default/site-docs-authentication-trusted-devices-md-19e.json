@@ -1,0 +1,28 @@
+{
+  "id": "authentication/trusted-devices",
+  "title": "Trusted Devices",
+  "description": "WebAuthn-based trusted device registration and management for passwordless authentication.",
+  "source": "@site/../docs/authentication/trusted-devices.md",
+  "sourceDirName": "authentication",
+  "slug": "/authentication/trusted-devices",
+  "permalink": "/authentication/trusted-devices",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "lastUpdatedAt": null,
+  "frontMatter": {
+    "id": "trusted-devices",
+    "title": "Trusted Devices",
+    "sidebar_label": "Trusted Devices"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Auth v2",
+    "permalink": "/authentication/auth-v2"
+  },
+  "next": {
+    "title": "Tickets",
+    "permalink": "/tickets/"
+  }
+}

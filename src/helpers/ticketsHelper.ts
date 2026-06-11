@@ -5,6 +5,9 @@ export const mapStatusToActivityType = (toStatus: any): TicketActivityType => {
   let activityType = TicketActivityType.INFO;
 
   switch (toStatus) {
+    case TicketStatus.DRAFT:
+      activityType = TicketActivityType.INFO;
+      break;
     case TicketStatus.IN_PROGRESS:
       activityType = TicketActivityType.IN_PROGRESS;
       break;
@@ -23,4 +26,13 @@ export const mapStatusToActivityType = (toStatus: any): TicketActivityType => {
   }
 
   return activityType;
+};
+
+export const formatTicketStatus = (status: string): string => {
+  if (!status) return status;
+
+  return status
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 };

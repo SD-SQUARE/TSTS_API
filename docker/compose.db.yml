@@ -14,6 +14,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tsts-network
 
   redis:
     image: redis:7-alpine
@@ -24,6 +26,8 @@ services:
     volumes:
       - redis-data:/data
     command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      - tsts-network
 
   minio:
     image: minio/minio:latest
@@ -35,17 +39,36 @@ services:
       MINIO_ROOT_USER: ${MINIO_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET}
+      MINIO_CERT_FILE: ${MINIO_CERT_FILE}
+      MINIO_KEY_FILE: ${MINIO_KEY_FILE}
     command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
     volumes:
       - minio_data:/data
+      - /opt/certs:/root/certs:ro
     networks:
-      - app-network
+      - tsts-network
+
+  mongodb:
+    image: mongo:4.4
+    container_name: mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - tsts-network
 
 volumes:
   postgres_data:  
   redis-data:
   minio_data:
+  mongo_data:
   
 networks:
-  app-network:
-    driver: bridge
+  tsts-network:
+    external: true
