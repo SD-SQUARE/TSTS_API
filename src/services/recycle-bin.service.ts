@@ -59,7 +59,10 @@ export const listDeletedRecords = async (entityName: string) => {
     return null;
   }
 
-  const columns = metadata.columns.map((column) => column.propertyName);
+  const SENSITIVE_COLUMNS = ["password", "token", "secret", "salt", "hash"];
+  const columns = metadata.columns
+    .map((column) => column.propertyName)
+    .filter((col) => !SENSITIVE_COLUMNS.some((sensitive) => col.toLowerCase().includes(sensitive)));
   const alias = metadata.tableName;
   const records = await PostgresDataSource.getRepository(metadata.target as any)
     .createQueryBuilder(alias)

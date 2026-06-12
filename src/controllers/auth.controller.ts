@@ -19,8 +19,13 @@ const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
+  audit(req)
+    .action(AuditAction.USER_LOGIN)
+    .summary(`Login attempt for ${email}`)
+    .metadata({ email });
+
   // Call service layer
-  const result = await loginUser(email, password);
+  const result = await loginUser(email, password, req);
 
   // Set cookie
   res.cookie("refresh_token", result.refreshToken, {

@@ -125,11 +125,36 @@ export const loginUser = async (
 
   if (!user) {
     logger.info(`[server][auth] User not found for email: ${email}`);
+    if (req) {
+      (req as any).user = {
+        id: "unknown",
+        name: {
+          first: { ar: email, en: email },
+          mid: { ar: "", en: "" },
+          last: { ar: "", en: "" },
+        },
+        role: "unknown",
+        email: email,
+      };
+    }
     audit(req)?.step('user not found');
     throw new AppError(t('user_not_found'), 400);
   }
 
   logger.info(`[server][auth] User found: ${user.id}`);
+  
+  if (req) {
+    (req as any).user = {
+      id: user.id,
+      name: {
+        first: user.firstName,
+        mid: user.midName,
+        last: user.lastName,
+      },
+      role: user.user_type,
+      email: user.email,
+    };
+  }
 
   audit(req)?.step('user record found');
 

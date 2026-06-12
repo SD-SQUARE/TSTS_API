@@ -20,6 +20,8 @@ import { uuidValidationSchema } from "../validation/shared/uuidSchema.js";
 import { uploadTicketMediaSchema } from "../validation/tickets/media/upload-ticket-media-schema.js";
 import { IMAGE_PATHS } from "../constants/imagePathes.js";
 import { getAiSettings } from "../services/site-settings.service.js";
+import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 type FinalReportPayload = {
   title_en?: string | null;
@@ -380,6 +382,10 @@ export const upsertTicketFinalReportController = async (req: any, res: Response)
     has_knowledge_draft: Boolean(report.knowledgeDraft),
   });
 
+  audit(req)
+    .action(AuditAction.UPSERT_FINAL_REPORT)
+    .summary(action === "created" ? `Created final report for ticket ${ticketId}` : `Updated final report for ticket ${ticketId}`);
+
   const fresh = await findReportById(report.id);
   return res
     .status(action === "created" ? ResponseStatus.CREATED : ResponseStatus.SUCCESS)
@@ -442,6 +448,10 @@ export const uploadTicketFinalReportMediaController = async (
     count: savedMedia.length,
     files: savedMedia.map((item) => item.name),
   });
+
+  audit(req)
+    .action(AuditAction.UPLOAD_FINAL_REPORT_MEDIA)
+    .summary(`Uploaded media to final report for ticket ${ticketId}`);
 
   const response = await Promise.all(savedMedia.map(mapAttachment));
   logger.info("[server][ticket-final-report] attachments uploaded", {
@@ -558,6 +568,10 @@ export const updateFinalReportByIdController = async (req: any, res: Response) =
   await recordHistory(saved, actorId, "draft_updated", {
     has_knowledge_draft: Boolean(saved.knowledgeDraft),
   });
+
+  audit(req)
+    .action(AuditAction.UPSERT_FINAL_REPORT)
+    .summary(`Updated final report ${reportId}`);
 
   const fresh = await findReportById(saved.id);
   return res.status(ResponseStatus.SUCCESS).json(await mapFinalReportResponse(fresh as TicketFinalReport, lang));
@@ -752,6 +766,10 @@ Rules: _en fields in English only, _ar fields in Arabic only.`;
     knowledgeDraft: saved.knowledgeDraft,
   });
 
+  audit(req)
+    .action(AuditAction.GENERATE_AI_FINAL_REPORT_DRAFT)
+    .summary(`Generated AI knowledge draft for report ${reportId}`);
+
   const fresh = await findReportById(saved.id);
   return res.status(ResponseStatus.SUCCESS).json(await mapFinalReportResponse(fresh as TicketFinalReport, lang));
 };
@@ -835,6 +853,10 @@ export const publishFinalReportController = async (req: any, res: Response) => {
   await recordHistory(report, actorId, "published", {
     knowledgeItemId: savedKnowledgeItem.id,
   });
+
+  audit(req)
+    .action(AuditAction.PUBLISH_FINAL_REPORT)
+    .summary(`Published final report ${reportId} as knowledge item ${savedKnowledgeItem.id}`);
 
   return res.status(ResponseStatus.SUCCESS).json({
     knowledgeItemId: savedKnowledgeItem.id,

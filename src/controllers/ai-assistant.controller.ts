@@ -10,6 +10,8 @@ import { TicketPriority } from "../enums/TicketPriority.enum.js";
 import logger from "../utils/logger.js";
 import { invalidateTicketAnalyticsCache } from "../services/tickets/ticket-cache.service.js";
 import { getAiSettings } from "../services/site-settings.service.js";
+import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS || 120000);
 
@@ -721,6 +723,10 @@ export const aiCreateTicket = async (req: Request, res: Response) => {
             logger.warn("[ai-assistant] Cache invalidation failed (non-fatal):", e?.message)
         );
 
+        audit(req)
+            .action(AuditAction.CREATE_TICKET)
+            .summary(`Created ticket #${savedTicket.ticket_number} via AI Assistant`);
+
         logger.info(`[ai-assistant] Ticket #${savedTicket.ticket_number} created by requester ${user.id}`);
         return res.status(201).json({ success: true, ticketId: savedTicket.id, ticketNumber: savedTicket.ticket_number, isDraft: !!isDraft });
     } catch (error: any) {
@@ -779,6 +785,10 @@ ${text.trim()}
 
         const parsed = JSON.parse(jsonMatch[0]);
         if (!parsed.en || !parsed.ar) throw new Error("AI response missing required fields");
+
+        audit(req)
+            .action(AuditAction.GENERATE_AI_TEXT)
+            .summary(`Generated AI text for field: ${fieldContext || "general"}`);
 
         return res.json({ en: parsed.en.trim(), ar: parsed.ar.trim(), summary: parsed.summary?.trim() || "" });
 
