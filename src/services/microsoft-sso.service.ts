@@ -12,6 +12,8 @@ import {
 } from "./auth.service.js";
 import { AppError } from "../utils/AppError.js";
 import { isEmailAllowedByDomainSettings } from "./site-settings.service.js";
+import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 const userRepo = PostgresDataSource.getRepository(User);
 
@@ -49,31 +51,37 @@ const verifyMicrosoftIdToken = async (idToken: string) =>
     );
   });
 
-export const loginWithMicrosoftSso = async (idToken: string, t: any) => {
+export const loginWithMicrosoftSso = async (idToken: string, req: any) => {
+  const t = req.t;
   if (!process.env.AZURE_TENANT_ID || !process.env.AZURE_CLIENT_ID) {
+    audit(req)?.step('SSO not configured');
     throw new AppError(t("sso_not_configured"), 500);
   }
 
   let claims;
   try {
     claims = await verifyMicrosoftIdToken(idToken);
-  } catch (error) {
+  } catch (error: any) {
     console.error("[SSO] Token verification failed:", error);
+    audit(req)?.step('SSO token verification failed').metadata({ error: error.message });
     throw new AppError(t("sso_token_invalid"), 401);
   }
 
   const email = (claims.email || claims.preferred_username || "").toLowerCase();
 
   if (!email) {
+    audit(req)?.step('SSO email missing from claims');
     throw new AppError(t("sso_email_missing"), 400);
   }
 
+  audit(req)?.step('SSO login attempt').metadata({ email });
   console.log(`[SSO] Attempting login for email: ${email}`);
 
   // Check if email domain is allowed
   const domainAllowed = await isEmailAllowedByDomainSettings(email);
   if (!domainAllowed) {
     console.warn(`[SSO] Email domain not allowed: ${email}`);
+    audit(req)?.step('SSO email domain not allowed').metadata({ email });
     throw new AppError(t("email_domain_not_allowed"), 403);
   }
 
@@ -85,9 +93,11 @@ export const loginWithMicrosoftSso = async (idToken: string, t: any) => {
 
   if (!user) {
     console.warn(`[SSO] User not found in database: ${email}`);
+    audit(req)?.step('SSO user not found').metadata({ email });
     throw new AppError(t("sso_user_not_found"), 403);
   }
 
+  audit(req)?.resource('USER', user.id).step('SSO user found, generating tokens');
   console.log(`[SSO] User found: ${user.id}, generating tokens...`);
 
   const permissions = await getEffectivePermissionKeysForUser(user.id);
@@ -110,6 +120,7 @@ export const loginWithMicrosoftSso = async (idToken: string, t: any) => {
     setStatusActive(user.id),
   ]);
 
+  audit(req)?.step('SSO login successful').summary('User logged in via SSO').metadata({ loginMethod: 'microsoft_sso' });
   console.log(`[SSO] Login successful for user: ${user.id}`);
 
   return {

@@ -784,12 +784,30 @@ export class CustomFormService {
     ];
 
     const normalizedResponses = responses.map((response) => {
+      let fallbackEmail = "";
+      let fallbackName = "";
+
       const answers = fields.reduce(
         (acc: Record<string, any>, field: any) => {
-          acc[field.id] = this.formatAnswerForDisplay(
+          const formattedVal = this.formatAnswerForDisplay(
             field,
             response.data?.[field.id],
           );
+          acc[field.id] = formattedVal;
+
+          if (field.type === "email" && !fallbackEmail && formattedVal) {
+            fallbackEmail = formattedVal;
+          }
+          if (
+            field.type === "short_text" &&
+            !fallbackName &&
+            formattedVal &&
+            (field.label_en?.toLowerCase().includes("name") ||
+              field.label_ar?.includes("اسم"))
+          ) {
+            fallbackName = formattedVal;
+          }
+
           return acc;
         },
         {},
@@ -797,8 +815,8 @@ export class CustomFormService {
 
       return {
         id: response.id,
-        responder: this.buildDisplayName(response.responder) || "Public visitor",
-        responderEmail: response.responder?.email || "",
+        responder: this.buildDisplayName(response.responder) || fallbackName || "Public visitor",
+        responderEmail: response.responder?.email || fallbackEmail || "",
         submittedAt: response.createdAt,
         createdAt: response.createdAt,
         answers,

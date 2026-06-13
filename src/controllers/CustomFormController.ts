@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { ResponseStatus } from "../enums/ResponseStatus.enum.js";
 import { CustomFormService } from "../services/CustomFormService.js";
+import { audit } from "../helpers/auditBuilder.js";
+import { AuditAction } from "../enums/AuditAction.enum.js";
 
 const buildExportFilename = (title: string) =>
   `${title || "form-responses"}`
@@ -95,11 +97,20 @@ export class CustomFormController {
   }
 
   static async submit(req: Request, res: Response) {
+    audit(req)
+      .summary("Custom form submission attempt")
+      .action(AuditAction.SUBMIT_CUSTOM_FORM)
+      .step("form submission request received");
+
     const response = await CustomFormService.submitResponse(
       req.params.id,
       req.body,
       (req as any).user,
     );
+
+    audit(req)
+      .step("form submitted successfully")
+      .resource("CUSTOM_FORM", req.params.id);
 
     return res.status(ResponseStatus.CREATED).json({
       data: response,
@@ -108,10 +119,20 @@ export class CustomFormController {
   }
 
   static async submitPublic(req: Request, res: Response) {
+    audit(req)
+      .summary("Public custom form submission attempt")
+      .action(AuditAction.SUBMIT_CUSTOM_FORM)
+      .step("public form submission request received")
+      .metadata({ token: req.params.token });
+
     const response = await CustomFormService.submitPublicResponse(
       req.params.token,
       req.body,
     );
+
+    audit(req)
+      .step("public form submitted successfully")
+      .resource("CUSTOM_FORM", response.formId);
 
     return res.status(ResponseStatus.CREATED).json({
       data: response,

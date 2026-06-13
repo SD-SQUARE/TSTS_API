@@ -23,11 +23,17 @@ const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 export const loginWithMicrosoft = async (req: Request, res: Response) => {
   const { idToken } = req.body;
 
+  audit(req)
+    .summary('User SSO login attempt')
+    .action(AuditAction.USER_LOGIN)
+    .step('SSO login request received');
+
   if (!idToken) {
+    audit(req).step('missing idToken').metadata({ reason: 'invalid_input' });
     throw new AppError(t("invalid_input"), 400);
   }
 
-  const result = await loginWithMicrosoftSso(idToken, req.t);
+  const result = await loginWithMicrosoftSso(idToken, req);
 
   res.cookie("refresh_token", result.refreshToken, {
     httpOnly: true,

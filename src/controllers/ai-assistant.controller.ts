@@ -481,7 +481,7 @@ export function parseToolCall(text: string): any | null {
     if (rawParsed) return rawParsed;
 
     // 3. Fallback: handle XML-style tool calls
-    const xmlTagMatch = text.match(/<(?:tool_call|longcat_tool_call|function_call|invoke)[^>]*>([\s\S]*?)<\/(?:tool_call|longcat_tool_call|function_call|invoke)>/i);
+    const xmlTagMatch = text.match(/<(?:tool_call|longcat_tool_call|function_call|invoke)[^>]*>([\s\S]*?)(?:<\/(?:tool_call|longcat_tool_call|function_call|invoke)>|$)/i);
     if (xmlTagMatch) {
         const inner = xmlTagMatch[1].trim();
         try {
@@ -489,27 +489,47 @@ export function parseToolCall(text: string): any | null {
             if (parsed?.tool) return parsed;
         } catch { /* not JSON */ }
 
-        const nameMatch = inner.match(/^(\w+)\s*([\s\S]*)/);
+        // Sometimes the model outputs: <longcat_tool_call>search_kb","query":"..."}
+        // Let's strip any leading non-alphanumeric (like quote or comma) from the remainder
+        const nameMatch = inner.match(/^"?([A-Za-z0-9_]+)"?\s*[,:]?\s*([\s\S]*)/);
         if (nameMatch) {
             const toolName = nameMatch[1].trim();
-            const remainder = nameMatch[2].trim();
+            let remainder = nameMatch[2].trim();
+            if (remainder.startsWith(',')) remainder = remainder.slice(1).trim();
+
             const result: any = { tool: toolName };
 
             if (remainder) {
                 try {
-                    const args = JSON.parse(remainder.startsWith("{") ? remainder : `{${remainder}}`);
+                    // Try to fix trailing braces if needed
+                    if (!remainder.endsWith("}")) remainder += "}";
+                    const args = JSON.parse(remainder.startsWith("{") ? remainder : `{${remainder}`);
                     Object.assign(result, args);
                 } catch {
-                    // Extract key="value" style args
-                    const kvPairs = remainder.matchAll(/(\w+)\s*[:=]\s*"([^"]+)"/g);
-                    for (const [, key, value] of kvPairs) {
-                        result[key] = value;
-                    }
-                    
-                    // Extract LongCat format args
-                    const longcatMatches = remainder.matchAll(/<longcat_arg_key>([\s\S]*?)<\/longcat_arg_key>\s*<longcat_arg_value>([\s\S]*?)<\/longcat_arg_value>/gi);
-                    for (const [, key, value] of longcatMatches) {
+                    // Pattern 1 & 2: <longcat_arg_key>KEY</longcat_arg_key> [<longcat_arg_value>]VAL</longcat_arg_value>
+                    const longcatWellFormed = remainder.matchAll(/<longcat_arg_key>([\s\S]*?)<\/longcat_arg_key>\s*(?:<longcat_arg_value>)?([\s\S]*?)<\/longcat_arg_value>/gi);
+                    let foundArgs = false;
+                    for (const [, key, value] of longcatWellFormed) {
                         result[key.trim()] = value.trim();
+                        foundArgs = true;
+                    }
+
+                    // Pattern 3: Degenerate — key and value merged inside one tag:
+                    // <longcat_arg_key>KEY\nVALUE</longcat_arg_value>  (no closing key tag, no opening value tag)
+                    if (!foundArgs) {
+                        const longcatMerged = remainder.matchAll(/<longcat_arg_key>([^\n<]+)\n([\s\S]*?)<\/longcat_arg_value>/gi);
+                        for (const [, key, value] of longcatMerged) {
+                            result[key.trim()] = value.trim();
+                            foundArgs = true;
+                        }
+                    }
+
+                    // Pattern 4: key="value" style
+                    if (!foundArgs) {
+                        const kvPairs = remainder.matchAll(/(\w+)\s*[:=]\s*"([^"]+)"/g);
+                        for (const [, key, value] of kvPairs) {
+                            result[key] = value;
+                        }
                     }
                 }
             }
@@ -548,19 +568,49 @@ export const aiAssistantChat = async (req: Request, res: Response) => {
         }
 
         const systemPrompt = language === "ar" ? SYSTEM_PROMPT_AR : SYSTEM_PROMPT_EN;
+
+        // Helper: strip embedded file content blocks from messages to reduce context size on retry
+        const stripFileContent = (msgs: { role: string; content: string }[]) =>
+            msgs.map(m => ({
+                ...m,
+                content: m.role === "user"
+                    ? m.content
+                        .replace(/---\s*File:.*?---\n[\s\S]*?(?=\n---\s*File:|$)/g, "")
+                        .replace(/\[File:.*?\]/g, "[File attached - content omitted]")
+                        .trim()
+                    : m.content
+            }));
+
         const conversation: { role: string; content: string }[] = [
             { role: "system", content: systemPrompt },
             ...messages.slice(-8),
         ];
 
         let pendingTicket: any = null;
-        const MAX_TOOL_CALLS = 4;
+        const MAX_TOOL_CALLS = 17;
         const executedTools = new Set<string>();
 
         for (let i = 0; i < MAX_TOOL_CALLS; i++) {
             // Use deterministic temperature: 0 for tool calling phases
-            const llmResponse = await callAi(conversation, aiSettings, { temperature: 0, maxTokens: 512 });
+            let llmResponse: string;
+            try {
+                llmResponse = await callAi(conversation, aiSettings, { temperature: 0, maxTokens: 512 });
+            } catch (providerErr: any) {
+                // Provider error (e.g. context too large due to file content) — strip file blocks and retry once
+                if (providerErr?.message?.includes("Provider returned error") || providerErr?.message?.includes("context length")) {
+                    logger.warn({ message: "[ai-assistant] Provider error, retrying without file content", error: providerErr?.message });
+                    try {
+                        const stripped = stripFileContent(conversation);
+                        llmResponse = await callAi(stripped, aiSettings, { temperature: 0, maxTokens: 512 });
+                    } catch {
+                        throw providerErr; // re-throw original if retry also fails
+                    }
+                } else {
+                    throw providerErr;
+                }
+            }
             const toolCall = parseToolCall(llmResponse);
+
 
             if (!toolCall) {
                 // Safeguard: Malformed XML
@@ -602,16 +652,18 @@ export const aiAssistantChat = async (req: Request, res: Response) => {
                 return res.end();
             }
 
-            if (executedTools.has(toolCall.tool) && toolCall.tool !== "search_kb") {
-                logger.warn({ message: "[ai-assistant] Prevented infinite tool loop", tool: toolCall.tool });
+            // Only block create_ticket from repeating (to prevent duplicate tickets).
+            // get_specializations, get_problems and search_kb are allowed to retry
+            // because their first call might fail with missing/invalid args.
+            if (executedTools.has(toolCall.tool) && toolCall.tool === "create_ticket") {
+                logger.warn({ message: "[ai-assistant] Prevented duplicate create_ticket", tool: toolCall.tool });
                 conversation.push({ role: "assistant", content: llmResponse });
                 const loopPrompt = language === "ar"
-                    ? "لقد قمت باستدعاء هذه الأداة مسبقاً. لا تكرر الاستدعاء. اقرأ سجل المحادثة واستمر."
-                    : "You already called this tool. Do not call it again. Look at the conversation history and proceed.";
+                    ? "لقد قمت بإنشاء التذكرة مسبقاً. لا تكرر العملية. اقرأ سجل المحادثة وأجب المستخدم."
+                    : "The ticket was already prepared. Do not call create_ticket again. Summarize the result to the user.";
                 conversation.push({ role: "user", content: loopPrompt });
                 continue;
             }
-            executedTools.add(toolCall.tool);
 
             // Structured logging
             logger.info({
@@ -643,9 +695,52 @@ export const aiAssistantChat = async (req: Request, res: Response) => {
 
             conversation.push({ role: "assistant", content: llmResponse });
             conversation.push({ role: "user", content: `[Tool result for ${toolCall.tool}]:\n${toolResult}` });
+            // Track create_ticket execution to prevent duplicates
+            if (toolCall.tool === "create_ticket") executedTools.add("create_ticket");
         }
 
-        const finalResponse = await callAi(conversation, aiSettings, { temperature: 0.2, maxTokens: 512 });
+        let finalResponse = await callAi(conversation, aiSettings, { temperature: 0.2, maxTokens: 512 });
+
+        // If the model still emits a tool call in the final response, try to execute it (especially create_ticket)
+        const finalToolCall = parseToolCall(finalResponse);
+        if (finalToolCall?.tool === "create_ticket") {
+            const toolResult = await executeTool(finalToolCall, language);
+            try {
+                const parsed = JSON.parse(toolResult);
+                if (parsed.__pending_ticket__) {
+                    pendingTicket = { title: parsed.title, description: parsed.description, specializationId: parsed.specializationId, problemId: parsed.problemId, specializationName: parsed.specializationName, problemName: parsed.problemName };
+                    const previewMsg = language === "ar" ? "جهزت معاينة للتذكرة. راجع العنوان والوصف ثم اختر الإرسال أو الحفظ كمسودة." : "I prepared a ticket preview. Review the title and description, then submit it or save it as a draft.";
+                    res.write(`data: ${JSON.stringify({ content: previewMsg })}\n\n`);
+                    res.write(`data: ${JSON.stringify({ ticketAction: pendingTicket })}\n\n`);
+                    res.write("data: [DONE]\n\n");
+                    return res.end();
+                }
+            } catch { /* fall through */ }
+        }
+
+        // Final safeguard against leaking raw XML tool calls
+        if (finalResponse.includes("<longcat_tool_call>") || finalResponse.includes("<tool_call>") || finalResponse.includes('{"tool":') || finalToolCall) {
+            // The model is stuck — ask it one more time to produce a plain text summary
+            try {
+                const nudge = language === "ar"
+                    ? "استناداً إلى نتائج الأدوات أعلاه، قدم ملخصاً نصياً مختصراً للمستخدم دون استخدام أي JSON أو XML."
+                    : "Based on the tool results above, provide a short plain-text summary response to the user. Do NOT output any JSON or XML.";
+                conversation.push({ role: "assistant", content: finalResponse });
+                conversation.push({ role: "user", content: nudge });
+                finalResponse = await callAi(conversation, aiSettings, { temperature: 0.4, maxTokens: 400 });
+                // Strip any remaining XML
+                if (finalResponse.includes("<longcat_tool_call>") || finalResponse.includes("<tool_call>") || finalResponse.includes('{"tool":')) {
+                    finalResponse = language === "ar"
+                        ? "تم جمع المعلومات. يمكنني المساعدة في تقديم طلب دعم. هل تريد إنشاء تذكرة؟"
+                        : "I've gathered the information needed. I can help you submit a support request. Would you like me to create a ticket?";
+                }
+            } catch {
+                finalResponse = language === "ar"
+                    ? "تم جمع المعلومات. يمكنني المساعدة في تقديم طلب دعم. هل تريد إنشاء تذكرة؟"
+                    : "I've gathered the information needed. I can help you submit a support request. Would you like me to create a ticket?";
+            }
+        }
+
         for (const word of finalResponse.split(/(\s+)/)) {
             if (word) res.write(`data: ${JSON.stringify({ content: word })}\n\n`);
         }
